@@ -233,72 +233,40 @@ header{
   to{opacity:1;transform:scale(1.4)}
 }
 
-/* НАСТОЯЩИЙ ЛИСЁНОК ANNIVEO */
-.fox-orbit{
-  position:absolute;
-  inset:0;
-  z-index:8;
-  pointer-events:none;
-  transform-origin:50% 50%;
-  animation:foxOrbit 12s linear infinite;
-}
+/* ЛИСЁНОК: ОБЪЁМНАЯ ОРБИТА И ЖИВОЙ ПОЛЁТ */
+.fox-orbit{position:absolute;inset:0;z-index:8;pointer-events:none}
 .fox-position{
-  position:absolute;
-  left:50%;
-  top:50%;
-  width:92px;
-  height:92px;
-  transform:translate(-50%,-50%) translateX(115px);
+  position:absolute;left:50%;top:50%;
+  width:112px;height:112px;
+  transform:translate(-50%,-50%) translate(-85px,-40px);
+  will-change:transform;
 }
 .cosmic-fox{
-  width:100%;
-  height:100%;
-  display:block;
-  object-fit:contain;
-  user-select:none;
-  -webkit-user-select:none;
+  width:100%;height:100%;display:block;object-fit:contain;
+  user-select:none;-webkit-user-select:none;
   filter:drop-shadow(0 0 13px #c6a6ff99);
-  animation:foxCounterOrbit 12s linear infinite;
-  transition:filter .25s ease;
+  transition:filter .3s ease;
 }
 .fox-glow{
-  position:absolute;
-  inset:22%;
-  border-radius:50%;
-  background:#b887ff77;
-  filter:blur(19px);
-  z-index:-1;
+  position:absolute;inset:22%;border-radius:50%;
+  background:#b887ff77;filter:blur(19px);z-index:-1;
 }
 .fox-pose{
-  position:relative;
-  width:100%;
-  height:100%;
-  transform-origin:50% 65%;
-  transition:transform .3s cubic-bezier(.2,1.4,.3,1);
+  position:relative;width:100%;height:100%;
+  transform-origin:55% 60%;
+  animation:foxFloat 2.4s ease-in-out infinite;
 }
-@keyframes foxOrbit{
-  from{transform:rotate(0deg)}
-  to{transform:rotate(360deg)}
+@keyframes foxFloat{
+  0%,100%{transform:translateY(0) rotate(-3deg) scale(1,.98)}
+  50%{transform:translateY(-7px) rotate(3deg) scale(1.025,1.02)}
 }
-@keyframes foxCounterOrbit{
-  from{transform:rotate(0deg)}
-  to{transform:rotate(-360deg)}
+.fox-orbit.listening .cosmic-fox{filter:drop-shadow(0 0 23px #d3aaff)}
+.fox-orbit.listening .fox-pose{animation:foxListen 3s ease-in-out infinite}
+@keyframes foxListen{
+  0%,100%{transform:translateY(0) rotate(-9deg) scale(1)}
+  50%{transform:translateY(-3px) rotate(-6deg) scale(1.035)}
 }
-
-/* КОГДА ПОЛЬЗОВАТЕЛЬ НАЧИНАЕТ ПИСАТЬ */
-.fox-orbit.listening{
-  animation-play-state:paused;
-}
-.fox-orbit.listening .cosmic-fox{
-  animation-play-state:paused;
-  filter:drop-shadow(0 0 23px #d3aaff);
-}
-.fox-orbit.listening .fox-pose{
-  transform:scale(1.23) rotate(-16deg);
-}
-.universe.listening .planet{
-  animation-duration:24s;
-}
+.universe.listening .planet{animation-duration:24s}
 
 /* МАЛЕНЬКИЕ ЗВЁЗДЫ */
 .fox-star{
@@ -899,7 +867,7 @@ select{
   .tile{height:220px}
 }
 @media(max-width:390px){
-  .fox-position{width:76px;height:76px}
+  .fox-position{width:96px;height:96px}
   .welcome h1{font-size:27px}
   .idea{padding:12px 8px}
   .idea strong{font-size:11px}
@@ -908,7 +876,7 @@ select{
 }
 @media(prefers-reduced-motion:reduce){
   .planet,.axis-ring,.spark,.fox-orbit,
-  .cosmic-fox,.fox-star,.splash-orb,
+  .cosmic-fox,.fox-pose,.fox-star,.splash-orb,
   .splash-orb:before,.splash-orb:after,
   .splash-progress:before{animation:none!important}
 }
@@ -956,7 +924,7 @@ select{
           <img
             class="cosmic-fox"
             id="cosmicFox"
-            src="/BD71E4C8-D596-4B41-8293-D0BCA3A293DF.png"
+            src="/%D0%9B%D0%B8%D1%81%D0%B0%202.png"
             alt="Космический лисёнок"
             draggable="false">
         </div>
@@ -2098,56 +2066,54 @@ async function generateMedia(kind){
   });
 })();
 
-/* РЕАКЦИЯ ЛИСЁНКА */
+/* РЕАКЦИЯ ЛИСЁНКА И ОБЪЁМНАЯ ОРБИТА */
 (function setupFoxInteraction(){
   const fox=$("foxOrbit");
   const universe=$("universe");
   const input=$("messageInput");
-  const hide=$("hideKeyboard");
+  const position=fox?.querySelector(".fox-position");
+  if(!fox||!universe||!input||!position) return;
 
-  if(!fox||!universe||!input) return;
+  const reduced=window.matchMedia("(prefers-reduced-motion: reduce)");
+  let phase=3.9;
+  let previous=0;
+  let frameId=0;
+  let state=null;
 
-  function listen(){
-    fox.classList.add("listening");
-    universe.classList.add("listening");
-  }
-
-  function relax(){
-    fox.classList.remove("listening");
-    universe.classList.remove("listening");
-  }
-
-  input.addEventListener("focus",listen);
-  input.addEventListener("blur",relax);
-
-  input.addEventListener("input",()=>{
-    if(document.activeElement===input){
-      listen();
+  function frame(now){
+    const dt=previous?Math.min((now-previous)/1000,.05):0;
+    previous=now;
+    if(!document.hidden&&currentView==="chat"&&!$("welcome").classList.contains("hidden")){
+      const listening=document.activeElement===input||recording||openingMic;
+      fox.classList.toggle("listening",listening);
+      universe.classList.toggle("listening",listening);
+      if(!listening&&!reduced.matches) phase+=dt*Math.PI*2/12;
+      const depth=Math.sin(phase);
+      const radius=Math.min(122,universe.clientWidth*.34);
+      const target=listening
+        ?{x:radius*.48,y:38,scale:1.12,turn:0,tilt:-6,depth:1}
+        :{x:Math.cos(phase)*radius,y:depth*49,
+          scale:.86+depth*.18,
+          turn:90+90*Math.tanh(depth*5),
+          tilt:Math.cos(phase)*9,depth};
+      if(!state) state={...target};
+      const blend=reduced.matches?1:1-Math.exp(-dt*7);
+      for(const key of Object.keys(target)){
+        state[key]+=(target[key]-state[key])*blend;
+      }
+      fox.style.zIndex=state.depth<-.12?"2":"8";
+      position.style.transform=
+        "translate(-50%,-50%) translate("+state.x.toFixed(2)+"px,"+
+        state.y.toFixed(2)+"px) scale("+state.scale.toFixed(3)+
+        ") rotate("+state.tilt.toFixed(2)+"deg) rotateY("+
+        state.turn.toFixed(2)+"deg)";
     }
-  });
-
-  hide?.addEventListener("click",relax);
-
-  /* Если пользователь нажимает на микрофон,
-     лисёнок тоже реагирует */
-  const mic=$("mic");
-  mic?.addEventListener("click",()=>{
-    if(!recording){
-      listen();
-      setTimeout(()=>{
-        if(document.activeElement!==input){
-          relax();
-        }
-      },1800);
-    }
-  });
-
-  /* Проверка загрузки картинки */
-  const image=$("cosmicFox");
-  image?.addEventListener("error",()=>{
-    console.warn(
-      "Изображение лисёнка не найдено. Проверь имя PNG в GitHub."
-    );
+    frameId=requestAnimationFrame(frame);
+  }
+  frameId=requestAnimationFrame(frame);
+  window.addEventListener("pagehide",()=>cancelAnimationFrame(frameId));
+  window.addEventListener("pageshow",event=>{
+    if(event.persisted){previous=0;frameId=requestAnimationFrame(frame);}
   });
 })();
 
