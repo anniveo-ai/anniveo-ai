@@ -1565,7 +1565,8 @@ async function requestJSON(url,options,onRetry=()=>{}){
   while(true){
     try{
       const response=await fetch(url,options);
-      const data=await response.json();
+      const data=response.headers.get("content-type")?.includes("text/event-stream")
+        ?response:await response.json();
       if(response.status===202&&data.processing&&processingAttempts<20){
         processingAttempts++;
         onRetry("Ответ ещё готовится…");
@@ -1593,7 +1594,7 @@ async function requestJSON(url,options,onRetry=()=>{}){
 }
 
 /* API */
-async function api(payload,timeout=90000){
+async function api(payload,timeout=90000,onToken=null){
   if(!initData||!user){
     throw Error("Открой ANNIVEO AI через Telegram");
   }
@@ -1604,12 +1605,50 @@ async function api(payload,timeout=90000){
       method:"POST",
       headers:{"Content-Type":"application/json"},
       signal:controller.signal,
-      body:JSON.stringify({...payload,initData})
+      body:JSON.stringify({...payload,...(onToken?{stream:true}:{}),initData})
     },message=>{
       if(orbVoiceActive) $("voiceStatus").textContent=message;
     });
     if(!response.ok){
       throw Error(data.error||"Ошибка сервера ANNIVEO");
+    }
+    if(response.headers.get("content-type")?.includes("text/event-stream")){
+      const reader=response.body.getReader();
+      const decoder=new TextDecoder();
+      let buffer="",reply="",finished=false;
+      const processEvent=raw=>{
+        for(const line of raw.split("\n")){
+          if(!line.startsWith("data:")) continue;
+          const value=line.slice(5).trim();
+          if(!value) continue;
+          let event;
+          try{event=JSON.parse(value);}catch{continue;}
+          if(event.type==="token"&&typeof event.content==="string"){
+            reply+=event.content;
+            onToken?.(event.content);
+          }else if(event.type==="done"){
+            reply=event.reply||reply;
+            finished=true;
+          }else if(event.type==="error"){
+            throw Error(event.error||"Ошибка генерации ответа");
+          }
+        }
+      };
+      while(!finished){
+        const {done,value}=await reader.read();
+        if(done) break;
+        buffer+=decoder.decode(value,{stream:true}).replace(/\r\n/g,"\n");
+        let boundary;
+        while((boundary=buffer.indexOf("\n\n"))!==-1){
+          const event=buffer.slice(0,boundary);
+          buffer=buffer.slice(boundary+2);
+          processEvent(event);
+          if(finished) break;
+        }
+      }
+      if(buffer.trim()&&!finished) processEvent(buffer);
+      if(!reply.trim()) throw Error("Нейросеть вернула пустой ответ");
+      return {reply};
     }
     return data;
   }catch(e){
@@ -1721,7 +1760,10 @@ async function sendMessage(text,audioURL,spokenVoice=false){
         requestId:crypto.randomUUID()
       };
 
-    const data=await api(payload);
+    const data=await api(payload,90000,spokenVoice?null:token=>{
+      pending.textContent+=token;
+      pending.style.whiteSpace="pre-wrap";
+    });
 
     if(typeof data.reply!=="string"||!data.reply.trim()){
       throw Error("Нейросеть вернула пустой ответ");
