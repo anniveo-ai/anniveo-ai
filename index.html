@@ -1,79 +1,72 @@
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ANNIVEO AI</title>
 <style>
+:root{color-scheme:dark}
 *{box-sizing:border-box}
-body{margin:0;background:#0b0d14;color:white;font-family:-apple-system,Arial,sans-serif}
-header{padding:20px;border-bottom:1px solid #292d3a;display:flex;justify-content:space-between;align-items:center}
-.logo{font-size:23px;font-weight:800;color:#a78bfa}
-.menu{font-size:23px;cursor:pointer}
-main{height:calc(100dvh - 160px);overflow:auto;padding:22px}
-.welcome{text-align:center;margin-top:12vh}
-.welcome h1{font-size:32px;margin-bottom:10px}
-.welcome p{color:#9ca3af}
-.models{display:flex;gap:10px;overflow-x:auto;padding:15px 0}
-.model{background:#202333;border:1px solid #383b50;border-radius:14px;padding:13px;white-space:nowrap;cursor:pointer;color:white}
-.model.active{border-color:#a78bfa;background:#35294e}
-.message{padding:14px;margin:12px 0;border-radius:15px;line-height:1.5;white-space:pre-wrap}
-.user{background:#35304d;margin-left:12%}
-.ai{background:#1c2030;margin-right:12%}
-footer{position:fixed;bottom:0;width:100%;background:#0b0d14;padding:12px}
-.inputbox{display:flex;background:#202333;border-radius:18px;padding:8px;gap:8px}
-input{flex:1;min-width:0;background:none;border:0;outline:0;color:white;font-size:16px;padding:10px}
-button{background:#8b5cf6;color:white;border:0;border-radius:12px;padding:10px 16px;font-size:18px}
+body{margin:0;background:#090b13;color:#f5f6ff;font:16px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+main{max-width:760px;margin:auto;min-height:100dvh;display:flex;flex-direction:column;padding:22px 18px max(18px,env(safe-area-inset-bottom))}
+header{display:flex;align-items:center;justify-content:space-between;padding:5px 0 22px;border-bottom:1px solid #25283a}
+header strong{letter-spacing:2px;font-size:19px}
+.tag{font-size:11px;background:#252044;color:#bcaaff;border:1px solid #51448c;border-radius:99px;padding:6px 10px}
+.chat{flex:1;overflow:auto;display:flex;flex-direction:column;gap:14px;padding:24px 0}
+.welcome{margin:auto;text-align:center}
+.orb{width:92px;height:92px;border-radius:28px;margin:0 auto 24px;background:linear-gradient(135deg,#7c3aed,#2563eb,#06b6d4);display:grid;place-items:center;font-size:40px;box-shadow:0 0 60px #6d28d955}
+.welcome h1{font-size:32px;margin:0 0 12px}
+.welcome p{color:#a7adc2;line-height:1.5}
+.msg{padding:14px 17px;border-radius:18px;max-width:88%;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.user{align-self:flex-end;background:#5133aa}
+.assistant{align-self:flex-start;background:#1b2030;border:1px solid #30374d}
+form{display:flex;gap:10px;background:#171b2a;border:1px solid #33384d;border-radius:20px;padding:9px;align-items:end}
+textarea{flex:1;background:transparent;color:white;border:0;outline:0;resize:none;font:inherit;padding:11px 7px;max-height:130px}
+button{border:0;border-radius:13px;background:linear-gradient(135deg,#8b5cf6,#2563eb);color:white;font-size:22px;width:48px;height:48px;cursor:pointer}
+footer{text-align:center;color:#777e97;font-size:11px;padding:12px 0 0}
 </style>
 </head>
 <body>
+<main>
 <header>
-<div class="logo">✦ ANNIVEO AI</div>
-<div class="menu" onclick="newChat()">＋</div>
+<strong>✦ ANNIVEO AI</strong>
+<span class="tag">MINI APP</span>
 </header>
-<main id="chat">
+<section class="chat" id="chat">
 <div class="welcome" id="welcome">
-<h1>Привет! Я ANNIVEO AI ✨</h1>
-<p>Твой интеллектуальный помощник</p>
-<div class="models">
-<button class="model active" onclick="choose(this)">✦ ANNIVEO</button>
-<button class="model" onclick="choose(this)">GPT</button>
-<button class="model" onclick="choose(this)">Claude</button>
-<button class="model" onclick="choose(this)">Gemini</button>
+<div class="orb">✦</div>
+<h1>Привет! Я ANNIVEO AI</h1>
+<p>Твой интеллектуальный помощник. Задай вопрос, чтобы начать диалог.</p>
 </div>
-<p>О чём поговорим сегодня?</p>
-</div>
+</section>
+<form id="form">
+<textarea id="message" rows="1" placeholder="Напиши сообщение…" aria-label="Сообщение"></textarea>
+<button type="submit" aria-label="Отправить">➤</button>
+</form>
+<footer>ANNIVEO AI · Скоро подключим искусственный интеллект</footer>
 </main>
-<footer>
-<div class="inputbox">
-<input id="prompt" placeholder="Спроси ANNIVEO AI..." onkeydown="if(event.key==='Enter')send()">
-<button onclick="send()">➤</button>
-</div>
-</footer>
 <script>
-function choose(el){
-document.querySelectorAll('.model').forEach(x=>x.classList.remove('active'));
-el.classList.add('active');
+const chat=document.getElementById('chat'),form=document.getElementById('form'),input=document.getElementById('message');
+function add(text,who){
+const el=document.createElement('div');
+el.className='msg '+who;
+el.textContent=text;
+chat.appendChild(el);
+chat.scrollTop=chat.scrollHeight;
 }
-function add(text,type){
-const d=document.createElement('div');
-d.className='message '+type;
-d.textContent=text;
-document.getElementById('chat').appendChild(d);
-d.scrollIntoView();
-}
-function send(){
-const input=document.getElementById('prompt');
+form.addEventListener('submit',e=>{
+e.preventDefault();
 const text=input.value.trim();
 if(!text)return;
 document.getElementById('welcome')?.remove();
 add(text,'user');
 input.value='';
-add('Подключаем искусственный интеллект...','ai');
-}
-function newChat(){
-document.getElementById('chat').innerHTML='<div class="welcome"><h1>Новый чат ✨</h1><p>Чем могу помочь?</p></div>';
+add('Интерфейс работает! На следующем этапе мы подключим настоящий ИИ, и я смогу отвечать на вопросы.','assistant');
+});
+if(window.Telegram?.WebApp){
+window.Telegram.WebApp.ready();
+window.Telegram.WebApp.expand();
 }
 </script>
 </body>
