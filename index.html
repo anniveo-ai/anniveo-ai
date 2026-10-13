@@ -137,6 +137,11 @@ header{
   transition:transform .06s linear;
 }
 .voice-status{font-size:12px;color:#c6a6ff;text-align:center;margin:-4px 0 12px}
+.end-voice{
+  display:block;margin:0 auto 12px;padding:7px 13px;
+  background:#30263e;border:1px solid #68517f;border-radius:16px;
+  color:#d7b9ff;font-size:12px;
+}
 .planet:focus-visible{outline:2px solid #ffe0ff;outline-offset:8px}
 .planet{
   border:0;padding:0;cursor:pointer;
@@ -967,6 +972,7 @@ select{
   </div>
 
   <div id="voiceStatus" class="voice-status" role="status">Нажми на шар, чтобы поговорить</div>
+  <button id="endVoice" type="button" class="end-voice hidden" onclick="endVoiceSession()">Завершить разговор</button>
 
   <p>
     Я твой <span class="fox-highlight">AI-ассистент</span>.
@@ -1250,6 +1256,7 @@ let audioChunks = [];
 let audioURLs = [];
 let recordTimer = null;
 let orbVoiceActive=false;
+let voiceSessionVersion=0;
 let voiceHeard=false;
 let voiceAnalyser=null,voiceAudioContext=null,voiceFrame=0;
 let voiceSourceNode=null;
@@ -1383,8 +1390,7 @@ function openView(name){
     toast("Сначала заверши голосовое сообщение");
     return;
   }
-  stopSpokenReply();
-  orbVoiceActive=false;
+  endVoiceSession();
   $("messageInput").blur();
   currentView = name;
 
@@ -1684,6 +1690,7 @@ async function sendMessage(text,audioURL,spokenVoice=false){
   }
 
   const isAnonymous=anonymous;
+  const voiceReplySession=voiceSessionVersion;
   const context=cleanHistory(anonymousHistory).slice(-12);
 
   showWelcome=spokenVoice&&!isAnonymous;
@@ -1739,7 +1746,7 @@ async function sendMessage(text,audioURL,spokenVoice=false){
       historyLoaded=true;
       saveCache();
     }
-    if(spokenVoice) speakReply(data.reply);
+    if(spokenVoice&&voiceReplySession===voiceSessionVersion) speakReply(data.reply);
   }catch(e){
     if(spokenVoice) $("voiceStatus").textContent=e.message;
     formatAnswer(pending,e.message);
@@ -1797,8 +1804,34 @@ function stopVoiceMeter(){
   $("planetResponse").style.setProperty("--voice-level","0");
 }
 function stopSpokenReply(){
+  if(voiceUtterance){
+    voiceUtterance.onstart=null;
+    voiceUtterance.onend=null;
+    voiceUtterance.onerror=null;
+  }
   window.speechSynthesis?.cancel();voiceUtterance=null;
   $("voiceOrb").setAttribute("aria-label","Говорить с ANNIVEO AI");
+}
+function releaseMicrophone(){
+  microphoneStream?.getTracks().forEach(track=>track.stop());
+  microphoneStream=null;
+  $("endVoice").classList.add("hidden");
+}
+function endVoiceSession(){
+  voiceSessionVersion++;
+  orbVoiceActive=false;
+  clearTimeout(recordTimer);
+  if(recorder?.state==="recording"){
+    recorder.onstop=null;recorder.stop();
+  }
+  recording=false;
+  stopVoiceMeter();stopSpokenReply();releaseMicrophone();
+  $("mic").classList.remove("recording");
+  $("mic").setAttribute("aria-label","Записать голосовое сообщение");
+  $("mic").title="Записать голосовое сообщение";
+  $("voiceStatus").textContent="Разговор завершён. Нажми на шар, чтобы начать";
+  $("chatStatus").textContent="";
+  updateControls();
 }
 async function handleOrbVoice(){
   if(busy||transcribing||openingMic){toast("Подожди, готовлю ответ");return;}
@@ -1893,10 +1926,14 @@ async function handleMic(){
   updateControls();
 
   try{
-    microphoneStream=
-      await navigator.mediaDevices.getUserMedia({
-        audio:true
+    const liveStream=microphoneStream?.getAudioTracks().some(track=>track.readyState==="live");
+    if(!liveStream){
+      releaseMicrophone();
+      microphoneStream=await navigator.mediaDevices.getUserMedia({
+        audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}
       });
+    }
+    $("endVoice").classList.remove("hidden");
     const mime=[
       "audio/mp4",
       "audio/webm;codecs=opus",
@@ -1927,9 +1964,7 @@ async function handleMic(){
       }
     },120000);
   }catch(e){
-    microphoneStream?.getTracks().forEach(
-      track=>track.stop()
-    );
+    releaseMicrophone();
     stopVoiceMeter();
     orbVoiceActive=false;
     $("voiceStatus").textContent="Разреши доступ к микрофону и нажми на шар";
@@ -1949,10 +1984,7 @@ async function finishVoice(){
   $("mic").title="Записать голосовое сообщение";
   $("mic").classList.remove("recording");
 
-  microphoneStream?.getTracks().forEach(
-    track=>track.stop()
-  );
-  microphoneStream=null;
+  // Микрофон остаётся открыт до завершения разговора.
 
   const blob=new Blob(audioChunks,{
     type:recorder.mimeType||"audio/webm"
@@ -2286,7 +2318,7 @@ async function generateMedia(kind){
 
 /* ЗАВЕРШЕНИЕ */
 window.addEventListener("pagehide",()=>{
-  stopVoiceMeter();stopSpokenReply();
+  endVoiceSession();
   void voiceAudioContext?.close().catch(()=>{});voiceAudioContext=null;
   if(recorder?.state==="recording"){
     recorder.onstop=null;
