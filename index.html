@@ -1933,12 +1933,23 @@ function startVoiceMeter(){
 }
 function speakReply(text){
   stopSpokenReply();
-  const plain=String(text).replace(/\*\*|[#\x60]/g,"").trim();
+  const plain=String(text)
+    .replace(/\[([^\]]+)\]\([^)]+\)/g,"$1")
+    .replace(/https?:\/\/\S+/g,"")
+    .replace(/[*_~#\x60]/g,"")
+    .replace(/\s+/g," ")
+    .trim();
   voiceUtterance=new SpeechSynthesisUtterance(plain);
-  voiceUtterance.lang="ru-RU";voiceUtterance.rate=1;
+  voiceUtterance.lang="ru-RU";
+  voiceUtterance.rate=.93;
+  voiceUtterance.pitch=1.16;
   const voices=window.speechSynthesis.getVoices();
-  const russian=voices.find(v=>v.lang.toLowerCase().startsWith("ru"));
-  if(russian) voiceUtterance.voice=russian;
+  const russian=voices.filter(v=>v.lang.toLowerCase().startsWith("ru"));
+  const gentleFoxVoice=
+    russian.find(v=>/milena|elena|yelena|alena|anna|irina|svetlana|female|woman/i.test(v.name))||
+    russian.find(v=>!/yuri|dmitri|dmitry|male/i.test(v.name))||
+    russian[0];
+  if(gentleFoxVoice) voiceUtterance.voice=gentleFoxVoice;
   voiceUtterance.onstart=()=>{$("voiceStatus").textContent="ANNIVEO отвечает… Нажми на шар для нового вопроса";};
   voiceUtterance.onend=()=>{$("voiceStatus").textContent="Нажми на шар, чтобы продолжить разговор";};
   voiceUtterance.onerror=()=>{$("voiceStatus").textContent="Не удалось озвучить. Ответ есть в чате";};
