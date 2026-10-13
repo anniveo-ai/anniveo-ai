@@ -45,9 +45,9 @@ header{
   position:relative;
   display:flex;
   align-items:center;
-  gap:10px;
-  padding-bottom:18px;
-  min-height:72px;
+  gap:6px;
+  padding-bottom:0;
+  min-height:38px;
 }
 .logo{
   font-size:19px;font-weight:800;
@@ -55,11 +55,12 @@ header{
 }
 .logo span{color:var(--purple)}
 .credit{
-  position:absolute;
-  top:34px;left:0;
+  position:static;
+  margin-left:auto;
+  flex:none;
   display:flex;
   align-items:center;
-  gap:8px;
+  gap:6px;
   background:transparent;
   border:0;
   padding:0;
@@ -82,7 +83,10 @@ header{
   text-shadow:0 0 12px #b887ff99;
 }
 .gear{
-  margin-left:auto;
+  margin-left:0;
+  flex:none;
+  width:28px;
+  padding:0;
   border:0;
   background:none;
   font-size:22px;
