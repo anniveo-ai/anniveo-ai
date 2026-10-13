@@ -555,6 +555,11 @@ header{
   background:linear-gradient(130deg,#d7bbff,#a67cdb);
   color:#241833;
 }
+#mic{display:grid;place-items:center;padding:0}
+#mic svg{display:block;pointer-events:none}
+#mic .mic-stop-icon{display:none}
+#mic.recording .mic-icon{display:none}
+#mic.recording .mic-stop-icon{display:block}
 .recording{background:#8e3f58}
 .status{
   font-size:11px;
@@ -1148,7 +1153,15 @@ select{
       maxlength="4000"
       placeholder="Спроси ANNIVEO…"></textarea>
     <button type="button" id="mic"
-      class="circle" onclick="handleMic()">🎙</button>
+      class="circle" onclick="handleMic()" aria-label="Записать голосовое сообщение" title="Записать голосовое сообщение">
+      <svg class="mic-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <rect x="9" y="2" width="6" height="12" rx="3"/>
+        <path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/>
+      </svg>
+      <svg class="mic-stop-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true" focusable="false">
+        <rect x="6" y="6" width="12" height="12" rx="2"/>
+      </svg>
+    </button>
     <button type="submit" id="send"
       class="circle send">➤</button>
   </form>
@@ -1773,7 +1786,8 @@ async function handleMic(){
     recorder.onstop=finishVoice;
     recorder.start();
     recording=true;
-    $("mic").textContent="■";
+    $("mic").setAttribute("aria-label","Остановить запись и отправить");
+    $("mic").title="Остановить запись и отправить";
     $("mic").classList.add("recording");
     $("chatStatus").textContent=
       "Идёт запись · нажми ■ для отправки";
@@ -1797,7 +1811,8 @@ async function handleMic(){
 async function finishVoice(){
   clearTimeout(recordTimer);
   recording=false;
-  $("mic").textContent="🎙";
+  $("mic").setAttribute("aria-label","Записать голосовое сообщение");
+  $("mic").title="Записать голосовое сообщение";
   $("mic").classList.remove("recording");
 
   microphoneStream?.getTracks().forEach(
