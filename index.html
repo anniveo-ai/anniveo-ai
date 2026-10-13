@@ -32,6 +32,8 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 button:disabled{opacity:.5}
 .hidden{display:none!important}
 .app{
+  position:relative;
+  z-index:1;
   max-width:760px;
   height:100dvh;
   margin:auto;
@@ -118,6 +120,13 @@ header{
   font-weight:600;
 }
 
+/* ДИНАМИЧЕСКИЙ ФОН ИЗ ЦВЕТОВ ПО КРАЯМ ТЕКУЩЕГО КАДРА */
+#ambientBackground{
+  position:fixed;inset:-40px;
+  width:calc(100% + 80px);height:calc(100% + 80px);
+  z-index:0;pointer-events:none;
+  filter:blur(35px);
+}
 /* ЕДИНЫЙ ВИДЕОФОН С ЛИСЁНКОМ И ШАРОМ */
 .universe{
   position:relative;width:100%;height:260px;
@@ -125,7 +134,7 @@ header{
   overflow:hidden;pointer-events:none;
 }
 .universe-video{
-  display:block;width:100%;height:100%;
+  display:block;width:100%;height:auto;aspect-ratio:16/9;
   object-fit:contain;pointer-events:none;
   -webkit-mask-image:radial-gradient(ellipse at center,#000 62%,transparent 100%);
   mask-image:radial-gradient(ellipse at center,#000 62%,transparent 100%);
@@ -728,6 +737,7 @@ select{
 </head>
 
 <body>
+<canvas id="ambientBackground" aria-hidden="true"></canvas>
 
 <!-- ЗАСТАВКА -->
 <div id="splash">
@@ -1888,29 +1898,81 @@ async function generateMedia(kind){
   });
 })();
 
-/* НЕПРЕРЫВНЫЙ ВИДЕОФОН: ВПЕРЁД И НАЗАД УЖЕ СШИТЫ В MP4 */
+/* ВИДЕО И ФОН МЕНЯЮТСЯ ВМЕСТЕ */
 (function setupHeroVideo(){
   const video=$("heroVideo");
-  if(!video) return;
-  video.muted=true;
-  video.defaultMuted=true;
-  function syncPlayback(){
-    const visible=!document.hidden&&currentView==="chat"&&
+  const canvas=$("ambientBackground");
+  if(!video||!canvas) return;
+  const ctx=canvas.getContext("2d");
+  const sampler=document.createElement("canvas");
+  sampler.width=32;sampler.height=18;
+  const sample=sampler.getContext("2d",{willReadFrequently:true});
+  canvas.width=96;canvas.height=144;
+  let frame=0,lastPaint=-Infinity;
+  video.muted=true;video.defaultMuted=true;
+
+  function visible(){
+    return !document.hidden&&currentView==="chat"&&
       !$("welcome").classList.contains("hidden");
-    if(visible){
+  }
+  function paint(){
+    if(!ctx||!sample||video.readyState<2) return;
+    sample.drawImage(video,0,0,32,18);
+    const data=sample.getImageData(0,0,32,18).data;
+    function color(x,y){
+      let r=0,g=0,b=0,n=0;
+      for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+        const px=Math.max(0,Math.min(31,x+dx));
+        const py=Math.max(0,Math.min(17,y+dy));
+        const i=(py*32+px)*4;
+        r+=data[i];g+=data[i+1];b+=data[i+2];n++;
+      }
+      return [Math.round(r/n),Math.round(g/n),Math.round(b/n)];
+    }
+    const edges=[
+      [0,0,color(1,1)],[.5,0,color(16,1)],[1,0,color(30,1)],
+      [0,.5,color(1,9)],[1,.5,color(30,9)],
+      [0,1,color(1,16)],[.5,1,color(16,16)],[1,1,color(30,16)]
+    ];
+    const base=edges.reduce((sum,e)=>sum.map((v,i)=>v+e[2][i]),[0,0,0])
+      .map(v=>Math.round(v/edges.length));
+    ctx.fillStyle="rgb("+base.join(",")+")";
+    ctx.fillRect(0,0,96,144);
+    for(const [x,y,c] of edges){
+      const gradient=ctx.createRadialGradient(x*96,y*144,0,x*96,y*144,115);
+      gradient.addColorStop(0,"rgba("+c.join(",")+",.9)");
+      gradient.addColorStop(1,"rgba("+c.join(",")+",0)");
+      ctx.fillStyle=gradient;ctx.fillRect(0,0,96,144);
+    }
+  }
+  function tick(now){
+    frame=0;
+    if(!visible()||video.paused) return;
+    if(now-lastPaint>=100){
+      paint();lastPaint=now;
+    }
+    frame=requestAnimationFrame(tick);
+  }
+  function syncPlayback(){
+    if(visible()){
       if(video.paused) video.play()?.catch(()=>{});
+      if(!frame) frame=requestAnimationFrame(tick);
     }else{
-      video.pause();
+      video.pause();cancelAnimationFrame(frame);frame=0;
     }
   }
   const observer=new MutationObserver(syncPlayback);
   observer.observe($("welcome"),{attributes:true,attributeFilter:["class"]});
   observer.observe($("view-chat"),{attributes:true,attributeFilter:["class"]});
   video.addEventListener("canplay",syncPlayback);
+  video.addEventListener("playing",syncPlayback);
+  video.addEventListener("loadeddata",paint);
   document.addEventListener("visibilitychange",syncPlayback);
   document.addEventListener("pointerdown",syncPlayback,{passive:true});
   window.addEventListener("pageshow",syncPlayback);
-  window.addEventListener("pagehide",()=>video.pause());
+  window.addEventListener("pagehide",()=>{
+    video.pause();cancelAnimationFrame(frame);frame=0;
+  });
   syncPlayback();
 })();
 
