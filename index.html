@@ -597,9 +597,13 @@ nav button{
   transition:color .3s,transform .22s;
 }
 nav button span{
-  font-size:23px;
-  line-height:27px;
+  width:25px;height:25px;
+  display:grid;place-items:center;
   transition:transform .25s;
+}
+nav button span svg{
+  width:23px;height:23px;
+  display:block;
 }
 nav button.active{color:#f5eaff}
 nav button.active span{transform:scale(1.08)}
@@ -1185,19 +1189,19 @@ select{
   <div id="navGlider"></div>
   <button class="active" data-tab="chat"
     onclick="openView('chat')">
-    <span>⌂</span>Чат
+    <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 2v-6.5A7.5 7.5 0 1 1 20 11.5Z"/><path d="M8 10h8M8 14h5"/></svg></span>Чат
   </button>
   <button data-tab="studio"
     onclick="openView('studio')">
-    <span>▣</span>Студия
+    <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="m12 7 1.4 3.6L17 12l-3.6 1.4L12 17l-1.4-3.6L7 12l3.6-1.4L12 7Z"/></svg></span>Студия
   </button>
   <button data-tab="history"
     onclick="openView('history')">
-    <span>◴</span>История
+    <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>История
   </button>
   <button data-tab="profile"
     onclick="openView('profile')">
-    <span>♙</span>Профиль
+    <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0v1H5v-1Z"/></svg></span>Профиль
   </button>
 </nav>
 
