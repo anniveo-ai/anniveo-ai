@@ -10,172 +10,104 @@
 :root{color-scheme:dark}
 *{box-sizing:border-box}
 body{
-  margin:0;
-  background:#090b13;
-  color:#f5f6ff;
-  font:16px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
+ margin:0;background:#090b13;color:#f5f6ff;
+ font:16px -apple-system,BlinkMacSystemFont,
+ 'Segoe UI',sans-serif
 }
 main{
-  max-width:760px;
-  margin:auto;
-  height:100dvh;
-  display:flex;
-  flex-direction:column;
-  padding:22px 18px max(18px,env(safe-area-inset-bottom))
+ max-width:760px;margin:auto;height:100dvh;
+ display:flex;flex-direction:column;
+ padding:22px 18px max(18px,env(safe-area-inset-bottom))
 }
 header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:5px 0 18px;
-  border-bottom:1px solid #25283a
+ display:flex;align-items:center;
+ justify-content:space-between;
+ padding:5px 0 18px;border-bottom:1px solid #25283a
 }
 header strong{letter-spacing:2px;font-size:19px}
 .tag{
-  font-size:11px;
-  background:#252044;
-  color:#bcaaff;
-  border:1px solid #51448c;
-  border-radius:99px;
-  padding:6px 10px
+ font-size:11px;background:#252044;color:#bcaaff;
+ border:1px solid #51448c;border-radius:99px;
+ padding:6px 10px
 }
 .mode{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  padding:15px 2px;
-  border-bottom:1px solid #25283a
+ display:flex;align-items:center;
+ justify-content:space-between;gap:12px;
+ padding:15px 2px;border-bottom:1px solid #25283a
 }
-.mode-title{
-  display:flex;
-  align-items:center;
-  gap:11px
-}
+.mode-title{display:flex;align-items:center;gap:11px}
 .shield{font-size:23px}
 .mode-name{font-size:14px;font-weight:600}
 .mode-status{
-  font-size:12px;
-  color:#9299b0;
-  margin-top:4px
+ font-size:12px;color:#9299b0;margin-top:4px
 }
 .switch{
-  position:relative;
-  flex-shrink:0;
-  width:62px;
-  height:34px;
-  border:0;
-  border-radius:99px;
-  background:#353849;
-  padding:3px;
-  cursor:pointer;
-  transition:background .2s
+ position:relative;flex-shrink:0;width:62px;
+ height:34px;border:0;border-radius:99px;
+ background:#353849;padding:3px;cursor:pointer;
+ transition:background .2s
 }
 .switch::after{
-  content:"";
-  display:block;
-  width:28px;
-  height:28px;
-  border-radius:50%;
-  background:white;
-  box-shadow:0 2px 6px #0005;
-  transition:transform .2s
+ content:"";display:block;width:28px;height:28px;
+ border-radius:50%;background:white;
+ box-shadow:0 2px 6px #0005;
+ transition:transform .2s
 }
 .switch.active{
-  background:linear-gradient(135deg,#8b5cf6,#2563eb)
+ background:linear-gradient(135deg,#8b5cf6,#2563eb)
 }
-.switch.active::after{
-  transform:translateX(28px)
-}
+.switch.active::after{transform:translateX(28px)}
 .switch:disabled{opacity:.5}
 .chat{
-  flex:1;
-  min-height:0;
-  overflow:auto;
-  display:flex;
-  flex-direction:column;
-  gap:14px;
-  padding:24px 0
+ flex:1;min-height:0;overflow:auto;
+ display:flex;flex-direction:column;gap:14px;
+ padding:24px 0
 }
 .welcome{margin:auto;text-align:center}
 .orb{
-  width:92px;
-  height:92px;
-  border-radius:28px;
-  margin:0 auto 24px;
-  background:linear-gradient(135deg,#7c3aed,#2563eb,#06b6d4);
-  display:grid;
-  place-items:center;
-  font-size:40px;
-  box-shadow:0 0 60px #6d28d955
+ width:92px;height:92px;border-radius:28px;
+ margin:0 auto 24px;
+ background:linear-gradient(135deg,#7c3aed,#2563eb,#06b6d4);
+ display:grid;place-items:center;font-size:40px;
+ box-shadow:0 0 60px #6d28d955
 }
 .welcome h1{font-size:32px;margin:0 0 12px}
 .welcome p{color:#a7adc2;line-height:1.5}
 .msg{
-  padding:14px 17px;
-  border-radius:18px;
-  max-width:88%;
-  line-height:1.5;
-  white-space:pre-wrap;
-  overflow-wrap:anywhere
+ padding:14px 17px;border-radius:18px;
+ max-width:88%;line-height:1.5;
+ white-space:pre-wrap;overflow-wrap:anywhere
 }
-.user{
-  align-self:flex-end;
-  background:#5133aa
-}
+.user{align-self:flex-end;background:#5133aa}
 .assistant{
-  align-self:flex-start;
-  background:#1b2030;
-  border:1px solid #30374d
+ align-self:flex-start;background:#1b2030;
+ border:1px solid #30374d
 }
 .notice{
-  align-self:center;
-  font-size:12px;
-  color:#bcaaff;
-  background:#252044;
-  border:1px solid #51448c;
-  padding:9px 13px;
-  border-radius:14px;
-  text-align:center
+ align-self:center;font-size:12px;color:#bcaaff;
+ background:#252044;border:1px solid #51448c;
+ padding:9px 13px;border-radius:14px;text-align:center
 }
 form{
-  display:flex;
-  gap:10px;
-  background:#171b2a;
-  border:1px solid #33384d;
-  border-radius:20px;
-  padding:9px;
-  align-items:end
+ display:flex;gap:10px;background:#171b2a;
+ border:1px solid #33384d;border-radius:20px;
+ padding:9px;align-items:end
 }
 textarea{
-  flex:1;
-  min-width:0;
-  background:transparent;
-  color:white;
-  border:0;
-  outline:0;
-  resize:none;
-  font:inherit;
-  padding:11px 7px;
-  max-height:130px
+ flex:1;min-width:0;background:transparent;
+ color:white;border:0;outline:0;resize:none;
+ font:inherit;padding:11px 7px;max-height:130px
 }
 #send{
-  border:0;
-  border-radius:13px;
-  background:linear-gradient(135deg,#8b5cf6,#2563eb);
-  color:white;
-  font-size:22px;
-  width:48px;
-  height:48px;
-  cursor:pointer;
-  flex-shrink:0
+ border:0;border-radius:13px;
+ background:linear-gradient(135deg,#8b5cf6,#2563eb);
+ color:white;font-size:22px;width:48px;height:48px;
+ cursor:pointer;flex-shrink:0
 }
 #send:disabled{opacity:.5}
 footer{
-  text-align:center;
-  color:#777e97;
-  font-size:11px;
-  padding:12px 0 0
+ text-align:center;color:#777e97;
+ font-size:11px;padding:12px 0 0
 }
 </style>
 </head>
@@ -187,45 +119,46 @@ footer{
 </header>
 
 <div class="mode">
-  <div class="mode-title">
-    <span class="shield">🛡️</span>
-    <div>
-      <div class="mode-name">Анонимный чат</div>
-      <div class="mode-status" id="modeStatus">
-        История сохраняется
-      </div>
-    </div>
+ <div class="mode-title">
+  <span class="shield">🛡️</span>
+  <div>
+   <div class="mode-name">Анонимный чат</div>
+   <div class="mode-status" id="modeStatus">
+    История сохраняется
+   </div>
   </div>
-  <button
-    type="button"
-    id="modeSwitch"
-    class="switch"
-    role="switch"
-    aria-checked="false"
-    aria-label="Анонимный чат">
-  </button>
+ </div>
+ <button
+  type="button"
+  id="modeSwitch"
+  class="switch"
+  role="switch"
+  aria-checked="false"
+  aria-label="Анонимный чат">
+ </button>
 </div>
 
 <section class="chat" id="chat"></section>
 
 <form id="form">
-<textarea
+ <textarea
   id="message"
   rows="1"
   maxlength="4000"
   placeholder="Напиши сообщение…"
   aria-label="Сообщение"></textarea>
-<button id="send" type="submit" aria-label="Отправить">➤</button>
+ <button id="send" type="submit"
+  aria-label="Отправить">➤</button>
 </form>
 
 <footer>
-ANNIVEO AI · Твой интеллектуальный помощник
+ ANNIVEO AI · Твой интеллектуальный помощник
 </footer>
 </main>
 
 <script>
 const API_URL =
-  "https://anniveo-ai-api.yaylaevismail.workers.dev/";
+ "https://anniveo-ai-api.yaylaevismail.workers.dev/";
 
 const tg = window.Telegram?.WebApp;
 const chat = document.getElementById("chat");
@@ -236,16 +169,16 @@ const modeSwitch = document.getElementById("modeSwitch");
 const modeStatus = document.getElementById("modeStatus");
 
 if (tg) {
-  tg.ready();
-  tg.expand();
+ tg.ready();
+ tg.expand();
 }
 
 const initData = tg?.initData || "";
 const userId = tg?.initDataUnsafe?.user?.id;
 
 const CACHE_KEY = userId
-  ? "anniveo_chat_cache_v3_" + userId
-  : null;
+ ? "anniveo_chat_cache_v3_" + userId
+ : null;
 
 let history = [];
 let temporaryHistory = [];
@@ -253,447 +186,448 @@ let anonymous = false;
 let busy = false;
 let loaded = false;
 let historyVersion = 0;
+let syncing = false;
 
 const sleep = ms =>
-  new Promise(resolve => setTimeout(resolve, ms));
+ new Promise(resolve => setTimeout(resolve, ms));
 
 function validMessages(messages) {
-  if (!Array.isArray(messages)) return [];
+ if (!Array.isArray(messages)) return [];
 
-  return messages.filter(item =>
-    item &&
-    ["user","assistant"].includes(item.role) &&
-    typeof item.content === "string"
-  ).slice(-40).map(item => ({
-    role:item.role,
-    content:item.content
-  }));
+ return messages.filter(item =>
+  item &&
+  ["user","assistant"].includes(item.role) &&
+  typeof item.content === "string"
+ ).slice(-40).map(item => ({
+  role:item.role,
+  content:item.content
+ }));
 }
 
 function saveCache(messages) {
-  if (!CACHE_KEY) return;
+ if (!CACHE_KEY) return;
 
-  try {
-    localStorage.setItem(
-      CACHE_KEY,
-      JSON.stringify(validMessages(messages))
-    );
-  } catch(e) {}
+ try {
+  localStorage.setItem(
+   CACHE_KEY,
+   JSON.stringify(validMessages(messages))
+  );
+ } catch(e) {}
 }
 
 function readCache() {
-  if (!CACHE_KEY) return [];
+ if (!CACHE_KEY) return [];
 
-  try {
-    return validMessages(
-      JSON.parse(localStorage.getItem(CACHE_KEY) || "[]")
-    );
-  } catch(e) {
-    return [];
-  }
+ try {
+  return validMessages(
+   JSON.parse(localStorage.getItem(CACHE_KEY) || "[]")
+  );
+ } catch(e) {
+  return [];
+ }
 }
 
 function showWelcome() {
-  const welcome = document.createElement("div");
-  welcome.className = "welcome";
-  welcome.id = "welcome";
+ const welcome = document.createElement("div");
+ welcome.className = "welcome";
+ welcome.id = "welcome";
 
-  welcome.innerHTML = `
-    <div class="orb">✦</div>
-    <h1>Привет! Я ANNIVEO AI</h1>
-    <p>Твой интеллектуальный помощник.
-    Задай вопрос, чтобы начать диалог.</p>
-  `;
+ welcome.innerHTML = `
+  <div class="orb">✦</div>
+  <h1>Привет! Я ANNIVEO AI</h1>
+  <p>Твой интеллектуальный помощник.
+  Задай вопрос, чтобы начать диалог.</p>
+ `;
 
-  chat.appendChild(welcome);
+ chat.appendChild(welcome);
 }
 
 function add(text, role) {
-  document.getElementById("welcome")?.remove();
+ document.getElementById("welcome")?.remove();
 
-  const el = document.createElement("div");
-  el.className = "msg " + role;
-  el.textContent = text;
-
-  chat.appendChild(el);
-  chat.scrollTop = chat.scrollHeight;
-
-  return el;
+ const el = document.createElement("div");
+ el.className = "msg " + role;
+ el.textContent = text;
+ chat.appendChild(el);
+ chat.scrollTop = chat.scrollHeight;
+ return el;
 }
 
 function renderMessages(messages) {
-  chat.replaceChildren();
+ chat.replaceChildren();
 
-  if (!messages.length) {
-    showWelcome();
-    return;
-  }
+ if (!messages.length) {
+  showWelcome();
+  return;
+ }
 
-  messages.forEach(item => {
-    add(item.content, item.role);
-  });
+ messages.forEach(item =>
+  add(item.content, item.role)
+ );
 }
 
 function showNotice(text) {
-  const el = document.createElement("div");
-  el.className = "notice";
-  el.textContent = text;
-  chat.prepend(el);
+ const el = document.createElement("div");
+ el.className = "notice";
+ el.textContent = text;
+ chat.prepend(el);
 }
 
 function updateMode() {
-  modeSwitch.classList.toggle("active", anonymous);
-  modeSwitch.setAttribute(
-    "aria-checked",
-    String(anonymous)
-  );
+ modeSwitch.classList.toggle("active", anonymous);
+ modeSwitch.setAttribute(
+  "aria-checked", String(anonymous)
+ );
 
-  modeStatus.textContent = anonymous
-    ? "История не сохраняется"
-    : "История сохраняется";
+ modeStatus.textContent = anonymous
+  ? "История не сохраняется"
+  : "История сохраняется";
 }
 
 function setBusy(value) {
-  busy = value;
-  send.disabled = value || !loaded;
-  modeSwitch.disabled = value;
+ busy = value;
+ send.disabled = value || !loaded;
+ modeSwitch.disabled = value;
 }
 
-async function api(payload, timeoutMs = 45000) {
-  const controller = new AbortController();
+function createRequestId() {
+ if (crypto.randomUUID) {
+  return crypto.randomUUID();
+ }
 
-  const timer = setTimeout(
-    () => controller.abort(),
-    timeoutMs
-  );
+ const bytes = new Uint8Array(16);
+ crypto.getRandomValues(bytes);
+
+ return Array.from(bytes)
+  .map(n => n.toString(16).padStart(2,"0"))
+  .join("");
+}
+
+async function api(payload, timeoutMs = 42000) {
+ const controller = new AbortController();
+ const timer = setTimeout(
+  () => controller.abort(),
+  timeoutMs
+ );
+
+ try {
+  const response = await fetch(API_URL, {
+   method:"POST",
+   signal:controller.signal,
+   headers:{
+    "Content-Type":"application/json"
+   },
+   body:JSON.stringify({
+    ...payload,
+    initData
+   })
+  });
+
+  let data;
 
   try {
-    const response = await fetch(API_URL, {
-      method:"POST",
-      signal:controller.signal,
-      headers:{
-        "Content-Type":"application/json"
-      },
-      body:JSON.stringify({
-        ...payload,
-        initData
-      })
-    });
+   data = await response.json();
+  } catch {
+   const error = new Error(
+    "Сервер вернул некорректный ответ"
+   );
+   error.retryable = response.status >= 500;
+   throw error;
+  }
 
-    let data;
+  // Новый Worker возвращает 202,
+  // пока запрос ещё обрабатывается.
+  if (response.status === 202 && data.processing) {
+   return { processing:true };
+  }
 
-    try {
-      data = await response.json();
-    } catch {
-      throw new Error("Некорректный ответ сервера");
+  if (!response.ok) {
+   const error = new Error(
+    data.error || "Ошибка сервера"
+   );
+   error.status = response.status;
+   throw error;
+  }
+
+  return data;
+
+ } catch(error) {
+  if (error.name === "AbortError") {
+   const e = new Error(
+    "Превышено время ожидания ответа"
+   );
+   e.retryable = true;
+   throw e;
+  }
+
+  if (error instanceof TypeError) {
+   const e = new Error(
+    "Соединение временно недоступно"
+   );
+   e.retryable = true;
+   throw e;
+  }
+
+  throw error;
+
+ } finally {
+  clearTimeout(timer);
+ }
+}
+
+function canRetry(error) {
+ return error.retryable ||
+  error.status === 408 ||
+  error.status === 429 ||
+  error.status >= 500;
+}
+
+async function sendWithRecovery(payload, pending) {
+ const isAnonymous = payload.action === "anonymous";
+
+ // Один и тот же requestId используется
+ // во всех попытках обычного чата.
+ const maxAttempts = isAnonymous ? 3 : 5;
+
+ for (let attempt = 0; attempt < maxAttempts; attempt++) {
+  if (attempt > 0) {
+   pending.textContent =
+    "Восстанавливаю соединение…\n" +
+    "Попытка " + (attempt + 1) +
+    " из " + maxAttempts;
+
+   await sleep(Math.min(
+    1200 * attempt,
+    3500
+   ));
+  }
+
+  try {
+   const data = await api(payload);
+
+   if (data.processing) {
+    if (attempt === maxAttempts - 1) {
+     throw new Error(
+      "Запрос ещё обрабатывается. " +
+      "Подожди немного и открой чат снова."
+     );
     }
+    continue;
+   }
 
-    if (!response.ok) {
-      const error = new Error(
-        data.error || "Ошибка сервера"
-      );
-      error.status = response.status;
-      throw error;
-    }
+   if (
+    typeof data.reply !== "string" ||
+    !data.reply.trim()
+   ) {
+    throw new Error("ИИ вернул пустой ответ");
+   }
 
-    return data;
+   return data;
 
   } catch(error) {
-    if (error.name === "AbortError") {
-      const timeoutError = new Error(
-        "Сервер отвечает слишком долго"
-      );
-      timeoutError.networkFailure = true;
-      throw timeoutError;
-    }
-
-    if (error instanceof TypeError) {
-      const networkError = new Error(
-        "Не удалось подключиться к серверу"
-      );
-      networkError.networkFailure = true;
-      throw networkError;
-    }
-
+   if (
+    !canRetry(error) ||
+    attempt === maxAttempts - 1
+   ) {
     throw error;
-
-  } finally {
-    clearTimeout(timer);
+   }
   }
-}
+ }
 
-function isRetryable(error) {
-  return error.networkFailure ||
-    error.status === 408 ||
-    error.status === 429 ||
-    error.status >= 500;
-}
-
-async function anonymousRequest(payload, pending) {
-  let lastError;
-
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      if (attempt > 0) {
-        pending.textContent =
-          "Восстанавливаю соединение… " +
-          "Попытка " + (attempt + 1) + " из 3";
-      }
-
-      return await api(payload);
-
-    } catch(error) {
-      lastError = error;
-
-      if (!isRetryable(error) || attempt === 2) {
-        throw error;
-      }
-
-      await sleep(700 * (attempt + 1));
-    }
-  }
-
-  throw lastError;
+ throw new Error(
+  "Не удалось получить ответ сервера"
+ );
 }
 
 async function fetchHistory() {
-  const data = await api(
-    { action:"history" },
-    12000
-  );
+ const data = await api(
+  { action:"history" },
+  15000
+ );
 
-  return validMessages(data.messages);
+ return validMessages(data.messages);
+}
+
+async function synchronizeHistory() {
+ if (syncing || !initData || !userId) return;
+
+ syncing = true;
+ const version = historyVersion;
+
+ try {
+  const serverHistory = await fetchHistory();
+
+  // Не перезаписываем более новую локальную историю.
+  if (version !== historyVersion) return;
+
+  history = serverHistory;
+  saveCache(history);
+
+  if (!anonymous && !busy) {
+   renderMessages(history);
+  }
+
+ } catch(error) {
+  if (!anonymous && !busy) {
+   showNotice(
+    "Облачная синхронизация временно недоступна"
+   );
+  }
+ } finally {
+  syncing = false;
+ }
 }
 
 async function loadHistory() {
-  if (!initData || !userId) {
-    renderMessages([]);
-    add(
-      "Открой ANNIVEO AI через Telegram.",
-      "assistant"
-    );
-    return;
-  }
+ if (!initData || !userId) {
+  renderMessages([]);
+  add(
+   "Открой ANNIVEO AI через Telegram.",
+   "assistant"
+  );
+  return;
+ }
 
-  history = readCache();
-  renderMessages(history);
+ history = readCache();
+ renderMessages(history);
 
-  loaded = true;
-  send.disabled = false;
+ loaded = true;
+ send.disabled = false;
 
-  const version = historyVersion;
-
-  try {
-    const serverHistory = await fetchHistory();
-
-    // Не затираем новый диалог старым запросом.
-    if (version !== historyVersion) return;
-
-    history = serverHistory;
-    saveCache(history);
-
-    if (!anonymous && !busy) {
-      renderMessages(history);
-    }
-
-  } catch(error) {
-    if (!anonymous) {
-      showNotice("Облачная синхронизация недоступна");
-    }
-  }
+ await synchronizeHistory();
 }
 
 modeSwitch.addEventListener("click", () => {
-  if (busy || !loaded) return;
+ if (busy || !loaded) return;
 
-  anonymous = !anonymous;
-  input.value = "";
+ anonymous = !anonymous;
+ input.value = "";
 
-  if (anonymous) {
-    temporaryHistory = [];
-    renderMessages([]);
-    showNotice(
-      "🔒 Анонимный чат включён. " +
-      "Сообщения не сохраняются."
-    );
-  } else {
-    temporaryHistory = [];
-    renderMessages(history);
-  }
+ if (anonymous) {
+  temporaryHistory = [];
+  renderMessages([]);
+  showNotice(
+   "🔒 Анонимный чат включён. " +
+   "История не сохраняется в ANNIVEO AI."
+  );
+ } else {
+  temporaryHistory = [];
+  renderMessages(history);
+  synchronizeHistory();
+ }
 
-  updateMode();
+ updateMode();
 });
 
 form.addEventListener("submit", async event => {
-  event.preventDefault();
+ event.preventDefault();
 
-  if (busy || !loaded) return;
+ if (busy || !loaded) return;
 
-  const text = input.value.trim();
-  if (!text) return;
+ const text = input.value.trim();
+ if (!text) return;
 
-  const currentMode = anonymous;
+ const currentMode = anonymous;
 
-  const context = currentMode
-    ? validMessages(temporaryHistory).slice(-12)
-    : [];
+ const context = currentMode
+  ? validMessages(temporaryHistory).slice(-12)
+  : [];
 
-  const oldHistory = currentMode
-    ? null
-    : validMessages(history);
+ const payload = currentMode
+  ? {
+     action:"anonymous",
+     message:text,
+     messages:context
+    }
+  : {
+     action:"chat",
+     message:text,
+     requestId:createRequestId()
+    };
 
-  setBusy(true);
+ setBusy(true);
 
-  add(text,"user");
-  input.value = "";
+ add(text,"user");
+ input.value = "";
 
-  const pending = add(
-    "ANNIVEO AI думает…",
-    "assistant"
+ const pending = add(
+  "ANNIVEO AI думает…",
+  "assistant"
+ );
+
+ try {
+  const data = await sendWithRecovery(
+   payload,
+   pending
   );
 
-  const payload = currentMode
-    ? {
-        action:"anonymous",
-        message:text,
-        messages:context
-      }
-    : {
-        action:"chat",
-        message:text
-      };
+  pending.textContent = data.reply;
 
-  try {
-    let data;
+  const pair = [
+   {role:"user",content:text},
+   {role:"assistant",content:data.reply}
+  ];
 
-    if (currentMode) {
-      data = await anonymousRequest(payload, pending);
+  if (currentMode) {
+   // Только временная история в памяти страницы.
+   temporaryHistory = validMessages([
+    ...temporaryHistory,
+    ...pair
+   ]);
 
-    } else {
-      try {
-        data = await api(payload);
+  } else {
+   history = validMessages([
+    ...history,
+    ...pair
+   ]);
 
-      } catch(error) {
-        if (!isRetryable(error)) throw error;
-
-        pending.textContent =
-          "Проверяю, сохранился ли ответ…";
-
-        // Обычный запрос не отправляем повторно:
-        // сначала проверяем результат в D1.
-        await sleep(800);
-
-        let serverHistory;
-
-        try {
-          serverHistory = await fetchHistory();
-        } catch {
-          throw new Error(
-            "Соединение прервалось. " +
-            "Проверь историю через несколько секунд."
-          );
-        }
-
-        const previousLength = oldHistory.length;
-
-        // Ищем новое сообщение пользователя
-        // и следующий за ним ответ.
-        let recovered = null;
-
-        for (
-          let i = serverHistory.length - 2;
-          i >= 0;
-          i--
-        ) {
-          if (
-            serverHistory[i].role === "user" &&
-            serverHistory[i].content === text &&
-            serverHistory[i + 1]?.role === "assistant"
-          ) {
-            const before = serverHistory.slice(0, i);
-
-            // Не считаем старую одинаковую пару новой.
-            const isOldPair =
-              before.length < previousLength &&
-              oldHistory[i]?.role === "user" &&
-              oldHistory[i]?.content === text &&
-              oldHistory[i + 1]?.content ===
-                serverHistory[i + 1].content;
-
-            if (!isOldPair) {
-              recovered = serverHistory[i + 1].content;
-              break;
-            }
-          }
-        }
-
-        if (!recovered) {
-          throw new Error(
-            "Ответ пока не получен. " +
-            "Подожди немного и открой чат снова."
-          );
-        }
-
-        data = { reply:recovered };
-      }
-    }
-
-    if (
-      typeof data.reply !== "string" ||
-      !data.reply.trim()
-    ) {
-      throw new Error("Пустой ответ ИИ");
-    }
-
-    pending.textContent = data.reply;
-
-    const pair = [
-      {role:"user",content:text},
-      {role:"assistant",content:data.reply}
-    ];
-
-    if (currentMode) {
-      temporaryHistory = validMessages([
-        ...temporaryHistory,
-        ...pair
-      ]);
-
-    } else {
-      history = validMessages([
-        ...history,
-        ...pair
-      ]);
-
-      historyVersion++;
-      saveCache(history);
-    }
-
-  } catch(error) {
-    pending.textContent =
-      "Ошибка: " + error.message +
-      "\nПопробуй ещё раз позже.";
-
-  } finally {
-    setBusy(false);
-    input.focus();
+   historyVersion++;
+   saveCache(history);
   }
+
+ } catch(error) {
+  pending.textContent =
+   "Не удалось получить ответ.\n" +
+   error.message +
+   "\nПроверь соединение и попробуй позже.";
+
+  // Если обычный запрос завершился на сервере,
+  // восстанавливаем историю из D1.
+  if (!currentMode) {
+   await sleep(1000);
+
+   try {
+    const serverHistory = await fetchHistory();
+    history = serverHistory;
+    historyVersion++;
+    saveCache(history);
+    renderMessages(history);
+   } catch {
+    // Оставляем сообщение об ошибке видимым.
+   }
+  }
+
+ } finally {
+  setBusy(false);
+  input.focus();
+ }
 });
 
 input.addEventListener("keydown", event => {
-  if (
-    event.key === "Enter" &&
-    !event.shiftKey
-  ) {
-    event.preventDefault();
-    form.requestSubmit();
-  }
+ if (
+  event.key === "Enter" &&
+  !event.shiftKey
+ ) {
+  event.preventDefault();
+  form.requestSubmit();
+ }
 });
 
 if (initData && userId) {
-  history = readCache();
-  renderMessages(history);
+ history = readCache();
+ renderMessages(history);
 } else {
-  showWelcome();
+ showWelcome();
 }
 
 updateMode();
