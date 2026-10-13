@@ -1617,7 +1617,7 @@ function renderChat(){
 }
 
 /* ПОВТОР ПРИ ВРЕМЕННОМ ОБРЫВЕ СВЯЗИ */
-async function requestJSON(url,options,onRetry=()=>{}){
+async function requestJSON(url,options,onRetry=()=>{},timeoutMessage="Ответ задержался. Нажми на шар и попробуй ещё раз."){
   let networkAttempts=0,processingAttempts=0;
   while(true){
     try{
@@ -1633,7 +1633,7 @@ async function requestJSON(url,options,onRetry=()=>{}){
       return {response,data};
     }catch(error){
       if(error.name==="AbortError"||options.signal?.aborted){
-        throw Error("Ответ задержался. Нажми на шар и попробуй ещё раз.");
+        throw Error(timeoutMessage);
       }
       const networkFailure=error instanceof TypeError||
         /load failed|failed to fetch|networkerror|network request failed/i.test(error.message||"");
@@ -2049,11 +2049,15 @@ async function handleMic(){
       });
     }
     $("endVoice").classList.remove("hidden");
-    const mime=[
+    const mimeCandidates=[
+      "audio/mp4;codecs=mp4a.40.2",
       "audio/mp4",
       "audio/webm;codecs=opus",
       "audio/webm"
-    ].find(x=>MediaRecorder.isTypeSupported(x));
+    ];
+    const mime=typeof MediaRecorder.isTypeSupported==="function"
+      ?mimeCandidates.find(type=>MediaRecorder.isTypeSupported(type))
+      :undefined;
 
     recorder=new MediaRecorder(
       microphoneStream,
@@ -2064,6 +2068,23 @@ async function handleMic(){
       if(e.data.size) audioChunks.push(e.data);
     };
     recorder.onstop=finishVoice;
+    recorder.onerror=()=>{
+      clearTimeout(recordTimer);
+      recording=false;
+      orbVoiceActive=false;
+      recorder.onstop=null;
+      audioChunks=[];
+      stopVoiceMeter();
+      releaseMicrophone();
+      $("mic").classList.remove("recording");
+      $("mic").setAttribute("aria-label","Записать голосовое сообщение");
+      $("mic").title="Записать голосовое сообщение";
+      const message="Запись прервалась. Проверь доступ к микрофону и попробуй ещё раз.";
+      $("chatStatus").textContent=message;
+      $("voiceStatus").textContent=message;
+      toast(message);
+      updateControls();
+    };
     recorder.start();
     recording=true;
     if(orbVoiceActive) startVoiceMeter();
@@ -2082,8 +2103,16 @@ async function handleMic(){
     releaseMicrophone();
     stopVoiceMeter();
     orbVoiceActive=false;
-    $("voiceStatus").textContent="Разреши доступ к микрофону и нажми на шар";
-    toast("Разреши доступ к микрофону");
+    const denied=e.name==="NotAllowedError"||e.name==="PermissionDeniedError";
+    const missing=e.name==="NotFoundError"||e.name==="DevicesNotFoundError";
+    const message=denied
+      ?"Разреши ANNIVEO доступ к микрофону в настройках Telegram или iPhone."
+      :missing
+        ?"Не нашёл микрофон на устройстве."
+        :"Не удалось включить микрофон. Проверь разрешение и попробуй ещё раз.";
+    $("voiceStatus").textContent=message;
+    $("chatStatus").textContent=message;
+    toast(message);
   }finally{
     openingMic=false;
     updateControls();
@@ -2143,7 +2172,7 @@ async function finishVoice(){
     },message=>{
       if(spokenVoice) $("voiceStatus").textContent=message;
       $("chatStatus").textContent=message;
-    });
+    },"Распознавание речи задержалось. Попробуй записать короче.");
     if(!response.ok||!data.text){
       throw Error(
         data.error||"Не удалось распознать голос"
