@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="ru">
 <head>
@@ -47,7 +46,8 @@ footer{text-align:center;color:#777e97;font-size:11px;padding:12px 0 0}
 </main>
 
 <script>
-const API_URL = "https://anniveo-ai-api.yaylaevismail.workers.dev/";
+const API_URL =
+  "https://anniveo-ai-api.yaylaevismail.workers.dev/";
 
 const tg = window.Telegram?.WebApp;
 const chat = document.getElementById("chat");
@@ -70,6 +70,8 @@ const CACHE_KEY = userId
 let history = [];
 let busy = false;
 let loaded = false;
+let synced = false;
+let historyVersion = 0;
 
 function validMessages(messages) {
   if (!Array.isArray(messages)) return [];
@@ -111,12 +113,14 @@ function showWelcome() {
   const welcome = document.createElement("div");
   welcome.className = "welcome";
   welcome.id = "welcome";
+
   welcome.innerHTML = `
     <div class="orb">✦</div>
     <h1>Привет! Я ANNIVEO AI</h1>
     <p>Твой интеллектуальный помощник.
     Задай вопрос, чтобы начать диалог.</p>
   `;
+
   chat.appendChild(welcome);
 }
 
@@ -146,68 +150,164 @@ function renderMessages(messages) {
   });
 }
 
-async function api(payload) {
-  const response = await fetch(API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      ...payload,
-      initData
-    })
-  });
+function sameMessages(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
 
-  const data = await response.json();
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-  if (!response.ok) {
-    throw new Error(
-      data.error || "Ошибка сервера"
-    );
+async function api(payload, options = {}) {
+  const retries = options.retries ?? 1;
+  const timeout = options.timeout ?? 25000;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          ...payload,
+          initData
+        }),
+        signal: controller.signal
+      });
+
+      let data;
+
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error("Некорректный ответ сервера");
+      }
+
+      if (!response.ok) {
+        const error = new Error(
+          data.error || "Ошибка сервера"
+        );
+
+        error.status = response.status;
+        throw error;
+      }
+
+      return data;
+
+    } catch (error) {
+      const networkError =
+        error.name === "AbortError" ||
+        error instanceof TypeError;
+
+      const temporaryServerError =
+        error.status === 429 ||
+        error.status === 502 ||
+        error.status === 503 ||
+        error.status === 504;
+
+      // Историю можно безопасно запрашивать повторно.
+      // Чат автоматически повторяем только при явном
+      // отказе сервера, чтобы избежать двойных сообщений.
+      const canRetry =
+        payload.action === "history"
+          ? networkError || temporaryServerError
+          : temporaryServerError;
+
+      if (attempt < retries && canRetry) {
+        await delay(700 * (attempt + 1));
+        continue;
+      }
+
+      if (error.name === "AbortError") {
+        throw new Error(
+          "Сервер слишком долго отвечает. Попробуй ещё раз."
+        );
+      }
+
+      if (error instanceof TypeError) {
+        throw new Error(
+          "Проблема с соединением. Проверь интернет."
+        );
+      }
+
+      throw error;
+
+    } finally {
+      clearTimeout(timer);
+    }
   }
-
-  return data;
 }
 
 async function loadHistory() {
-  send.disabled = true;
-
   if (!initData || !userId) {
-    add(
-      "Открой ANNIVEO AI через Telegram.",
-      "assistant"
-    );
+    add("Открой ANNIVEO AI через Telegram.", "assistant");
+    send.disabled = true;
     return;
   }
 
-  // Показываем локальную историю сразу.
-  const cached = readCache();
-  history = cached;
-  renderMessages(history);
+  // Сразу разрешаем пользоваться чатом.
+  // Серверную историю загружаем параллельно.
+  loaded = true;
+  send.disabled = false;
+
+  const versionAtStart = historyVersion;
 
   try {
-    // Затем получаем актуальную историю из D1.
-    const data = await api({
-      action: "history"
-    });
+    const data = await api(
+      {action: "history"},
+      {retries: 2, timeout: 12000}
+    );
+
+    const serverHistory = validMessages(data.messages);
+    synced = true;
+
+    // Не перезаписываем переписку, если пользователь
+    // уже успел отправить сообщение.
+    if (historyVersion !== versionAtStart || busy) {
+      return;
+    }
+
+    if (!sameMessages(history, serverHistory)) {
+      history = serverHistory;
+      saveCache(history);
+      renderMessages(history);
+    }
+
+  } catch (error) {
+    console.warn("Ошибка синхронизации:", error.message);
+
+    // При временном сбое сохраняем локальную историю.
+    // Не засоряем чат техническими ошибками.
+  }
+}
+
+async function refreshHistory() {
+  if (busy || !initData) return;
+
+  try {
+    const data = await api(
+      {action: "history"},
+      {retries: 1, timeout: 12000}
+    );
 
     const serverHistory = validMessages(data.messages);
 
-    history = serverHistory;
-    saveCache(history);
+    if (busy) return;
 
-    // Перерисовываем только после получения облачной истории.
-    renderMessages(history);
+    synced = true;
 
-    loaded = true;
-    send.disabled = false;
+    if (!sameMessages(history, serverHistory)) {
+      history = serverHistory;
+      saveCache(history);
+      renderMessages(history);
+    }
 
   } catch (error) {
-    add(
-      "Не удалось синхронизировать историю: " +
-      error.message,
-      "assistant"
-    );
+    console.warn("Не удалось обновить историю:", error.message);
   }
 }
 
@@ -220,6 +320,7 @@ form.addEventListener("submit", async event => {
   if (!text) return;
 
   busy = true;
+  historyVersion++;
   send.disabled = true;
 
   add(text, "user");
@@ -231,10 +332,16 @@ form.addEventListener("submit", async event => {
   );
 
   try {
-    const data = await api({
-      action: "chat",
-      message: text
-    });
+    const data = await api(
+      {
+        action: "chat",
+        message: text
+      },
+      {
+        retries: 1,
+        timeout: 45000
+      }
+    );
 
     if (
       typeof data.reply !== "string" ||
@@ -255,13 +362,18 @@ form.addEventListener("submit", async event => {
 
   } catch (error) {
     pending.textContent =
-      "Ошибка: " + error.message +
-      "\nПопробуй отправить сообщение ещё раз.";
+      "Не удалось получить ответ: " +
+      error.message;
+
+    // Сохраняем текст, чтобы пользователь
+    // мог отправить его ещё раз.
+    if (!input.value.trim()) {
+      input.value = text;
+    }
 
   } finally {
     busy = false;
     send.disabled = false;
-    input.focus();
   }
 });
 
@@ -275,7 +387,7 @@ input.addEventListener("keydown", event => {
   }
 });
 
-// Мгновенно отображаем кэш до запроса к серверу.
+// Мгновенно показываем историю из памяти телефона.
 if (initData && userId) {
   history = readCache();
   renderMessages(history);
@@ -283,8 +395,16 @@ if (initData && userId) {
   showWelcome();
 }
 
-// Синхронизируем с облачной памятью.
+// Подключаем облачную историю.
 loadHistory();
+
+// Когда пользователь возвращается в приложение,
+// пробуем обновить историю.
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && synced) {
+    refreshHistory();
+  }
+});
 </script>
 </body>
 </html>
