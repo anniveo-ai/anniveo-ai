@@ -571,6 +571,32 @@ header{
   border-radius:30px;
   box-shadow:0 8px 25px #0005,inset 0 1px 1px #ffffff18;
 }
+.attachment-menu{
+  position:absolute;left:4px;bottom:calc(100% + 12px);z-index:45;
+  display:grid;gap:3px;width:min(250px,calc(100vw - 32px));
+  padding:8px;border:1px solid rgba(221,200,255,.23);
+  border-radius:20px;background:rgba(35,33,47,.94);
+  -webkit-backdrop-filter:blur(24px) saturate(145%);
+  backdrop-filter:blur(24px) saturate(145%);
+  box-shadow:0 14px 36px #0008,inset 0 1px #ffffff12;
+  transform-origin:bottom left;animation:attachMenuIn .16s ease-out;
+}
+@keyframes attachMenuIn{
+  from{opacity:0;transform:translateY(7px) scale(.97)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.attachment-option{
+  display:flex;align-items:center;gap:12px;width:100%;min-height:46px;
+  padding:7px 11px;border:0;border-radius:13px;background:transparent;
+  color:#f4edff;text-align:left;font-size:14px;
+}
+.attachment-option:active{background:rgba(183,144,232,.2)}
+.attachment-icon{
+  display:grid;place-items:center;width:32px;height:32px;flex:none;
+  border:1px solid rgba(205,179,240,.18);border-radius:11px;
+  background:rgba(198,166,255,.12);font-size:17px;
+}
+.attachment-input{display:none}
 .composer textarea{
   background:none;
   border:0;
@@ -1228,9 +1254,19 @@ select{
 <!-- ПОЛЕ ВВОДА -->
 <div id="dock" class="dock">
 
+  <div id="attachmentMenu" class="attachment-menu hidden" role="menu" aria-label="Добавить вложение">
+    <button type="button" class="attachment-option" role="menuitem" onclick="chooseAttachment('camera')"><span class="attachment-icon">📷</span>Камера</button>
+    <button type="button" class="attachment-option" role="menuitem" onclick="chooseAttachment('photo')"><span class="attachment-icon">▧</span>Фото</button>
+    <button type="button" class="attachment-option" role="menuitem" onclick="chooseAttachment('file')"><span class="attachment-icon">📎</span>Файл</button>
+    <button type="button" class="attachment-option" role="menuitem" onclick="chooseAttachment('video')"><span class="attachment-icon">▶</span>Видео</button>
+  </div>
+  <input id="attachmentCamera" class="attachment-input" type="file" accept="image/*" capture="environment" onchange="attachmentPicked(this)">
+  <input id="attachmentPhoto" class="attachment-input" type="file" accept="image/*" onchange="attachmentPicked(this)">
+  <input id="attachmentFile" class="attachment-input" type="file" onchange="attachmentPicked(this)">
+  <input id="attachmentVideo" class="attachment-input" type="file" accept="video/*" onchange="attachmentPicked(this)">
+
   <form id="chatForm" class="composer">
-    <button type="button" class="circle"
-      onclick="openView('studio')">＋</button>
+    <button type="button" id="attachButton" class="circle" aria-label="Добавить вложение" aria-expanded="false" onclick="toggleAttachmentMenu()">＋</button>
     <textarea id="messageInput" rows="1"
       maxlength="4000"
       placeholder="Спроси ANNIVEO…"></textarea>
@@ -1922,6 +1958,36 @@ function updateControls(){
   $("messageInput").disabled=
     recording||transcribing||openingMic;
 }
+
+function toggleAttachmentMenu(){
+  if(busy||recording||transcribing||openingMic) return;
+  const menu=$("attachmentMenu");
+  const isOpen=menu.classList.contains("hidden");
+  menu.classList.toggle("hidden",!isOpen);
+  $("attachButton").setAttribute("aria-expanded",String(isOpen));
+  if(isOpen) tg?.HapticFeedback?.impactOccurred("light");
+}
+function chooseAttachment(kind){
+  $("attachmentMenu").classList.add("hidden");
+  $("attachButton").setAttribute("aria-expanded","false");
+  const input=$("attachment"+kind[0].toUpperCase()+kind.slice(1));
+  input?.click();
+}
+function attachmentPicked(input){
+  const file=input.files?.[0];
+  if(file){
+    toast("Выбран файл: "+file.name);
+    // В чате пока открывается системный выбор; обработка и отправка вложений в ИИ не подключены.
+  }
+  input.value="";
+}
+document.addEventListener("click",event=>{
+  const menu=$("attachmentMenu"),button=$("attachButton");
+  if(menu&&!menu.contains(event.target)&&!button?.contains(event.target)){
+    menu.classList.add("hidden");
+    button?.setAttribute("aria-expanded","false");
+  }
+});
 
 /* БЫСТРЫЕ ПОДСКАЗКИ */
 function sendQuickPrompt(text){
