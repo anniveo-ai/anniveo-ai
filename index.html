@@ -181,7 +181,6 @@ footer{
 </head>
 <body>
 <main>
-
 <header>
 <strong>✦ ANNIVEO AI</strong>
 <span class="tag">MINI APP</span>
@@ -222,7 +221,6 @@ footer{
 <footer>
 ANNIVEO AI · Твой интеллектуальный помощник
 </footer>
-
 </main>
 
 <script>
@@ -254,6 +252,10 @@ let temporaryHistory = [];
 let anonymous = false;
 let busy = false;
 let loaded = false;
+let historyVersion = 0;
+
+const sleep = ms =>
+  new Promise(resolve => setTimeout(resolve, ms));
 
 function validMessages(messages) {
   if (!Array.isArray(messages)) return [];
@@ -357,27 +359,110 @@ function setBusy(value) {
   modeSwitch.disabled = value;
 }
 
-async function api(payload) {
-  const response = await fetch(API_URL, {
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json"
-    },
-    body:JSON.stringify({
-      ...payload,
-      initData
-    })
-  });
+async function api(payload, timeoutMs = 45000) {
+  const controller = new AbortController();
 
-  const data = await response.json();
+  const timer = setTimeout(
+    () => controller.abort(),
+    timeoutMs
+  );
 
-  if (!response.ok) {
-    throw new Error(
-      data.error || "Ошибка сервера"
-    );
+  try {
+    const response = await fetch(API_URL, {
+      method:"POST",
+      signal:controller.signal,
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({
+        ...payload,
+        initData
+      })
+    });
+
+    let data;
+
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error("Некорректный ответ сервера");
+    }
+
+    if (!response.ok) {
+      const error = new Error(
+        data.error || "Ошибка сервера"
+      );
+      error.status = response.status;
+      throw error;
+    }
+
+    return data;
+
+  } catch(error) {
+    if (error.name === "AbortError") {
+      const timeoutError = new Error(
+        "Сервер отвечает слишком долго"
+      );
+      timeoutError.networkFailure = true;
+      throw timeoutError;
+    }
+
+    if (error instanceof TypeError) {
+      const networkError = new Error(
+        "Не удалось подключиться к серверу"
+      );
+      networkError.networkFailure = true;
+      throw networkError;
+    }
+
+    throw error;
+
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function isRetryable(error) {
+  return error.networkFailure ||
+    error.status === 408 ||
+    error.status === 429 ||
+    error.status >= 500;
+}
+
+async function anonymousRequest(payload, pending) {
+  let lastError;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      if (attempt > 0) {
+        pending.textContent =
+          "Восстанавливаю соединение… " +
+          "Попытка " + (attempt + 1) + " из 3";
+      }
+
+      return await api(payload);
+
+    } catch(error) {
+      lastError = error;
+
+      if (!isRetryable(error) || attempt === 2) {
+        throw error;
+      }
+
+      await sleep(700 * (attempt + 1));
+    }
   }
 
-  return data;
+  throw lastError;
+}
+
+async function fetchHistory() {
+  const data = await api(
+    { action:"history" },
+    12000
+  );
+
+  return validMessages(data.messages);
 }
 
 async function loadHistory() {
@@ -393,16 +478,18 @@ async function loadHistory() {
   history = readCache();
   renderMessages(history);
 
-  // Локальная история уже доступна.
   loaded = true;
   send.disabled = false;
 
-  try {
-    const data = await api({
-      action:"history"
-    });
+  const version = historyVersion;
 
-    history = validMessages(data.messages);
+  try {
+    const serverHistory = await fetchHistory();
+
+    // Не затираем новый диалог старым запросом.
+    if (version !== historyVersion) return;
+
+    history = serverHistory;
     saveCache(history);
 
     if (!anonymous && !busy) {
@@ -411,9 +498,7 @@ async function loadHistory() {
 
   } catch(error) {
     if (!anonymous) {
-      showNotice(
-        "Облачная синхронизация недоступна"
-      );
+      showNotice("Облачная синхронизация недоступна");
     }
   }
 }
@@ -425,7 +510,6 @@ modeSwitch.addEventListener("click", () => {
   input.value = "";
 
   if (anonymous) {
-    // Начинаем новый временный разговор.
     temporaryHistory = [];
     renderMessages([]);
     showNotice(
@@ -433,7 +517,6 @@ modeSwitch.addEventListener("click", () => {
       "Сообщения не сохраняются."
     );
   } else {
-    // Уничтожаем временную историю.
     temporaryHistory = [];
     renderMessages(history);
   }
@@ -450,9 +533,14 @@ form.addEventListener("submit", async event => {
   if (!text) return;
 
   const currentMode = anonymous;
+
   const context = currentMode
-    ? validMessages(temporaryHistory).slice(-20)
+    ? validMessages(temporaryHistory).slice(-12)
     : [];
+
+  const oldHistory = currentMode
+    ? null
+    : validMessages(history);
 
   setBusy(true);
 
@@ -464,19 +552,91 @@ form.addEventListener("submit", async event => {
     "assistant"
   );
 
+  const payload = currentMode
+    ? {
+        action:"anonymous",
+        message:text,
+        messages:context
+      }
+    : {
+        action:"chat",
+        message:text
+      };
+
   try {
-    const data = await api(
-      currentMode
-        ? {
-            action:"anonymous",
-            message:text,
-            messages:context
+    let data;
+
+    if (currentMode) {
+      data = await anonymousRequest(payload, pending);
+
+    } else {
+      try {
+        data = await api(payload);
+
+      } catch(error) {
+        if (!isRetryable(error)) throw error;
+
+        pending.textContent =
+          "Проверяю, сохранился ли ответ…";
+
+        // Обычный запрос не отправляем повторно:
+        // сначала проверяем результат в D1.
+        await sleep(800);
+
+        let serverHistory;
+
+        try {
+          serverHistory = await fetchHistory();
+        } catch {
+          throw new Error(
+            "Соединение прервалось. " +
+            "Проверь историю через несколько секунд."
+          );
+        }
+
+        const previousLength = oldHistory.length;
+
+        // Ищем новое сообщение пользователя
+        // и следующий за ним ответ.
+        let recovered = null;
+
+        for (
+          let i = serverHistory.length - 2;
+          i >= 0;
+          i--
+        ) {
+          if (
+            serverHistory[i].role === "user" &&
+            serverHistory[i].content === text &&
+            serverHistory[i + 1]?.role === "assistant"
+          ) {
+            const before = serverHistory.slice(0, i);
+
+            // Не считаем старую одинаковую пару новой.
+            const isOldPair =
+              before.length < previousLength &&
+              oldHistory[i]?.role === "user" &&
+              oldHistory[i]?.content === text &&
+              oldHistory[i + 1]?.content ===
+                serverHistory[i + 1].content;
+
+            if (!isOldPair) {
+              recovered = serverHistory[i + 1].content;
+              break;
+            }
           }
-        : {
-            action:"chat",
-            message:text
-          }
-    );
+        }
+
+        if (!recovered) {
+          throw new Error(
+            "Ответ пока не получен. " +
+            "Подожди немного и открой чат снова."
+          );
+        }
+
+        data = { reply:recovered };
+      }
+    }
 
     if (
       typeof data.reply !== "string" ||
@@ -493,25 +653,26 @@ form.addEventListener("submit", async event => {
     ];
 
     if (currentMode) {
-      // Только оперативная память.
       temporaryHistory = validMessages([
         ...temporaryHistory,
         ...pair
       ]);
+
     } else {
-      // Обычный чат сохраняем локально.
       history = validMessages([
         ...history,
         ...pair
       ]);
 
+      historyVersion++;
       saveCache(history);
     }
 
   } catch(error) {
     pending.textContent =
       "Ошибка: " + error.message +
-      "\nПопробуй отправить сообщение ещё раз.";
+      "\nПопробуй ещё раз позже.";
+
   } finally {
     setBusy(false);
     input.focus();
@@ -528,7 +689,6 @@ input.addEventListener("keydown", event => {
   }
 });
 
-// Сразу показываем сохранённую историю.
 if (initData && userId) {
   history = readCache();
   renderMessages(history);
