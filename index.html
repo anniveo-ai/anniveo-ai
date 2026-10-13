@@ -1235,7 +1235,7 @@ select{
       maxlength="4000"
       placeholder="Спроси ANNIVEO…"></textarea>
     <button type="button" id="mic"
-      class="circle" onclick="handleMic()" aria-label="Записать голосовое сообщение" title="Записать голосовое сообщение">
+      class="circle" onclick="handleMicClick()" aria-label="Записать голосовое сообщение" title="Записать голосовое сообщение">
       <svg class="mic-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
         <rect x="9" y="2" width="6" height="12" rx="3"/>
         <path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/>
@@ -1332,6 +1332,7 @@ let voiceAnalyser=null,voiceAudioContext=null,voiceFrame=0;
 let voiceSourceNode=null;
 let voiceUtterance=null;
 let micGesture=null;
+let ignoreMicClickUntil=0;
 
 const cacheKey = user?.id
   ? "anniveo_chat_cache_v3_" + user.id
@@ -1359,6 +1360,10 @@ function toast(message){
   setTimeout(()=>el.remove(),3500);
 }
 
+function handleMicClick(){
+  if(Date.now()<ignoreMicClickUntil) return;
+  void handleMic();
+}
 function setupMicGestures(){
   const button=$("mic");
   if(!button||button.dataset.gesturesReady) return;
@@ -1378,6 +1383,7 @@ function setupMicGestures(){
         await handleMic();
         if(micGesture!==state) return;
         if(state.released&&!state.locked&&recording) await handleMic();
+        if(micGesture===state) micGesture=null;
       },260);
     }
   });
@@ -1397,14 +1403,22 @@ function setupMicGestures(){
     clearTimeout(state.timer);
     state.released=true;
     button.classList.remove("gesture-active");
-    if(state.locked){micGesture=null;return;}
-    if(state.held){
-      if(recording) void handleMic();
+    if(state.locked){
+      event.preventDefault();
+      ignoreMicClickUntil=Date.now()+700;
       micGesture=null;
+      return;
+    }
+    if(state.held){
+      event.preventDefault();
+      ignoreMicClickUntil=Date.now()+700;
+      if(recording){void handleMic();micGesture=null;}
+      // Если запрос разрешения ещё идёт, таймер завершит запись после старта.
       return;
     }
     if(state.started&&recording){
       event.preventDefault();
+      ignoreMicClickUntil=Date.now()+700;
       micGesture=null;
       void handleMic();
     }else micGesture=null;
