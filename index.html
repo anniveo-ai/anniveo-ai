@@ -62,6 +62,30 @@ if (tg) {
 }
 
 const initData = tg?.initData || "";
+
+const CACHE_KEY = "anniveo_chat_cache_v2_" +
+  String(tg?.initDataUnsafe?.user?.id || "telegram");
+
+function saveCache(messages) {
+  try {
+    localStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify(messages.slice(-40))
+    );
+  } catch (e) {}
+}
+
+function readCache() {
+  try {
+    const data = JSON.parse(
+      localStorage.getItem(CACHE_KEY) || "[]"
+    );
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    return [];
+  }
+}
+
 let history = [];
 let busy = false;
 let loaded = false;
