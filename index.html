@@ -1837,5 +1837,79 @@ header {
 }
 </style>
 
+<!-- ANNIVEO AI — БАЛАНС ПОД НАЗВАНИЕМ -->
+<style>
+/* Новое расположение шапки */
+header {
+  display: grid !important;
+  grid-template-columns: 1fr auto !important;
+  grid-template-rows: auto auto !important;
+  align-items: center !important;
+  column-gap: 10px;
+  row-gap: 8px;
+  padding-bottom: 12px !important;
+}
+
+/* Название слева */
+header .logo {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0 !important;
+}
+
+/* Настройки справа */
+header .gear {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+}
+
+/* Баланс отдельной строкой */
+header .credit {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  justify-self: start;
+  margin: 0 !important;
+  padding: 4px 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Надпись Баланс */
+.balance-label {
+  font-size: 12px !important;
+  color: #aaa2bb !important;
+}
+
+/* Цифра */
+.balance-number {
+  font-size: 17px !important;
+  font-weight: 700;
+  color: #f5efff;
+}
+
+/* Фиолетовая звезда */
+.balance-star {
+  font-size: 22px !important;
+  color: #c6a6ff;
+  text-shadow: 0 0 12px #b887ff77;
+}
+
+/* Плавное нажатие */
+header .credit {
+  transition: opacity .2s, transform .2s;
+}
+
+header .credit:active {
+  opacity: .7;
+  transform: scale(.96);
+}
+</style>
+
 </body>
 </html>
