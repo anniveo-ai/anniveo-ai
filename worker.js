@@ -704,6 +704,43 @@ export default {
     let saved = false;
 
     try {
+      if((request.headers.get("content-type")||"").includes("multipart/form-data")){
+        const length=Number(request.headers.get("content-length")||0);
+        if(length>21*1024*1024) return json({error:"Голосовое слишком большое"},413,headers);
+        const form=await request.formData();
+        const voiceUser=await verifyTelegram(String(form.get("initData")||""),env.TELEGRAM_BOT_TOKEN);
+        if(!voiceUser) return json({error:"Открой ANNIVEO AI через Telegram"},401,headers);
+        if(form.get("action")!=="transcribe") return json({error:"Неизвестное действие"},400,headers);
+        const file=form.get("file");
+        if(!file||typeof file==="string"||!file.size||file.size>20*1024*1024){
+          return json({error:"Запись пустая или слишком большая"},400,headers);
+        }
+        if(!env.POLLINATIONS_API_KEY) return json({error:"Ключ ИИ не настроен"},503,headers);
+        const upload=new FormData();
+        upload.append("file",file,file.name||"voice.webm");
+        upload.append("model","openai/whisper-large-v3");
+        upload.append("response_format","json");
+        const controller=new AbortController();
+        const timer=setTimeout(()=>controller.abort(),60000);
+        try{
+          const response=await fetch("https://gen.pollinations.ai/v1/audio/transcriptions",{
+            method:"POST",headers:{Authorization:"Bearer "+env.POLLINATIONS_API_KEY},
+            body:upload,signal:controller.signal
+          });
+          if(!response.ok){
+            await response.body?.cancel();
+            return json({error:response.status===402
+              ?"Закончился лимит сервиса распознавания речи"
+              :"Не удалось распознать речь. Попробуй ещё раз"},
+              response.status===402?402:502,headers);
+          }
+          const data=await response.json();
+          const text=typeof data.text==="string"?data.text.trim():"";
+          if(!text) return json({error:"Речь не распознана. Попробуй ещё раз"},422,headers);
+          return json({text},200,headers);
+        }finally{clearTimeout(timer);}
+      }
+
       const body = await request.json();
       const action = body.action || "chat";
 

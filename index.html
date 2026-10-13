@@ -131,7 +131,15 @@ header{
   isolation:isolate;
   overflow:visible;
 }
+.planet-response{
+  position:relative;z-index:3;
+  transform:scale(calc(1 + var(--voice-level,0) * .18));
+  transition:transform .06s linear;
+}
+.voice-status{font-size:12px;color:#c6a6ff;text-align:center;margin:-4px 0 12px}
+.planet:focus-visible{outline:2px solid #ffe0ff;outline-offset:8px}
 .planet{
+  border:0;padding:0;cursor:pointer;
   position:relative;
   width:126px;
   height:126px;
@@ -924,11 +932,14 @@ select{
   <h1 id="greeting">Привет 👋🏻</h1>
   <h2>С чего начнём?</h2>
 
-  <div class="universe" id="universe" aria-hidden="true">
+  <div class="universe" id="universe">
     <div class="axis-ring one"></div>
     <div class="axis-ring two"></div>
     <div class="axis-ring three"></div>
-    <div class="planet"></div>
+    <div class="planet-response" id="planetResponse">
+      <button type="button" class="planet" id="voiceOrb" onclick="handleOrbVoice()"
+        aria-label="Говорить с ANNIVEO AI" title="Нажми и говори"></button>
+    </div>
 
     <!-- НАСТОЯЩИЙ ЛИСЁНОК ИЗ PNG -->
     <div class="fox-orbit" id="foxOrbit">
@@ -954,6 +965,8 @@ select{
     <i class="fox-star" style="left:90%;top:75%;animation-delay:1.2s"></i>
     <i class="fox-star" style="left:28%;top:90%;animation-delay:1.6s"></i>
   </div>
+
+  <div id="voiceStatus" class="voice-status" role="status">Нажми на шар, чтобы поговорить</div>
 
   <p>
     Я твой <span class="fox-highlight">AI-ассистент</span>.
@@ -1236,6 +1249,11 @@ let openingMic = false;
 let audioChunks = [];
 let audioURLs = [];
 let recordTimer = null;
+let orbVoiceActive=false;
+let voiceHeard=false;
+let voiceAnalyser=null,voiceAudioContext=null,voiceFrame=0;
+let voiceSourceNode=null;
+let voiceUtterance=null;
 
 const cacheKey = user?.id
   ? "anniveo_chat_cache_v3_" + user.id
@@ -1365,6 +1383,8 @@ function openView(name){
     toast("Сначала заверши голосовое сообщение");
     return;
   }
+  stopSpokenReply();
+  orbVoiceActive=false;
   $("messageInput").blur();
   currentView = name;
 
@@ -1621,7 +1641,7 @@ function updateControls(){
 }
 
 /* ОТПРАВКА */
-async function sendMessage(text,audioURL){
+async function sendMessage(text,audioURL,spokenVoice=false){
   text=String(text).trim();
   if(!text||busy||recording||openingMic) return;
   if(!initData||!user){
@@ -1632,7 +1652,7 @@ async function sendMessage(text,audioURL){
   const isAnonymous=anonymous;
   const context=cleanHistory(anonymousHistory).slice(-12);
 
-  showWelcome=false;
+  showWelcome=spokenVoice&&!isAnonymous;
   updateWelcome();
   if($("messages").children.length===0) renderChat();
 
@@ -1644,7 +1664,8 @@ async function sendMessage(text,audioURL){
   $("chatStatus").textContent="Готовлю ответ…";
   busy=true;
   updateControls();
-  scrollAppToBottom();
+  if(spokenVoice){app.scrollTop=0;$("voiceStatus").textContent="Думаю над ответом…";}
+  else scrollAppToBottom();
 
   try{
     const payload=isAnonymous
@@ -1684,14 +1705,16 @@ async function sendMessage(text,audioURL){
       historyLoaded=true;
       saveCache();
     }
+    if(spokenVoice) speakReply(data.reply);
   }catch(e){
+    if(spokenVoice) $("voiceStatus").textContent=e.message;
     formatAnswer(pending,e.message);
     pending.dataset.raw=e.message;
   }finally{
     busy=false;
     updateControls();
     $("chatStatus").textContent="";
-    scrollAppToBottom();
+    if(!spokenVoice) scrollAppToBottom();
   }
 }
 
@@ -1731,6 +1754,86 @@ function suggestIdea(){
     "Помоги придумать интересную идею для моего проекта. "+
     "Сначала задай мне несколько уточняющих вопросов.";
   $("messageInput").focus();
+}
+
+/* РАЗГОВОР ПО НАЖАТИЮ НА ШАР */
+function stopVoiceMeter(){
+  cancelAnimationFrame(voiceFrame);voiceFrame=0;
+  voiceSourceNode?.disconnect();voiceSourceNode=null;voiceAnalyser=null;
+  $("planetResponse").style.setProperty("--voice-level","0");
+}
+function stopSpokenReply(){
+  window.speechSynthesis?.cancel();voiceUtterance=null;
+  $("voiceOrb").setAttribute("aria-label","Говорить с ANNIVEO AI");
+}
+async function handleOrbVoice(){
+  if(busy||transcribing||openingMic){toast("Подожди, готовлю ответ");return;}
+  if(recording){recorder?.stop();return;}
+  if(!initData||!user){toast("Открой приложение через Telegram");return;}
+  stopSpokenReply();
+  if(!window.speechSynthesis||!window.SpeechSynthesisUtterance){
+    toast("Озвучка недоступна в этом браузере");return;
+  }
+  // Разблокируем озвучку в момент пользовательского нажатия.
+  const warmup=new SpeechSynthesisUtterance(" ");
+  warmup.volume=0;window.speechSynthesis.speak(warmup);
+  const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+  if(AudioContextClass){
+    if(!voiceAudioContext) voiceAudioContext=new AudioContextClass();
+    void voiceAudioContext.resume().catch(()=>{});
+  }
+  orbVoiceActive=true;voiceHeard=false;
+  $("voiceStatus").textContent="Слушаю… Говори. После паузы отправлю вопрос";
+  $("voiceOrb").setAttribute("aria-label","Завершить запись и отправить");
+  await handleMic();
+  if(!recording) orbVoiceActive=false;
+}
+function startVoiceMeter(){
+  if(!voiceAudioContext||!microphoneStream){
+    voiceHeard=true;
+    $("voiceStatus").textContent="Говори. Нажми на шар ещё раз для отправки";
+    return;
+  }
+  try{
+    voiceAnalyser=voiceAudioContext.createAnalyser();
+    voiceAnalyser.fftSize=1024;
+    voiceSourceNode=voiceAudioContext.createMediaStreamSource(microphoneStream);
+    voiceSourceNode.connect(voiceAnalyser);
+    const samples=new Float32Array(voiceAnalyser.fftSize);
+    let level=0,lastSpeech=performance.now(),began=lastSpeech;
+    function tick(now){
+      if(!recording||!voiceAnalyser) return;
+      voiceAnalyser.getFloatTimeDomainData(samples);
+      let energy=0;
+      for(const sample of samples) energy+=sample*sample;
+      const rms=Math.sqrt(energy/samples.length);
+      level+=(Math.min(1,rms*12)-level)*.35;
+      $("planetResponse").style.setProperty("--voice-level",level.toFixed(3));
+      if(rms>.018){voiceHeard=true;lastSpeech=now;}
+      if((voiceHeard&&now-lastSpeech>1800)||(!voiceHeard&&now-began>12000)){
+        if(recorder?.state==="recording") recorder.stop();
+        return;
+      }
+      voiceFrame=requestAnimationFrame(tick);
+    }
+    voiceFrame=requestAnimationFrame(tick);
+  }catch(e){
+    voiceHeard=true;
+    $("voiceStatus").textContent="Говори. Нажми на шар ещё раз для отправки";
+  }
+}
+function speakReply(text){
+  stopSpokenReply();
+  const plain=String(text).replace(/\*\*|[#\x60]/g,"").trim();
+  voiceUtterance=new SpeechSynthesisUtterance(plain);
+  voiceUtterance.lang="ru-RU";voiceUtterance.rate=1;
+  const voices=window.speechSynthesis.getVoices();
+  const russian=voices.find(v=>v.lang.toLowerCase().startsWith("ru"));
+  if(russian) voiceUtterance.voice=russian;
+  voiceUtterance.onstart=()=>{$("voiceStatus").textContent="ANNIVEO отвечает… Нажми на шар для нового вопроса";};
+  voiceUtterance.onend=()=>{$("voiceStatus").textContent="Нажми на шар, чтобы продолжить разговор";};
+  voiceUtterance.onerror=()=>{$("voiceStatus").textContent="Не удалось озвучить. Ответ есть в чате";};
+  window.speechSynthesis.speak(voiceUtterance);
 }
 
 /* ГОЛОС */
@@ -1777,6 +1880,7 @@ async function handleMic(){
     recorder.onstop=finishVoice;
     recorder.start();
     recording=true;
+    if(orbVoiceActive) startVoiceMeter();
     $("mic").setAttribute("aria-label","Остановить запись и отправить");
     $("mic").title="Остановить запись и отправить";
     $("mic").classList.add("recording");
@@ -1792,6 +1896,9 @@ async function handleMic(){
     microphoneStream?.getTracks().forEach(
       track=>track.stop()
     );
+    stopVoiceMeter();
+    orbVoiceActive=false;
+    $("voiceStatus").textContent="Разреши доступ к микрофону и нажми на шар";
     toast("Разреши доступ к микрофону");
   }finally{
     openingMic=false;
@@ -1801,6 +1908,8 @@ async function handleMic(){
 
 async function finishVoice(){
   clearTimeout(recordTimer);
+  const spokenVoice=orbVoiceActive;
+  stopVoiceMeter();
   recording=false;
   $("mic").setAttribute("aria-label","Записать голосовое сообщение");
   $("mic").title="Записать голосовое сообщение";
@@ -1822,7 +1931,13 @@ async function finishVoice(){
     return;
   }
 
+  if(spokenVoice&&!voiceHeard){
+    orbVoiceActive=false;
+    $("voiceStatus").textContent="Не услышал речь. Нажми на шар и попробуй ещё раз";
+    $("chatStatus").textContent="";updateControls();return;
+  }
   transcribing=true;
+  if(spokenVoice) $("voiceStatus").textContent="Распознаю твою речь…";
   updateControls();
   $("chatStatus").textContent=
     "Распознаю голосовое сообщение…";
@@ -1860,12 +1975,14 @@ async function finishVoice(){
     const url=URL.createObjectURL(blob);
     audioURLs.push(url);
     transcribing=false;
-    await sendMessage(text,url);
+    await sendMessage(text,url,spokenVoice);
   }catch(e){
+    if(spokenVoice) $("voiceStatus").textContent=e.message;
     toast(e.message);
   }finally{
     clearTimeout(timer);
     transcribing=false;
+    orbVoiceActive=false;
     $("chatStatus").textContent="";
     updateControls();
   }
@@ -2132,6 +2249,8 @@ async function generateMedia(kind){
 
 /* ЗАВЕРШЕНИЕ */
 window.addEventListener("pagehide",()=>{
+  stopVoiceMeter();stopSpokenReply();
+  void voiceAudioContext?.close().catch(()=>{});voiceAudioContext=null;
   if(recorder?.state==="recording"){
     recorder.onstop=null;
     recorder.stop();
