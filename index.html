@@ -2038,5 +2038,139 @@ showWelcome = true;
 renderChat();
 loadHistory();
 </script>
+
+<style>
+#anniveo-hide-keyboard {
+  position: fixed;
+  right: 18px;
+  bottom: 110px;
+  z-index: 99999;
+
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid #a985d5;
+  background: rgba(43, 34, 62, .94);
+  color: #d8b6ff;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  box-shadow: 0 0 18px #a66cff55;
+  backdrop-filter: blur(12px);
+
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(15px) scale(.85);
+  transition:
+    opacity .25s ease,
+    transform .3s ease,
+    visibility .25s;
+  pointer-events: none;
+}
+
+#anniveo-hide-keyboard.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+#anniveo-hide-keyboard svg {
+  width: 24px;
+  height: 24px;
+}
+</style>
+
+<button
+  id="anniveo-hide-keyboard"
+  type="button"
+  aria-label="Скрыть клавиатуру"
+>
+  <svg viewBox="0 0 24 24"
+       fill="none"
+       stroke="currentColor"
+       stroke-width="2"
+       stroke-linecap="round"
+       stroke-linejoin="round">
+    <path d="M4 5h16v11H4z"/>
+    <path d="M7 9h.01M11 9h.01M15 9h.01"/>
+    <path d="M8 13h8"/>
+    <path d="m9 19 3 3 3-3"/>
+  </svg>
+</button>
+
+<script>
+(() => {
+  const btn = document.getElementById(
+    "anniveo-hide-keyboard"
+  );
+
+  const viewport = window.visualViewport;
+  let keyboardOpen = false;
+
+  function updateKeyboard() {
+    const focused = document.activeElement;
+    const typing =
+      focused &&
+      (focused.tagName === "TEXTAREA" ||
+       focused.tagName === "INPUT" ||
+       focused.isContentEditable);
+
+    const keyboardHeight = viewport
+      ? Math.max(
+          0,
+          window.innerHeight -
+          viewport.height -
+          viewport.offsetTop
+        )
+      : 0;
+
+    keyboardOpen = !!typing && keyboardHeight > 100;
+
+    btn.classList.toggle("visible", keyboardOpen);
+
+    if (keyboardOpen) {
+      btn.style.bottom =
+        (keyboardHeight + 95) + "px";
+    }
+  }
+
+  btn.addEventListener("pointerdown", e => {
+    e.preventDefault();
+  });
+
+  btn.addEventListener("click", () => {
+    const active = document.activeElement;
+    if (active && typeof active.blur === "function") {
+      active.blur();
+    }
+    btn.classList.remove("visible");
+  });
+
+  viewport?.addEventListener(
+    "resize", updateKeyboard
+  );
+  viewport?.addEventListener(
+    "scroll", updateKeyboard
+  );
+
+  window.addEventListener(
+    "resize", updateKeyboard
+  );
+
+  document.addEventListener(
+    "focusin", updateKeyboard
+  );
+
+  document.addEventListener(
+    "focusout", () => {
+      setTimeout(updateKeyboard, 150);
+    }
+  );
+})();
+</script>
+
 </body>
 </html>
