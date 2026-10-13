@@ -1803,5 +1803,41 @@ showWelcome=true;
 renderChat();
 loadHistory();
 </script>
+
+<style>
+/* ANNIVEO AI — исправление верхней шапки */
+
+/* Освобождаем место под панель Telegram */
+.app {
+  padding-top: calc(
+    105px + env(safe-area-inset-top, 0px)
+  ) !important;
+}
+
+/* Название, баланс и настройки */
+header {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  padding-bottom: 16px;
+}
+
+/* Сохраняем расположение баланса */
+.credit {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* На небольших экранах */
+@media (max-width: 390px) {
+  .app {
+    padding-top: calc(
+      95px + env(safe-area-inset-top, 0px)
+    ) !important;
+  }
+}
+</style>
+
 </body>
 </html>
