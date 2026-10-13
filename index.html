@@ -136,8 +136,8 @@ header{
 .universe-video{
   display:block;width:100%;height:auto;aspect-ratio:16/9;
   object-fit:contain;pointer-events:none;
-  -webkit-mask-image:radial-gradient(ellipse at center,#000 62%,transparent 100%);
-  mask-image:radial-gradient(ellipse at center,#000 62%,transparent 100%);
+  -webkit-mask-image:radial-gradient(ellipse at center,#000 48%,transparent 92%);
+  mask-image:radial-gradient(ellipse at center,#000 48%,transparent 92%);
 }
 
 /* СОЗДАТЬ */
@@ -1904,10 +1904,7 @@ async function generateMedia(kind){
   const canvas=$("ambientBackground");
   if(!video||!canvas) return;
   const ctx=canvas.getContext("2d");
-  const sampler=document.createElement("canvas");
-  sampler.width=32;sampler.height=18;
-  const sample=sampler.getContext("2d",{willReadFrequently:true});
-  canvas.width=96;canvas.height=144;
+  const resolution=.3;
   let frame=0,lastPaint=-Infinity;
   video.muted=true;video.defaultMuted=true;
 
@@ -1916,34 +1913,31 @@ async function generateMedia(kind){
       !$("welcome").classList.contains("hidden");
   }
   function paint(){
-    if(!ctx||!sample||video.readyState<2) return;
-    sample.drawImage(video,0,0,32,18);
-    const data=sample.getImageData(0,0,32,18).data;
-    function color(x,y){
-      let r=0,g=0,b=0,n=0;
-      for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
-        const px=Math.max(0,Math.min(31,x+dx));
-        const py=Math.max(0,Math.min(17,y+dy));
-        const i=(py*32+px)*4;
-        r+=data[i];g+=data[i+1];b+=data[i+2];n++;
-      }
-      return [Math.round(r/n),Math.round(g/n),Math.round(b/n)];
+    if(!ctx||video.readyState<2||!video.videoWidth) return;
+    const width=Math.ceil((window.innerWidth+80)*resolution);
+    const height=Math.ceil((window.innerHeight+80)*resolution);
+    if(canvas.width!==width||canvas.height!==height){
+      canvas.width=width;canvas.height=height;
     }
-    const edges=[
-      [0,0,color(1,1)],[.5,0,color(16,1)],[1,0,color(30,1)],
-      [0,.5,color(1,9)],[1,.5,color(30,9)],
-      [0,1,color(1,16)],[.5,1,color(16,16)],[1,1,color(30,16)]
-    ];
-    const base=edges.reduce((sum,e)=>sum.map((v,i)=>v+e[2][i]),[0,0,0])
-      .map(v=>Math.round(v/edges.length));
-    ctx.fillStyle="rgb("+base.join(",")+")";
-    ctx.fillRect(0,0,96,144);
-    for(const [x,y,c] of edges){
-      const gradient=ctx.createRadialGradient(x*96,y*144,0,x*96,y*144,115);
-      gradient.addColorStop(0,"rgba("+c.join(",")+",.9)");
-      gradient.addColorStop(1,"rgba("+c.join(",")+",0)");
-      ctx.fillStyle=gradient;ctx.fillRect(0,0,96,144);
+    const rect=video.getBoundingClientRect();
+    const x=(rect.left+40)*resolution;
+    const y=(rect.top+40)*resolution;
+    const w=rect.width*resolution,h=rect.height*resolution;
+    const vw=video.videoWidth,vh=video.videoHeight;
+    const edge=2;
+    function draw(sx,sy,sw,sh,dx,dy,dw,dh){
+      if(dw>0&&dh>0) ctx.drawImage(video,sx,sy,sw,sh,dx,dy,dw,dh);
     }
+    // Extend the exact border pixels outwards at their matching screen positions.
+    draw(0,0,edge,edge,0,0,x,y);
+    draw(vw-edge,0,edge,edge,x+w,0,width-x-w,y);
+    draw(0,vh-edge,edge,edge,0,y+h,x,height-y-h);
+    draw(vw-edge,vh-edge,edge,edge,x+w,y+h,width-x-w,height-y-h);
+    draw(0,0,vw,edge,x,0,w,y);
+    draw(0,vh-edge,vw,edge,x,y+h,w,height-y-h);
+    draw(0,0,edge,vh,0,y,x,h);
+    draw(vw-edge,0,edge,vh,x+w,y,width-x-w,h);
+    draw(0,0,vw,vh,x,y,w,h);
   }
   function tick(now){
     frame=0;
