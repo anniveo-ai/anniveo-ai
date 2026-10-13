@@ -51,7 +51,20 @@ const chat=document.getElementById('chat'),form=document.getElementById('form'),
 function add(text,who){
 const el=document.createElement('div');
 el.className='msg '+who;
-el.textContent=text;
+if(who==='assistant'){
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  parts.forEach(part => {
+    if(part.startsWith('**') && part.endsWith('**')){
+      const b = document.createElement('strong');
+      b.textContent = part.slice(2,-2);
+      el.appendChild(b);
+    } else {
+      el.appendChild(document.createTextNode(part));
+    }
+  });
+} else {
+  el.textContent=text;
+}
 chat.appendChild(el);
 chat.scrollTop=chat.scrollHeight;
 }
