@@ -26,6 +26,14 @@ export default {
 
       const body = await request.json();
       const message = String(body.message || "").trim();
+      const history = Array.isArray(body.messages)
+  ? body.messages.slice(-20).filter(item =>
+      item &&
+      ["user", "assistant"].includes(item.role) &&
+      typeof item.content === "string" &&
+      item.content.length <= 4000
+    )
+  : [];
 
       if (!message || message.length > 4000) {
         return new Response(
