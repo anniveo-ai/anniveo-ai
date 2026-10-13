@@ -48,6 +48,7 @@ footer{text-align:center;color:#777e97;font-size:11px;padding:12px 0 0}
 </main>
 <script>
 const chat=document.getElementById('chat'),form=document.getElementById('form'),input=document.getElementById('message');
+const history = [];
 function add(text,who){
 const el=document.createElement('div');
 el.className='msg '+who;
