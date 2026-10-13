@@ -3,7 +3,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#101119">
 <title>ANNIVEO AI</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -16,22 +16,47 @@
   --line:#343341;
   --purple:#c6a6ff;
   --muted:#aaa5bb;
+  --app-height:100dvh;
+  --keyboard-height:0px;
 }
 *{box-sizing:border-box}
+html{
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  -webkit-text-size-adjust:100%;
+}
 body{
   margin:0;
+  width:100%;
+  height:var(--app-height);
+  overflow:hidden;
   background:radial-gradient(ellipse at 50% 12%,#30213d55,transparent 60%),var(--bg);
   color:#f6f3ff;
   font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
-button,textarea,select{font:inherit;color:inherit}
+button,textarea,select{
+  font:inherit;
+  color:inherit;
+}
 button{cursor:pointer}
 button:disabled{opacity:.5}
 .hidden{display:none!important}
+
 .app{
+  position:relative;
+  width:100%;
   max-width:760px;
+  height:100%;
   margin:auto;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
   padding:15px 16px 175px;
+}
+body.keyboard-open .app{
+  padding-bottom:110px;
 }
 header{
   display:flex;
@@ -59,10 +84,13 @@ header{
   background:none;
   font-size:22px;
 }
-.view{display:none}
+.view{
+  display:none;
+  min-width:0;
+}
 .view.active{display:block}
 
-/* ГЛАВНЫЙ ЭКРАН */
+/* ПРИВЕТСТВИЕ */
 .welcome{text-align:center}
 .welcome h1{
   font-size:31px;
@@ -82,7 +110,7 @@ header{
   max-width:470px;
 }
 
-/* ВРАЩАЮЩИЙСЯ ШАР */
+/* ШАР И ВРАЩЕНИЕ КОЛЕЦ ПО ОСЯМ */
 .universe{
   position:relative;
   width:100%;
@@ -92,7 +120,7 @@ header{
   place-items:center;
   perspective:750px;
   transform-style:preserve-3d;
-  overflow:visible;
+  isolation:isolate;
 }
 .planet{
   position:relative;
@@ -183,7 +211,8 @@ header{
 }
 .spark{
   position:absolute;
-  width:4px;height:4px;
+  width:4px;
+  height:4px;
   background:#d7b6ff;
   border-radius:50%;
   box-shadow:0 0 10px #c39aff;
@@ -197,10 +226,82 @@ header{
   to{opacity:1;transform:scale(1.4)}
 }
 
-/* КАРТОЧКИ ИДЕЙ */
+/* СОЗДАТЬ: ФОТО И ВИДЕО */
+.heading{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin:25px 0 12px;
+}
+.heading h2{
+  font-size:21px;
+  margin:0;
+}
+.heading button{
+  background:none;
+  border:0;
+  color:var(--muted);
+  font-size:11px;
+  text-align:right;
+}
+.tiles{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:10px;
+}
+.tile{
+  position:relative;
+  height:170px;
+  border-radius:16px;
+  border:1px solid #ffffff22;
+  overflow:hidden;
+  text-align:left;
+  background:#2a2436;
+  padding:0;
+}
+.tile img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  position:absolute;
+  inset:0;
+}
+.tile::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg,#0000 30%,#101019ed);
+}
+.tile .tile-icon{
+  position:absolute;
+  top:12px;
+  left:12px;
+  z-index:1;
+  padding:7px;
+  border-radius:9px;
+  background:#15151cb9;
+}
+.tile .tile-text{
+  position:absolute;
+  z-index:1;
+  left:12px;
+  bottom:13px;
+  right:10px;
+}
+.tile b{font-size:16px}
+.tile small{
+  display:block;
+  color:#c1bdce;
+  font-size:10px;
+  margin-top:5px;
+  line-height:1.4;
+}
+
+/* КАРТОЧКИ ИДЕЙ — ПОД ФОТО И ВИДЕО */
 .ideas{
   display:grid;
-  grid-template-columns:1fr 1fr;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
   gap:10px;
   margin-top:16px;
 }
@@ -231,70 +332,6 @@ header{
   font-size:10px;
   line-height:1.4;
 }
-.heading{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin:25px 0 12px;
-}
-.heading h2{font-size:21px;margin:0}
-.heading button{
-  background:none;
-  border:0;
-  color:var(--muted);
-  font-size:11px;
-}
-.tiles{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-}
-.tile{
-  position:relative;
-  height:170px;
-  border-radius:16px;
-  border:1px solid #ffffff22;
-  overflow:hidden;
-  text-align:left;
-  background:#2a2436;
-  padding:0;
-}
-.tile img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  position:absolute;
-  inset:0;
-}
-.tile::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:linear-gradient(180deg,#0000 30%,#101019ed);
-}
-.tile .tile-icon{
-  position:absolute;
-  top:12px;left:12px;
-  z-index:1;
-  padding:7px;
-  border-radius:9px;
-  background:#15151cb9;
-}
-.tile .tile-text{
-  position:absolute;
-  z-index:1;
-  left:12px;
-  bottom:13px;
-  right:10px;
-}
-.tile b{font-size:16px}
-.tile small{
-  display:block;
-  color:#c1bdce;
-  font-size:10px;
-  margin-top:5px;
-  line-height:1.4;
-}
 
 /* АНОНИМНЫЙ ЧАТ */
 .mode{
@@ -307,8 +344,14 @@ header{
   background:#1d1e28;
   border-radius:16px;
 }
-.mode .shield{font-size:21px;color:var(--purple)}
-.mode b{display:block;font-size:12px}
+.mode .shield{
+  font-size:21px;
+  color:var(--purple);
+}
+.mode b{
+  display:block;
+  font-size:12px;
+}
 .mode small{
   display:block;
   font-size:10px;
@@ -320,32 +363,40 @@ header{
   border:0;
   background:#474451;
   border-radius:30px;
-  width:45px;height:27px;
+  width:45px;
+  height:27px;
   padding:3px;
   flex:none;
 }
 .switch::after{
   content:"";
   display:block;
-  width:21px;height:21px;
+  width:21px;
+  height:21px;
   border-radius:50%;
   background:white;
   transition:transform .2s;
 }
 .switch.on{background:#9675c5}
-.switch.on::after{transform:translateX(18px)}
+.switch.on::after{
+  transform:translateX(18px);
+}
 
-/* ЧАТ */
+/* СООБЩЕНИЯ */
 .messages{
   display:flex;
   flex-direction:column;
   gap:16px;
   padding:8px 0 20px;
+  min-width:0;
 }
 .message{
+  min-width:0;
+  max-width:100%;
   line-height:1.65;
   font-size:14px;
   overflow-wrap:anywhere;
+  word-break:break-word;
 }
 .message.user{
   align-self:flex-end;
@@ -365,6 +416,11 @@ header{
   font-size:11px;
   margin-bottom:6px;
 }
+.answer{
+  min-width:0;
+  max-width:100%;
+  overflow-wrap:anywhere;
+}
 .answer p{margin:0 0 10px}
 .answer h1,.answer h2,.answer h3{
   font-size:17px;
@@ -374,9 +430,10 @@ header{
   padding-left:22px;
 }
 .answer pre{
+  max-width:100%;
   padding:12px;
   border-radius:10px;
-  overflow:auto;
+  overflow-x:auto;
   background:#20212b;
   font-size:12px;
 }
@@ -397,7 +454,7 @@ header{
   padding:5px 0;
 }
 .message audio{
-  max-width:240px;
+  max-width:100%;
   display:block;
   margin-bottom:8px;
 }
@@ -405,16 +462,18 @@ header{
 /* ПОЛЕ ВВОДА */
 .dock{
   position:fixed;
-  z-index:20;
+  z-index:40;
   left:50%;
   transform:translateX(-50%);
   bottom:calc(75px + env(safe-area-inset-bottom));
   width:min(730px,calc(100% - 30px));
+  max-width:calc(100vw - 30px);
 }
 .composer{
   display:flex;
   align-items:center;
   gap:8px;
+  min-width:0;
   padding:7px;
   background:#242431f2;
   backdrop-filter:blur(18px);
@@ -427,11 +486,13 @@ header{
   outline:none;
   resize:none;
   flex:1;
+  width:100%;
   min-width:0;
   min-height:36px;
   max-height:95px;
   padding:8px 0;
-  font-size:14px;
+  font-size:16px;
+  line-height:20px;
 }
 .circle{
   border:0;
@@ -462,7 +523,7 @@ nav{
   right:0;
   z-index:30;
   display:grid;
-  grid-template-columns:repeat(4,1fr);
+  grid-template-columns:repeat(4,minmax(0,1fr));
   padding:10px max(10px,calc((100vw - 730px)/2))
     calc(9px + env(safe-area-inset-bottom));
   background:#1a1b25f2;
@@ -471,6 +532,7 @@ nav{
   backdrop-filter:blur(18px);
 }
 nav button{
+  min-width:0;
   background:none;
   border:0;
   color:#9993a9;
@@ -482,6 +544,14 @@ nav button{
 }
 nav button span{font-size:22px}
 nav button.active{color:#caaaff}
+
+/* КЛАВИАТУРА IPHONE */
+body.keyboard-open nav{
+  display:none;
+}
+body.keyboard-open .dock{
+  bottom:calc(var(--keyboard-height) + 10px);
+}
 
 /* СТУДИЯ / ИСТОРИЯ / ПРОФИЛЬ */
 .page-title{
@@ -516,10 +586,11 @@ label{
   border-radius:12px;
   padding:12px;
   outline:none;
+  font-size:16px;
 }
 .fields{
   display:grid;
-  grid-template-columns:1fr 1fr;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
   gap:10px;
   margin-top:13px;
 }
@@ -529,7 +600,7 @@ select{
   border:1px solid #403d4c;
   border-radius:10px;
   padding:10px;
-  font-size:12px;
+  font-size:16px;
 }
 .primary{
   display:block;
@@ -571,7 +642,10 @@ select{
 }
 .profile{text-align:center}
 .profile h2{margin:0 0 6px}
-.profile p{color:var(--muted);font-size:12px}
+.profile p{
+  color:var(--muted);
+  font-size:12px;
+}
 .wallet{
   background:linear-gradient(120deg,#30263e,#1d1e29);
   border:1px solid #55466a;
@@ -602,7 +676,10 @@ select{
   padding:13px;
   margin-bottom:9px;
 }
-.history-item b{color:var(--purple);font-size:11px}
+.history-item b{
+  color:var(--purple);
+  font-size:11px;
+}
 .history-item p{
   font-size:12px;
   color:#c0b9cc;
@@ -632,7 +709,10 @@ select{
 }
 @media(min-width:600px){
   .universe{height:270px}
-  .planet{width:155px;height:155px}
+  .planet{
+    width:155px;
+    height:155px;
+  }
   .tile{height:230px}
 }
 @media(max-width:360px){
@@ -644,112 +724,11 @@ select{
 @media(prefers-reduced-motion:reduce){
   .planet,.axis-ring,.spark{animation:none}
 }
-
-/* Исправление увеличения экрана на iPhone */
-html {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-  -webkit-text-size-adjust: 100%;
-}
-
-body {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-.app {
-  width: 100%;
-  max-width: 760px;
-  overflow-x: clip;
-}
-
-.view,
-.messages,
-.message,
-.answer {
-  min-width: 0;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-.answer pre {
-  max-width: 100%;
-  overflow-x: auto;
-}
-
-.dock {
-  max-width: calc(100vw - 30px);
-}
-
-.composer {
-  min-width: 0;
-  max-width: 100%;
-}
-
-.composer textarea {
-  min-width: 0;
-  width: 100%;
-  font-size: 16px !important;
-}
-
-nav {
-  width: 100%;
-  max-width: 100vw;
-}
-
-nav button {
-  min-width: 0;
-}
-
-/* Исправление клавиатуры Telegram на iPhone */
-html {
-  overflow-x: hidden;
-  -webkit-text-size-adjust: 100%;
-}
-
-body {
-  overflow-x: hidden;
-  width: 100%;
-}
-
-textarea,
-input,
-select {
-  font-size: 16px !important;
-}
-
-.dock {
-  position: fixed;
-  bottom: calc(75px + env(safe-area-inset-bottom));
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(730px, calc(100% - 30px));
-  z-index: 100;
-  transition: none !important;
-}
-
-
-body.keyboard-open nav {
-  display: none !important;
-}
-
-body.keyboard-open .app {
-  padding-bottom: 100px;
-}
-
-.composer textarea {
-  font-size: 16px !important;
-  min-width: 0;
-}
-
 </style>
 </head>
 
 <body>
-<div class="app">
+<div class="app" id="app">
 
 <header>
   <div class="logo">✦ ANNIVEO <span>AI</span></div>
@@ -780,24 +759,7 @@ body.keyboard-open .app {
     и решать повседневные задачи.
   </p>
 
-  <div class="ideas">
-    <button class="idea" onclick="openView('image')">
-      <span class="symbol">✦</span>
-      <div>
-        <strong>Создай изображение<br>в моём стиле</strong>
-        <small>Опиши, что хочешь увидеть</small>
-      </div>
-    </button>
-
-    <button class="idea" onclick="suggestIdea()">
-      <span class="symbol">◇</span>
-      <div>
-        <strong>Придумай идею<br>для моего проекта</strong>
-        <small>Креативные идеи и план</small>
-      </div>
-    </button>
-  </div>
-
+  <!-- СНАЧАЛА ФОТО И ВИДЕО -->
   <div class="heading">
     <h2>Создать</h2>
     <button onclick="openView('studio')">
@@ -806,6 +768,25 @@ body.keyboard-open .app {
   </div>
 
   <div class="tiles" id="homeTiles"></div>
+
+  <!-- ПОТОМ КАРТОЧКИ ИДЕЙ -->
+  <div class="ideas">
+    <button class="idea" onclick="suggestIdea()">
+      <span class="symbol">◇</span>
+      <div>
+        <strong>Придумай идею<br>для моего проекта</strong>
+        <small>Креативные идеи и план</small>
+      </div>
+    </button>
+
+    <button class="idea" onclick="openView('image')">
+      <span class="symbol">✦</span>
+      <div>
+        <strong>Создай изображение<br>в моём стиле</strong>
+        <small>Опиши, что хочешь увидеть</small>
+      </div>
+    </button>
+  </div>
 </div>
 
 <div class="mode">
@@ -970,7 +951,7 @@ body.keyboard-open .app {
 
 </div>
 
-<!-- ПОЛЕ СООБЩЕНИЯ -->
+<!-- ПОЛЕ ВВОДА -->
 <div id="dock" class="dock">
   <form id="chatForm" class="composer">
     <button type="button" class="circle"
@@ -1010,12 +991,12 @@ body.keyboard-open .app {
 </nav>
 
 <script>
-/* НАСТРОЙКИ */
 const API_URL =
   "https://anniveo-ai-api.yaylaevismail.workers.dev/";
 
 const $ = id => document.getElementById(id);
 const tg = window.Telegram?.WebApp;
+const app = $("app");
 
 tg?.ready();
 tg?.expand();
@@ -1031,17 +1012,6 @@ let historyLoading = false;
 
 let normalHistory = [];
 let anonymousHistory = [];
-
-/*
-  ГЛАВНОЕ ИСПРАВЛЕНИЕ:
-  При каждом новом открытии приложения
-  сначала показываем главный экран с шаром.
-
-  После отправки сообщения или включения
-  анонимного режима главный экран скрывается.
-
-  Кнопка "Чат" НЕ возвращает шар.
-*/
 let showWelcome = true;
 
 let recorder = null;
@@ -1069,7 +1039,7 @@ function toast(message){
   setTimeout(() => el.remove(),3500);
 }
 
-/* ПРОВЕРКА ИСТОРИИ */
+/* ИСТОРИЯ */
 function cleanHistory(items){
   if(!Array.isArray(items)) return [];
 
@@ -1127,20 +1097,8 @@ if(user){
   }
 }
 
-/* КАРТОЧКИ: ВИДЕО СЛЕВА, ФОТО СПРАВА */
+/* ФОТО СЛЕВА, ВИДЕО СПРАВА */
 const tilesHTML = `
-<button class="tile" onclick="openView('video')">
-  <img
-    src="https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=650&q=85"
-    alt="Видео"
-    loading="lazy">
-  <span class="tile-icon">▣</span>
-  <span class="tile-text">
-    <b>Видео</b>
-    <small>Оживи свои идеи в движении</small>
-  </span>
-</button>
-
 <button class="tile" onclick="openView('image')">
   <img
     src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=650&q=85"
@@ -1152,18 +1110,38 @@ const tilesHTML = `
     <small>Реалистичные и стильные изображения</small>
   </span>
 </button>
+
+<button class="tile" onclick="openView('video')">
+  <img
+    src="https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=650&q=85"
+    alt="Видео"
+    loading="lazy">
+  <span class="tile-icon">▣</span>
+  <span class="tile-text">
+    <b>Видео</b>
+    <small>Оживи свои идеи в движении</small>
+  </span>
+</button>
 `;
 
 $("homeTiles").innerHTML = tilesHTML;
 $("studioTiles").innerHTML = tilesHTML;
 
-/* ПЕРЕКЛЮЧЕНИЕ РАЗДЕЛОВ */
+/* ПРОКРУТКА */
+function scrollAppToBottom(){
+  requestAnimationFrame(()=>{
+    app.scrollTop = app.scrollHeight;
+  });
+}
+
+/* РАЗДЕЛЫ */
 function openView(name){
   if(recording || transcribing || openingMic){
     toast("Сначала заверши голосовое сообщение");
     return;
   }
 
+  $("messageInput").blur();
   currentView = name;
 
   document.querySelectorAll(".view").forEach(el=>{
@@ -1188,28 +1166,21 @@ function openView(name){
     name !== "chat"
   );
 
-  if(name === "history"){
-    showHistory();
-  }
+  if(name === "history") showHistory();
+  if(name === "chat") renderChat();
 
-  if(name === "chat"){
-    renderChat();
-  }
-
-  window.scrollTo(0,0);
+  app.scrollTop = 0;
 }
 
-/* ПОКАЗ ГЛАВНОГО ЭКРАНА */
+/* ГЛАВНЫЙ ЭКРАН */
 function updateWelcome(){
-  const visible = showWelcome && !anonymous;
-
   $("welcome").classList.toggle(
     "hidden",
-    !visible
+    !showWelcome || anonymous
   );
 }
 
-/* БЕЗОПАСНОЕ ОТОБРАЖЕНИЕ ОТВЕТОВ */
+/* БЕЗОПАСНОЕ ФОРМАТИРОВАНИЕ */
 function formatAnswer(element,text){
   element.replaceChildren();
 
@@ -1225,9 +1196,7 @@ function formatAnswer(element,text){
 
     while((match = re.exec(str))){
       parent.append(
-        document.createTextNode(
-          str.slice(pos,match.index)
-        )
+        document.createTextNode(str.slice(pos,match.index))
       );
 
       const raw = match[0];
@@ -1379,7 +1348,6 @@ function addMessage(text,role,audioURL){
 
   content.dataset.raw = text;
   $("messages").append(el);
-
   return content;
 }
 
@@ -1387,12 +1355,6 @@ function renderChat(){
   updateWelcome();
   $("messages").replaceChildren();
 
-  /*
-    При первом входе с шаром историю
-    не показываем под главным экраном.
-
-    Но сами сообщения остаются сохранены.
-  */
   if(showWelcome && !anonymous) return;
 
   const items = anonymous
@@ -1470,10 +1432,6 @@ async function loadHistory(){
       saveCache();
       historyLoaded = true;
 
-      /*
-        ВАЖНО:
-        Загруженная история НЕ скрывает шар.
-      */
       if(!anonymous && !showWelcome){
         renderChat();
       }
@@ -1494,11 +1452,7 @@ function toggleAnonymous(){
   }
 
   anonymous = !anonymous;
-
-  /* Сразу убираем шар */
   showWelcome = false;
-
-  /* Новая анонимная сессия начинается с нуля */
   anonymousHistory = [];
 
   $("anonToggle").classList.toggle(
@@ -1515,9 +1469,8 @@ function toggleAnonymous(){
     : "История сохраняется";
 
   $("messageInput").value = "";
-
   renderChat();
-  window.scrollTo(0,0);
+  app.scrollTop = 0;
 
   if(anonymous){
     toast("Анонимный чат включён");
@@ -1528,7 +1481,7 @@ function toggleAnonymous(){
   }
 }
 
-/* БЛОКИРОВКА ВВОДА */
+/* КНОПКИ */
 function updateControls(){
   const locked =
     busy || recording || transcribing || openingMic;
@@ -1540,7 +1493,7 @@ function updateControls(){
     recording || transcribing || openingMic;
 }
 
-/* ОТПРАВКА СООБЩЕНИЯ */
+/* ОТПРАВКА */
 async function sendMessage(text,audioURL){
   text = String(text).trim();
 
@@ -1554,12 +1507,10 @@ async function sendMessage(text,audioURL){
   }
 
   const isAnonymous = anonymous;
-
   const context = cleanHistory(
     anonymousHistory
   ).slice(-12);
 
-  /* При первой отправке скрываем шар */
   showWelcome = false;
   updateWelcome();
 
@@ -1578,8 +1529,7 @@ async function sendMessage(text,audioURL){
 
   busy = true;
   updateControls();
-
-  window.scrollTo(0,document.body.scrollHeight);
+  scrollAppToBottom();
 
   try{
     const payload = isAnonymous
@@ -1625,13 +1575,14 @@ async function sendMessage(text,audioURL){
     }
 
   }catch(e){
-    pending.textContent = e.message;
+    formatAnswer(pending,e.message);
     pending.dataset.raw = e.message;
 
   }finally{
     busy = false;
     updateControls();
     $("chatStatus").textContent = "";
+    scrollAppToBottom();
   }
 }
 
@@ -1653,13 +1604,13 @@ $("chatForm").onsubmit = e=>{
 
   $("messageInput").value = "";
   $("messageInput").style.height = "";
+  $("messageInput").blur();
 
   sendMessage(text);
 };
 
 $("messageInput").oninput = ()=>{
   const input = $("messageInput");
-
   input.style.height = "auto";
   input.style.height =
     Math.min(input.scrollHeight,95) + "px";
@@ -1674,7 +1625,7 @@ $("messageInput").onkeydown = e=>{
   }
 };
 
-/* ИДЕЯ ДЛЯ ПРОЕКТА */
+/* ИДЕЯ */
 function suggestIdea(){
   $("messageInput").value =
     "Помоги придумать интересную идею для моего проекта. " +
@@ -1683,7 +1634,7 @@ function suggestIdea(){
   $("messageInput").focus();
 }
 
-/* ГОЛОСОВЫЕ СООБЩЕНИЯ */
+/* ГОЛОС */
 async function handleMic(){
   if(recording){
     if(recorder && recorder.state === "recording"){
@@ -1734,7 +1685,6 @@ async function handleMic(){
     };
 
     recorder.onstop = finishVoice;
-
     recorder.start();
 
     recording = true;
@@ -1892,7 +1842,7 @@ async function showHistory(){
   }
 }
 
-/* ГЕНЕРАЦИЯ ФОТО И ВИДЕО */
+/* ФОТО И ВИДЕО */
 async function generateMedia(kind){
   if(!initData || !user){
     toast("Открой ANNIVEO AI через Telegram");
@@ -2017,6 +1967,58 @@ async function generateMedia(kind){
   }
 }
 
+/* КЛАВИАТУРА TELEGRAM / IPHONE */
+(function setupKeyboard(){
+  const input = $("messageInput");
+  const viewport = window.visualViewport;
+
+  function updateViewport(){
+    if(!viewport) return;
+
+    const fullHeight = window.innerHeight;
+    const visibleHeight = viewport.height;
+    const offsetTop = viewport.offsetTop;
+
+    const keyboardHeight = Math.max(
+      0,
+      fullHeight - visibleHeight - offsetTop
+    );
+
+    const isKeyboardOpen =
+      document.activeElement === input &&
+      keyboardHeight > 120;
+
+    document.body.classList.toggle(
+      "keyboard-open",
+      isKeyboardOpen
+    );
+
+    document.documentElement.style.setProperty(
+      "--keyboard-height",
+      isKeyboardOpen ? keyboardHeight + "px" : "0px"
+    );
+  }
+
+  if(viewport){
+    viewport.addEventListener("resize",updateViewport);
+    viewport.addEventListener("scroll",updateViewport);
+  }
+
+  window.addEventListener("resize",updateViewport);
+
+  input.addEventListener("focus",()=>{
+    requestAnimationFrame(updateViewport);
+    setTimeout(updateViewport,250);
+  });
+
+  input.addEventListener("blur",()=>{
+    document.body.classList.remove("keyboard-open");
+    document.documentElement.style.setProperty(
+      "--keyboard-height","0px"
+    );
+  });
+})();
+
 /* ЗАВЕРШЕНИЕ */
 window.addEventListener("pagehide",()=>{
   if(recorder?.state === "recording"){
@@ -2031,129 +2033,10 @@ window.addEventListener("pagehide",()=>{
   audioURLs.forEach(url=>URL.revokeObjectURL(url));
 });
 
-/*
-  СТАРТ ПРИЛОЖЕНИЯ.
-
-  showWelcome = true
-  всегда при новой загрузке страницы.
-
-  Загрузка истории не меняет это значение.
-*/
+/* СТАРТ */
 showWelcome = true;
 renderChat();
 loadHistory();
-
-/* ANNIVEO AI — клавиатура iPhone */
-(function () {
-  const input = document.getElementById("messageInput");
-  const dock = document.getElementById("dock");
-  const nav = document.querySelector("nav");
-
-  if (!input || !dock) return;
-
-  const viewport = window.visualViewport;
-  let keyboardOpen = false;
-
-  function update() {
-    if (!viewport) return;
-
-    const focused = document.activeElement === input;
-    const keyboardHeight = Math.max(
-      0,
-      window.innerHeight -
-      viewport.height -
-      viewport.offsetTop
-    );
-
-    keyboardOpen = focused && keyboardHeight > 120;
-
-    document.body.classList.toggle(
-      "keyboard-open",
-      keyboardOpen
-    );
-
-    if (keyboardOpen) {
-      nav.style.display = "none";
-
-      /* Положение относительно видимой части экрана */
-      dock.style.position = "fixed";
-      dock.style.bottom = "auto";
-      dock.style.top =
-        Math.max(
-          0,
-          viewport.offsetTop + viewport.height -
-          dock.offsetHeight - 10
-        ) + "px";
-    } else {
-      nav.style.display = "";
-      dock.style.top = "";
-      dock.style.bottom = "";
-    }
-  }
-
-  input.addEventListener("focus", () => {
-    requestAnimationFrame(update);
-  });
-
-  input.addEventListener("blur", () => {
-    keyboardOpen = false;
-    document.body.classList.remove("keyboard-open");
-    nav.style.display = "";
-    dock.style.top = "";
-    dock.style.bottom = "";
-  });
-
-  viewport?.addEventListener("resize", update);
-  viewport?.addEventListener("scroll", update);
-  window.addEventListener("resize", update);
-})();
-
-  const input = document.getElementById("messageInput");
-  const dock = document.getElementById("dock");
-
-  if (!input || !dock) return;
-
-  const viewport = window.visualViewport;
-  if (!viewport) return;
-
-  function updateKeyboard() {
-    const keyboardHeight = Math.max(
-      0,
-      window.innerHeight -
-      viewport.height -
-      viewport.offsetTop
-    );
-
-    const isOpen =
-      document.activeElement === input &&
-      keyboardHeight > 120;
-
-    document.body.classList.toggle(
-      "keyboard-open",
-      isOpen
-    );
-
-    if (isOpen) {
-      dock.style.bottom =
-        Math.max(10, keyboardHeight + 10) + "px";
-    } else {
-      dock.style.bottom = "";
-    }
-  }
-
-  viewport.addEventListener("resize", updateKeyboard);
-  viewport.addEventListener("scroll", updateKeyboard);
-
-  input.addEventListener("focus", () => {
-    requestAnimationFrame(updateKeyboard);
-  });
-
-  input.addEventListener("blur", () => {
-    document.body.classList.remove("keyboard-open");
-    dock.style.bottom = "";
-  });
-})();
-
 </script>
 </body>
 </html>
