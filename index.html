@@ -62,7 +62,9 @@ if(!text)return;
 document.getElementById('welcome')?.remove();
 add(text,'user');
 input.value='';
-add('Интерфейс работает! На следующем этапе мы подключим настоящий ИИ, и я смогу отвечать на вопросы.','assistant');
+
+add('Подключаюсь к ANNIVEO AI...','assistant');
+
 });
 if(window.Telegram?.WebApp){
 window.Telegram.WebApp.ready();
