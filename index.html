@@ -72,7 +72,7 @@ try {
   });
   if (!response.ok) throw new Error('Ошибка сервера');
   const data = await response.json();
-  add(data.reply || data.response || 'Сервер не прислал ответ.', 'assistant');
+  add(data.answer || 'Сервер не прислал ответ.', 'assistant');
 } catch (error) {
   add('Не удалось связаться с ИИ. Проверь подключение сервера.', 'assistant');
 }
