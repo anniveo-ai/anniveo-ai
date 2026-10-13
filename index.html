@@ -136,7 +136,24 @@ header{
   transform:scale(calc(1 + var(--voice-level,0) * .18));
   transition:transform .06s linear;
 }
-.voice-status{font-size:12px;color:#c6a6ff;text-align:center;margin:-4px 0 12px}
+.voice-status{
+  display:table;
+  max-width:calc(100% - 28px);
+  margin:-2px auto 13px;
+  padding:8px 15px;
+  border:1px solid rgba(198,166,255,.28);
+  border-radius:999px;
+  background:linear-gradient(110deg,rgba(139,91,190,.16),rgba(198,166,255,.09));
+  box-shadow:0 0 22px rgba(166,103,255,.12),inset 0 1px rgba(255,255,255,.07);
+  color:#d9c1ff;
+  font-size:12px;
+  font-weight:550;
+  letter-spacing:.15px;
+  line-height:1.45;
+  text-align:center;
+  -webkit-backdrop-filter:blur(12px);
+  backdrop-filter:blur(12px);
+}
 .end-voice{
   display:block;margin:0 auto 12px;padding:7px 13px;
   background:#30263e;border:1px solid #68517f;border-radius:16px;
@@ -975,7 +992,7 @@ select{
     <i class="fox-star" style="left:28%;top:90%;animation-delay:1.6s"></i>
   </div>
 
-  <div id="voiceStatus" class="voice-status" role="status">Коснись шара — лисёнок с радостью тебя выслушает 🦊</div>
+  <div id="voiceStatus" class="voice-status" role="status">Нажми на шар, чтобы поговорить</div>
   <button id="endVoice" type="button" class="end-voice hidden" onclick="endVoiceSession()">Завершить разговор</button>
 
   <p>
@@ -1875,7 +1892,7 @@ function endVoiceSession(){
   $("mic").classList.remove("recording");
   $("mic").setAttribute("aria-label","Записать голосовое сообщение");
   $("mic").title="Записать голосовое сообщение";
-  $("voiceStatus").textContent="Я рядом 🦊 Коснись шара, когда захочешь поговорить";
+  $("voiceStatus").textContent="Разговор завершён. Нажми на шар, чтобы начать";
   $("chatStatus").textContent="";
   updateControls();
 }
@@ -1954,8 +1971,8 @@ function speakReply(text){
     russian.find(v=>!/yuri|dmitri|dmitry|male/i.test(v.name))||
     russian[0];
   if(gentleFoxVoice) voiceUtterance.voice=gentleFoxVoice;
-  voiceUtterance.onstart=()=>{$("voiceStatus").textContent="ANNIVEO отвечает…";};
-  voiceUtterance.onend=()=>{$("voiceStatus").textContent="Хочешь продолжить? Коснись шара и скажи ещё 🦊";};
+  voiceUtterance.onstart=()=>{$("voiceStatus").textContent="ANNIVEO отвечает… Нажми на шар для нового вопроса";};
+  voiceUtterance.onend=()=>{$("voiceStatus").textContent="Нажми на шар, чтобы продолжить разговор";};
   voiceUtterance.onerror=()=>{$("voiceStatus").textContent="Не удалось озвучить. Ответ есть в чате";};
   window.speechSynthesis.speak(voiceUtterance);
 }
