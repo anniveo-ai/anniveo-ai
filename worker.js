@@ -106,18 +106,26 @@ function cleanHistory(items, limit = 12) {
   }));
 }
 
-async function askAI(messages, apiKey) {
+// Диагностика скорости и ошибок Pollinations.
+async function askAI(messages, apiKey, mode) {
   let lastError;
 
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const started = Date.now();
     const controller = new AbortController();
 
     const timer = setTimeout(
       () => controller.abort(),
-      18000
+      12000
     );
 
     try {
+      console.log("ANNIVEO AI request", {
+        mode,
+        attempt,
+        historyCount: messages.length - 2
+      });
+
       const response = await fetch(
         "https://gen.pollinations.ai/v1/chat/completions",
         {
@@ -136,63 +144,61 @@ async function askAI(messages, apiKey) {
       );
 
       if (!response.ok) {
-        let details = {};
+        const error = new Error(
+          "Pollinations HTTP " + response.status
+        );
 
-        try {
-          details = await response.json();
-        } catch {}
-
-        const retryable =
+        error.retryable =
           response.status === 408 ||
           response.status === 429 ||
           response.status >= 500;
 
-        const error = new Error(
-          details.error?.message ||
-          "Сервис ИИ временно недоступен"
-        );
-
-        error.retryable = retryable;
-
-        if (retryable && attempt === 0) {
-          lastError = error;
-        } else {
-          throw error;
-        }
-
-      } else {
-        const data = await response.json();
-        const answer =
-          data.choices?.[0]?.message?.content;
-
-        if (
-          typeof answer !== "string" ||
-          !answer.trim()
-        ) {
-          throw new Error("ИИ вернул пустой ответ");
-        }
-
-        return answer;
+        throw error;
       }
 
-    } catch(error) {
+      const data = await response.json();
+      const answer =
+        data.choices?.[0]?.message?.content;
+
+      if (
+        typeof answer !== "string" ||
+        !answer.trim()
+      ) {
+        throw new Error("ИИ вернул пустой ответ");
+      }
+
+      console.log("ANNIVEO AI success", {
+        mode,
+        attempt,
+        durationMs: Date.now() - started
+      });
+
+      return answer;
+
+    } catch (error) {
       lastError = error;
+
+      console.error("ANNIVEO AI failure", {
+        mode,
+        attempt,
+        durationMs: Date.now() - started,
+        errorName: error.name,
+        errorMessage: error.message
+      });
 
       const retryable =
         error.retryable ||
         error.name === "AbortError" ||
         error instanceof TypeError;
 
-      if (!retryable || attempt === 1) {
+      if (!retryable || attempt === 2) {
         throw error;
       }
 
+      await sleep(250);
+
     } finally {
       clearTimeout(timer);
-    }
-
-    if (attempt === 0) {
-      await sleep(500);
     }
   }
 
@@ -327,6 +333,7 @@ export default {
       let requestId = null;
 
       if (anonymous) {
+        // Анонимный чат не читает D1.
         history = cleanHistory(
           body.messages,
           12
@@ -350,7 +357,6 @@ export default {
           );
         }
 
-        // Одна запись для одного запроса.
         const inserted = await env.DB.prepare(
           "INSERT OR IGNORE INTO chat_requests " +
           "(user_id, request_id, status) " +
@@ -415,7 +421,8 @@ export default {
       try {
         answer = await askAI(
           messages,
-          env.POLLINATIONS_API_KEY
+          env.POLLINATIONS_API_KEY,
+          anonymous ? "anonymous" : "normal"
         );
       } catch(error) {
         if (!anonymous && requestId) {
@@ -431,8 +438,6 @@ export default {
       }
 
       if (!anonymous) {
-        // Сохраняем ответ и помечаем запрос
-        // завершённым одним пакетом.
         await env.DB.batch([
           env.DB.prepare(
             "INSERT INTO chat_messages " +
@@ -463,7 +468,8 @@ export default {
     } catch(error) {
       console.error(
         "ANNIVEO AI error:",
-        error
+        error.name,
+        error.message
       );
 
       return json(
