@@ -55,7 +55,7 @@ el.textContent=text;
 chat.appendChild(el);
 chat.scrollTop=chat.scrollHeight;
 }
-form.addEventListener('submit',e=>{
+form.addEventListener('submit',async e=>{
 e.preventDefault();
 const text=input.value.trim();
 if(!text)return;
@@ -63,7 +63,20 @@ document.getElementById('welcome')?.remove();
 add(text,'user');
 input.value='';
 
-add('Подключаюсь к ANNIVEO AI...','assistant');
+
+try {
+  const response = await fetch('https://anniveo-ai-api.yaylaevismail.workers.dev/', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({message: text})
+  });
+  if (!response.ok) throw new Error('Ошибка сервера');
+  const data = await response.json();
+  add(data.reply || data.response || 'Сервер не прислал ответ.', 'assistant');
+} catch (error) {
+  add('Не удалось связаться с ИИ. Проверь подключение сервера.', 'assistant');
+}
+
 
 });
 if(window.Telegram?.WebApp){
