@@ -729,10 +729,13 @@ export default {
           });
           if(!response.ok){
             await response.body?.cancel();
-            return json({error:response.status===402
-              ?"Закончился лимит сервиса распознавания речи"
-              :"Не удалось распознать речь. Попробуй ещё раз"},
-              response.status===402?402:502,headers);
+            console.error("ANNIVEO transcription failed",{providerStatus:response.status});
+            return json({error:response.status===403
+              ?"Голосовой режим пока не подключён"
+              :response.status===402
+                ?"Закончился лимит сервиса распознавания речи"
+                :"Не удалось распознать речь. Попробуй ещё раз"},
+              response.status===403?403:response.status===402?402:502,headers);
           }
           const data=await response.json();
           const text=typeof data.text==="string"?data.text.trim():"";
