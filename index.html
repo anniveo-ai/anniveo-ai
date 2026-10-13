@@ -1,945 +1,167 @@
-
 <!doctype html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>ANNIVEO AI</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<html lang="ru"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#08090d">
+<title>ANNIVEO AI</title><script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-:root{color-scheme:dark}
-*{box-sizing:border-box}
-html,body{height:100%}
+:root{color-scheme:dark;--bg:#08090d;--panel:#15151c;--line:#2b2b35;--text:#f6f4ff;--muted:#9493a3;--violet:#7955f5}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,textarea,select{font:inherit;color:inherit}button{cursor:pointer}
+#app{max-width:760px;min-height:100dvh;margin:auto;padding:env(safe-area-inset-top) 16px calc(94px + env(safe-area-inset-bottom))}
+header{height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5;background:#08090dec;backdrop-filter:blur(18px)}
+.brand{display:flex;gap:9px;align-items:center;font-size:17px;font-weight:800;letter-spacing:.7px}.logo{height:30px;width:30px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,#a177ff,#5843e6);box-shadow:0 4px 22px #7958f655}
+.pill{border:1px solid #302d3b;border-radius:30px;background:#15151c;padding:8px 11px;color:#c9c4d4;font-size:11px}
+.view{display:none}.view.active{display:block;animation:up .18s ease}@keyframes up{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}
+.hero{padding:24px 4px 16px}.eyebrow{color:#bca8ff;font-size:10px;font-weight:750;letter-spacing:1.6px;text-transform:uppercase}.hero h1{font-size:32px;line-height:1.08;letter-spacing:-1px;margin:9px 0}.hero p,.head p{color:var(--muted);line-height:1.5;margin:0;font-size:13px}
+.info{display:flex;gap:10px;align-items:center;background:linear-gradient(110deg,#191620,#111218);border:1px solid #302d38;border-radius:16px;padding:12px;margin:4px 0 18px}.info i{height:34px;width:34px;flex:none;border-radius:11px;background:#29213f;color:#c4a7ff;display:grid;place-items:center;font-style:normal}.info b{font-size:12px;display:block;margin-bottom:3px}.info small{color:var(--muted);font-size:10px;line-height:1.4;display:block}
+h2.title{font-size:19px;margin:23px 0 12px}.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.tile{border:0;background:none;padding:0;text-align:center;min-width:0}.tile i{height:64px;border-radius:18px;border:1px solid #303039;background:linear-gradient(145deg,#202127,#15161b);display:grid;place-items:center;font-size:24px;font-style:normal;margin-bottom:7px}.tile span{font-size:11px;color:#e4e1ed}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}.card{height:145px;border:1px solid #32313a;border-radius:19px;padding:13px;display:flex;flex-direction:column;justify-content:flex-end;position:relative;overflow:hidden;text-align:left;background:#17171d}.card:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 78% 15%,#9c76ff70,transparent 40%),linear-gradient(145deg,#282431,#101116)}.card.v:before{background:radial-gradient(circle at 78% 16%,#398e9370,transparent 44%),linear-gradient(145deg,#1d292b,#101116)}.card>*{position:relative}.card i{position:absolute;right:14px;top:12px;font-size:29px;font-style:normal}.card small{color:#c8b8ff;font-size:9px;text-transform:uppercase;letter-spacing:1px}.card b{font-size:15px;margin-top:5px}.card em{font-size:10px;color:#aaa9b7;font-style:normal;margin-top:3px}
+.chips{display:flex;gap:8px;overflow:auto;padding-bottom:5px;scrollbar-width:none}.chip{white-space:nowrap;border:1px solid #303039;border-radius:99px;background:#17181f;padding:9px 13px;font-size:11px;color:#c7c5d0}
+.head{padding:17px 2px}.head h1{font-size:25px;margin:5px 0 6px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:14px;margin:5px 0}.label{display:block;color:#b4b2c0;font-size:11px;margin:2px 0 7px}.prompt{display:block;width:100%;min-height:98px;resize:vertical;border:1px solid #343540;border-radius:14px;background:#0f1015;color:var(--text);outline:0;padding:12px;line-height:1.45}.prompt:focus,select:focus{border-color:#8268ed}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px}select{width:100%;border:1px solid #353541;border-radius:11px;background:#101116;color:var(--text);padding:10px 8px;font-size:12px}.primary{width:100%;min-height:47px;border:0;border-radius:14px;background:linear-gradient(120deg,#8b63ff,#5842e7);font-weight:750;margin-top:12px}.primary:disabled{opacity:.55}.note{font-size:10px;color:#858594;line-height:1.45;margin:9px 2px}.status{min-height:18px;color:#bca8ff;font-size:11px;margin:8px 1px}.result{display:none;margin-top:10px}.result.show{display:block}.result img,.result video{width:100%;max-height:58vh;display:block;object-fit:contain;background:#050507;border-radius:14px}.download{display:inline-flex;margin-top:9px;text-decoration:none;color:white;background:#272433;border:1px solid #3e394b;border-radius:11px;padding:9px 12px;font-size:11px}
+.anonbar{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px;padding:10px 12px;border:1px solid #292a34;border-radius:14px;background:#13141a;color:#c8c5d2;font-size:11px}.anonbar small{display:block;color:#8e8c9b;margin-top:3px}.anon-toggle{width:46px;height:27px;border:0;border-radius:99px;background:#3a3b47;padding:3px;flex:none}.anon-toggle:after{content:"";display:block;width:21px;height:21px;border-radius:50%;background:white;transition:transform .2s}.anon-toggle.on{background:#7653f6}.anon-toggle.on:after{transform:translateX(19px)}.chatbox{height:min(62dvh,680px);min-height:300px;background:#0d0e13;border:1px solid #25262e;border-radius:20px;display:flex;flex-direction:column;overflow:hidden}.messages{flex:1;overflow:auto;display:flex;flex-direction:column;gap:14px;padding:14px 12px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}.welcome{margin:auto;text-align:center;max-width:290px;padding:14px}.welcome i{width:55px;height:55px;margin:0 auto 13px;border-radius:18px;background:linear-gradient(135deg,#9a72ff,#5141dc);display:grid;place-items:center;font-size:24px;font-style:normal}.welcome b{font-size:17px}.welcome p{font-size:11px;color:var(--muted);line-height:1.5}
+.msgrow{display:flex;flex-direction:column;gap:4px;max-width:92%;align-self:flex-start}.msgrow.user{align-self:flex-end}.labelname{font-size:10px;color:#bda8ff;padding:0 3px}.msg{font-size:13px;line-height:1.55;overflow-wrap:anywhere;white-space:pre-wrap}.msg.assistant{white-space:normal}.msg.user{background:#292938;border:1px solid #3b3949;border-radius:17px 17px 5px 17px;padding:10px 12px}.msg.assistant{padding:2px 3px}.msg p{margin:0 0 9px}.msg p:last-child{margin:0}.msg h1,.msg h2,.msg h3{font-size:1.1em;line-height:1.3;margin:12px 0 6px}.msg ul,.msg ol{margin:2px 0 9px;padding-left:21px}.msg li{margin:4px 0}.msg strong{font-weight:750}.msg audio{display:block;width:min(250px,65vw);height:34px;margin-bottom:6px}
+.compose{display:flex;align-items:flex-end;gap:7px;padding:8px;border-top:1px solid #24252e;background:#13141a}.chatinput{flex:1;min-width:0;min-height:42px;max-height:110px;resize:none;border:1px solid #33343f;border-radius:13px;background:#0d0e13;color:white;outline:0;padding:11px;font-size:13px;line-height:1.35}.iconbtn,.sendbtn{height:42px;width:42px;flex:none;border-radius:13px}.iconbtn{border:1px solid #383843;background:#20212a;font-size:17px}.iconbtn.recording{background:#4a2433;border-color:#c94566;color:#ff93ac}.sendbtn{border:0;background:linear-gradient(135deg,#8c64ff,#5144e8);font-size:19px}.sendbtn:disabled{opacity:.45}.chatstatus{min-height:18px;padding:4px 3px;color:#bca8ff;font-size:10px}
+.history{display:flex;flex-direction:column;gap:8px}.historyitem{border:1px solid var(--line);background:#13141a;border-radius:13px;padding:11px}.historyitem b{display:block;font-size:11px;margin-bottom:4px}.historyitem span{display:block;color:var(--muted);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.empty{text-align:center;color:var(--muted);padding:44px 15px;font-size:12px;line-height:1.6}
+.profile{background:linear-gradient(145deg,#191723,#111217);border:1px solid #302d3b;border-radius:21px;padding:18px;text-align:center;margin-top:8px}.avatar{width:80px;height:80px;border-radius:50%;margin:0 auto 12px;background:linear-gradient(135deg,#906dff,#4d43df);display:grid;place-items:center;overflow:hidden;font-size:30px;font-weight:800}.avatar img{width:100%;height:100%;object-fit:cover}.profile h2{font-size:19px;margin:0 0 4px}.username{font-size:12px;color:#bca8ff}.meta{display:grid;gap:8px;text-align:left;margin-top:18px}.meta div{padding:10px 11px;border-radius:11px;background:#101116;color:#aaa9b7;font-size:10px}.meta b{display:block;color:#eee;font-size:11px;margin-bottom:3px}
+nav{position:fixed;z-index:10;left:50%;bottom:max(9px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(500px,calc(100% - 28px));height:65px;border:1px solid #42424d;border-radius:23px;background:#292a32ed;backdrop-filter:blur(22px);display:grid;grid-template-columns:repeat(4,1fr);padding:5px;box-shadow:0 12px 40px #0008}nav button{border:0;background:transparent;color:#aaa9b5;border-radius:17px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:9px}nav button.active{background:#45434f;color:white}nav i{font-style:normal;font-size:18px;line-height:1}.toast{position:fixed;z-index:30;left:50%;bottom:85px;transform:translateX(-50%);max-width:calc(100% - 30px);padding:10px 13px;border-radius:13px;background:#272633;border:1px solid #454154;font-size:11px;box-shadow:0 8px 25px #0008}
+@media(min-width:600px){#app{padding-left:24px;padding-right:24px}.tile i{height:74px}.card{height:175px}.hero h1{font-size:38px}}
+/* ANNIVEO visual refresh */
 body{
- margin:0;background:#090b13;color:#f5f6ff;
- font:16px -apple-system,BlinkMacSystemFont,
- 'Segoe UI',sans-serif
+ background:
+  radial-gradient(ellipse at 12% 0%,rgba(106,73,220,.15),transparent 34rem),
+  radial-gradient(ellipse at 100% 42%,rgba(35,102,145,.09),transparent 28rem),
+  var(--bg);
 }
-main{
- max-width:760px;margin:auto;height:100dvh;
- display:flex;flex-direction:column;
- padding:22px 18px max(18px,env(safe-area-inset-bottom))
+#app{max-width:720px;padding-left:18px;padding-right:18px}
+header{height:64px;background:linear-gradient(#08090df2,#08090dd9);border-bottom:1px solid #ffffff0a}
+.brand{letter-spacing:1px}
+.logo{height:34px;width:34px;border:1px solid #ffffff25;border-radius:12px;background:linear-gradient(145deg,#b28aff,#7654ff 58%,#4356d8);box-shadow:0 0 30px #7958f655,inset 0 1px #ffffff55}
+.pill{padding:8px 12px;border-color:#7056bd80;background:linear-gradient(120deg,#211b32,#12131b);color:#d7c9ff;letter-spacing:.7px}
+.hero{
+ position:relative;isolation:isolate;overflow:hidden;
+ min-height:226px;margin:14px 0 16px;padding:27px 23px 22px;
+ border:1px solid #8c75cf42;border-radius:27px;
+ background:
+  radial-gradient(ellipse at 90% 5%,#a68aff39,transparent 36%),
+  radial-gradient(ellipse at 100% 100%,#485fe833,transparent 46%),
+  linear-gradient(135deg,#201b2b 0%,#14151f 54%,#10131c 100%);
+ box-shadow:0 18px 45px #0005,inset 0 1px #ffffff15;
 }
-header{
- display:flex;align-items:center;
- justify-content:space-between;
- padding:5px 0 18px;border-bottom:1px solid #25283a
+.hero:before{
+ content:"✦";position:absolute;z-index:-1;right:27px;top:31px;
+ color:#d7c6ff;font-size:70px;line-height:1;
+ text-shadow:0 0 24px #a17aff99,0 0 70px #7855ff77;
+ animation:starFloat 5s ease-in-out infinite;
 }
-header strong{letter-spacing:2px;font-size:19px}
-.tag{
- font-size:11px;background:#252044;color:#bcaaff;
- border:1px solid #51448c;border-radius:99px;
- padding:6px 10px
+.hero:after{
+ content:"";position:absolute;z-index:-1;width:180px;height:180px;right:-65px;bottom:-104px;
+ border:1px solid #a88bff3a;border-radius:50%;
+ box-shadow:0 0 0 18px #a88bff0b,0 0 0 38px #a88bff09,0 0 70px #7855ff22;
 }
-.mode{
- display:flex;align-items:center;
- justify-content:space-between;gap:12px;
- padding:15px 2px;border-bottom:1px solid #25283a
-}
-.mode-title{display:flex;align-items:center;gap:11px}
-.shield{font-size:23px}
-.mode-name{font-size:14px;font-weight:600}
-.mode-status{
- font-size:12px;color:#9299b0;margin-top:4px
-}
-.switch{
- position:relative;flex-shrink:0;width:62px;
- height:34px;border:0;border-radius:99px;
- background:#353849;padding:3px;cursor:pointer;
- transition:background .2s
-}
-.switch::after{
- content:"";display:block;width:28px;height:28px;
- border-radius:50%;background:white;
- box-shadow:0 2px 6px #0005;
- transition:transform .2s
-}
-.switch.active{
- background:linear-gradient(135deg,#8b5cf6,#2563eb)
-}
-.switch.active::after{transform:translateX(28px)}
-.switch:disabled{opacity:.5}
-.chat{
- flex:1;min-height:0;overflow:auto;
- display:flex;flex-direction:column;gap:24px;
- padding:24px 0;
- overscroll-behavior:contain;
- -webkit-overflow-scrolling:touch
-}
-.welcome{margin:auto;text-align:center}
-.orb{
- width:92px;height:92px;border-radius:28px;
- margin:0 auto 24px;
- background:linear-gradient(135deg,#7c3aed,#2563eb,#06b6d4);
- display:grid;place-items:center;font-size:40px;
- box-shadow:0 0 60px #6d28d955
-}
-.welcome h1{font-size:32px;margin:0 0 12px}
-.welcome p{color:#a7adc2;line-height:1.5}
-/* Единая лента переписки */
-.message-row{
- display:flex;flex-direction:column;
- min-width:0;width:100%;gap:7px
-}
-.message-row.user-row{align-items:flex-end}
-.message-row.assistant-row{align-items:stretch}
-.msg{
- line-height:1.65;
- white-space:pre-wrap;
- overflow-wrap:anywhere;
- min-width:0;
- user-select:text;
- -webkit-user-select:text
-}
-.msg strong{font-weight:700}
-.msg em{font-style:italic}
-.msg.user{
- background:#292d40;
- border:1px solid #393d52;
- padding:12px 16px;
- border-radius:19px 19px 6px 19px;
- max-width:86%;
- align-self:flex-end
-}
-.msg.assistant{
- background:transparent;
- border:0;
- padding:0 2px;
- max-width:100%;
- align-self:stretch;
- white-space:normal
-}
-.msg.assistant p{margin:0 0 12px}
-.msg.assistant p:last-child{margin-bottom:0}
-.msg.assistant h1,.msg.assistant h2,
-.msg.assistant h3,.msg.assistant h4,
-.msg.assistant h5,.msg.assistant h6{
- line-height:1.3;margin:18px 0 8px
-}
-.msg.assistant h1{font-size:1.45em}
-.msg.assistant h2{font-size:1.3em}
-.msg.assistant h3{font-size:1.18em}
-.msg.assistant h4,.msg.assistant h5,
-.msg.assistant h6{font-size:1.08em}
-.msg.assistant ul,.msg.assistant ol{
- margin:0 0 12px;padding-left:25px
-}
-.msg.assistant li{margin:5px 0}
-.msg.assistant blockquote{
- margin:8px 0 12px;padding:4px 0 4px 13px;
- border-left:3px solid #8b5cf6;color:#b9bfd3
-}
-.msg.assistant code{
- padding:2px 5px;border-radius:5px;
- background:#202438;font-size:.9em
-}
-.msg.assistant pre{
- overflow:auto;padding:12px;border-radius:10px;
- background:#171b2a
-}
-.msg.assistant pre code{padding:0;background:none}
-.msg.assistant hr{
- border:0;border-top:1px solid #33384d;
- margin:14px 0
-}
-.assistant-label{
- color:#bcaaff;font-size:12px;font-weight:650;
- letter-spacing:.3px;margin-bottom:3px
-}
-.actions{
- display:flex;align-items:center;gap:8px;min-height:25px
-}
-.user-row .actions{justify-content:flex-end}
-.copy-btn{
- display:inline-flex;align-items:center;gap:6px;
- border:0;background:transparent;color:#919ab2;
- font:12px -apple-system,BlinkMacSystemFont,
- 'Segoe UI',sans-serif;
- padding:5px 4px;cursor:pointer;
- -webkit-tap-highlight-color:transparent
-}
-.copy-btn:active{color:#e0d8ff}
-.copy-btn svg{
- width:15px;height:15px;
- fill:none;stroke:currentColor;stroke-width:1.7;
- stroke-linecap:round;stroke-linejoin:round
-}
-.streaming-cursor{
- display:inline-block;width:2px;height:1em;
- margin-left:3px;background:#bcaaff;
- vertical-align:-2px;border-radius:2px;
- animation:cursorPulse 1s ease-in-out infinite
-}
-@keyframes cursorPulse{
- 0%,100%{opacity:.25}
- 50%{opacity:1}
+@keyframes starFloat{50%{transform:translateY(-6px) rotate(8deg)}}
+.eyebrow{font-size:10px;letter-spacing:2px;color:#c7b1ff}
+.hero h1{position:relative;max-width:390px;margin:13px 0 10px;font-size:36px;line-height:1.02;letter-spacing:-1.5px;text-shadow:0 2px 20px #0006}
+.hero p{position:relative;max-width:310px;color:#b5b1c2;font-size:13px;line-height:1.55}
+.info{margin:0 0 25px;padding:13px 14px;border-radius:17px;border-color:#ffffff12;background:linear-gradient(110deg,#191722,#12131a);box-shadow:inset 0 1px #ffffff08}
+.info i{background:linear-gradient(145deg,#44336b,#27203a);border:1px solid #ffffff13;box-shadow:0 5px 18px #7955f522}
+h2.title{display:flex;align-items:center;gap:10px;margin:25px 0 13px;font-size:19px;letter-spacing:-.3px}
+h2.title:after{content:"";height:1px;flex:1;background:linear-gradient(90deg,#ffffff1b,transparent)}
+.tiles{gap:9px}
+.tile{transition:transform .18s ease}
+.tile:active{transform:scale(.96)}
+.tile i{height:70px;border-radius:21px;border:1px solid #ffffff17;background:linear-gradient(145deg,#24232c,#15161d);box-shadow:inset 0 1px #ffffff12,0 9px 20px #0003;color:#e5dbff}
+.tile:nth-child(1) i{background:radial-gradient(circle at 75% 20%,#875af344,transparent 46%),linear-gradient(145deg,#282235,#15161d)}
+.tile:nth-child(2) i{background:radial-gradient(circle at 75% 20%,#49a6b544,transparent 46%),linear-gradient(145deg,#1d292d,#15161d)}
+.tile:nth-child(3) i{background:radial-gradient(circle at 75% 20%,#725df244,transparent 46%),linear-gradient(145deg,#24223a,#15161d)}
+.tile:nth-child(4) i{background:radial-gradient(circle at 75% 20%,#e8b76c30,transparent 46%),linear-gradient(145deg,#30271f,#15161d)}
+.tile span{font-size:11px;font-weight:600;color:#dedbe8}
+.cards{gap:12px}
+.card{height:164px;padding:15px;border-radius:22px;border-color:#ffffff1a;box-shadow:0 12px 28px #0004;transition:transform .18s,border-color .18s}
+.card:active{transform:scale(.985)}
+.card:before{transition:transform .35s}
+.card:hover:before{transform:scale(1.05)}
+.card:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#090a10e8,transparent 66%);pointer-events:none}
+.card.v:before{background:radial-gradient(circle at 75% 14%,#53c3ce65,transparent 42%),radial-gradient(circle at 15% 60%,#313b68,transparent 46%),linear-gradient(145deg,#1b292c,#11131a)}
+.card:first-child:before{background:radial-gradient(circle at 77% 13%,#c396ff77,transparent 39%),radial-gradient(circle at 18% 45%,#654d91,transparent 44%),linear-gradient(145deg,#342742,#15151e)}
+.card>*{z-index:1}
+.card i{right:15px;top:14px;width:42px;height:42px;display:grid;place-items:center;border:1px solid #ffffff2c;border-radius:15px;background:#ffffff14;backdrop-filter:blur(8px);font-size:23px}
+.card small{font-weight:700;letter-spacing:1.3px;color:#d5c6ff}
+.card b{font-size:16px;letter-spacing:-.2px}
+.card em{color:#c0bdca}
+.chips{padding:2px 1px 8px}
+.chip{border-color:#ffffff17;background:linear-gradient(120deg,#1c1b25,#14151b);padding:10px 14px;color:#d3cbea;box-shadow:inset 0 1px #ffffff08}
+.head{padding:20px 2px 16px}
+.head h1{font-size:29px;letter-spacing:-.8px}
+.panel{border-color:#ffffff16;background:linear-gradient(145deg,#181821,#111218);box-shadow:0 12px 32px #0003,inset 0 1px #ffffff08}
+.prompt,select,.chatinput{border-color:#ffffff1a;background:#0d0e14}
+.prompt:focus,select:focus,.chatinput:focus{border-color:#9878ff;box-shadow:0 0 0 3px #7955f522}
+.primary{background:linear-gradient(110deg,#a178ff,#7552f4 53%,#4b57e5);box-shadow:0 8px 22px #7653f43b,inset 0 1px #ffffff35;transition:filter .18s,transform .18s}
+.primary:active{transform:scale(.99);filter:brightness(1.12)}
+.anonbar{border-color:#ffffff14;background:linear-gradient(110deg,#191821,#12131a)}
+.chatbox{border-color:#ffffff19;background:linear-gradient(180deg,#101117,#0b0c11);box-shadow:0 15px 36px #0004}
+.compose{background:#15161d}
+.iconbtn{border-color:#ffffff1b;background:#22232d}
+.sendbtn{background:linear-gradient(135deg,#a178ff,#7150ee 58%,#4d5be5);box-shadow:0 5px 16px #7653f44d}
+.profile{border-color:#ffffff19;background:radial-gradient(circle at 50% 0%,#835cf62b,transparent 55%),linear-gradient(145deg,#1b1a24,#111218)}
+.avatar{box-shadow:0 0 0 5px #ffffff0c,0 8px 30px #7955f544}
+.historyitem{border-color:#ffffff15;background:linear-gradient(120deg,#191a22,#111218)}
+nav{border-color:#ffffff24;background:#202129e8;box-shadow:0 14px 45px #0009,0 0 28px #8c6aff12}
+nav button{transition:background .2s,color .2s}
+nav button.active{background:linear-gradient(135deg,#51466a,#363747);color:#fff;box-shadow:inset 0 1px #ffffff1a}
+nav button.active i{color:#d9c9ff}
+.toast{backdrop-filter:blur(16px);background:#24232ded;border-color:#ffffff26}
+@media(max-width:380px){
+ #app{padding-left:14px;padding-right:14px}
+ .hero{padding:23px 18px 20px;min-height:214px}
+ .hero h1{font-size:32px}
+ .tile i{height:62px}
+ .card{height:150px;padding:12px}
+ .card b{font-size:14px}
 }
 @media(prefers-reduced-motion:reduce){
- .streaming-cursor{animation:none}
+ *,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}
 }
-.notice{
- align-self:center;font-size:12px;color:#bcaaff;
- background:#252044;border:1px solid #51448c;
- padding:9px 13px;border-radius:14px;text-align:center
-}
-form{
- display:flex;gap:10px;background:#171b2a;
- border:1px solid #33384d;border-radius:20px;
- padding:9px;align-items:end
-}
-textarea{
- flex:1;min-width:0;background:transparent;
- color:white;border:0;outline:0;resize:none;
- font:inherit;padding:11px 7px;max-height:130px
-}
-#send{
- border:0;border-radius:13px;
- background:linear-gradient(135deg,#8b5cf6,#2563eb);
- color:white;font-size:22px;width:48px;height:48px;
- cursor:pointer;flex-shrink:0
-}
-#send:disabled{opacity:.5}
-footer{
- text-align:center;color:#777e97;
- font-size:11px;padding:12px 0 0
-}
-</style>
-</head>
-<body>
-<main>
-<header>
-<strong>✦ ANNIVEO AI</strong>
-<span class="tag">MINI APP</span>
-</header>
-<div class="mode">
- <div class="mode-title">
-  <span class="shield">🛡️</span>
-  <div>
-   <div class="mode-name">Анонимный чат</div>
-   <div class="mode-status" id="modeStatus">История сохраняется</div>
-  </div>
- </div>
- <button type="button" id="modeSwitch" class="switch"
-  role="switch" aria-checked="false"
-  aria-label="Анонимный чат"></button>
+</style></head><body>
+<div id="app">
+<header><div class="brand"><span class="logo">✦</span><span>ANNIVEO AI</span></div><span class="pill">AI STUDIO</span></header>
+<section class="view active" id="view-home">
+ <div class="hero"><div class="eyebrow">Твоя AI-студия</div><h1>Что создадим<br>сегодня?</h1><p>Общайся с ИИ, создавай изображения и короткие видео в одном месте.</p></div>
+ <div class="info"><i>✦</i><div><b>ANNIVEO AI Studio</b><small>Генерация может расходовать баланс Pollinations. Проверь баланс перед запуском.</small></div></div>
+ <h2 class="title">Создать</h2><div class="tiles"><button class="tile" data-open="image"><i>✧</i><span>Фото</span></button><button class="tile" data-open="video"><i>▻</i><span>Видео</span></button><button class="tile" data-open="chat"><i>✦</i><span>Чат с ИИ</span></button><button class="tile" data-open="profile"><i>◎</i><span>Профиль</span></button></div>
+ <h2 class="title">Популярное</h2><div class="cards"><button class="card" data-open="image"><i>✧</i><small>Изображения</small><b>Создать фото</b><em>Опиши свою идею</em></button><button class="card v" data-open="video"><i>▻</i><small>Видео</small><b>Оживить идею</b><em>Сгенерировать ролик</em></button></div>
+ <h2 class="title">Идеи для начала</h2><div class="chips"><button class="chip" data-template="Портрет в кинематографичном свете, тёмный фон, стиль ANNIVEO">Кинопортрет</button><button class="chip" data-template="Ночной город после дождя, отражения неона, медленный проезд камеры">Ночной город</button><button class="chip" data-template="Фантастический пейзаж на закате, облака движутся, камера плавно приближается">Фантастика</button></div>
+</section>
+<section class="view" id="view-chat"><div class="head"><div class="eyebrow">ANNIVEO AI</div><h1>Чат</h1><p>Задавай вопросы текстом или запиши голосовое.</p></div><div class="anonbar"><div><b>Анонимный чат</b><small id="anonStatus">История сохраняется</small></div><button class="anon-toggle" id="anonToggle" type="button" role="switch" aria-checked="false" aria-label="Анонимный чат"></button></div><div class="chatbox"><div class="messages" id="messages"></div><div class="compose"><button class="iconbtn" id="mic" type="button">🎙</button><textarea class="chatinput" id="chatInput" rows="1" maxlength="4000" placeholder="Напиши сообщение…"></textarea><button class="sendbtn" id="send" type="button">➤</button></div></div><div class="chatstatus" id="chatStatus"></div><div class="note">Голосовое распознаётся в текст и отправляется ANNIVEO AI. Разреши доступ к микрофону.</div></section>
+<section class="view" id="view-image"><div class="head"><div class="eyebrow">AI creation</div><h1>Создать фото</h1><p>Опиши изображение и выбери формат.</p></div><div class="panel"><label class="label" for="imagePrompt">Что изобразить?</label><textarea class="prompt" id="imagePrompt" maxlength="1200" placeholder="Портрет в мягком студийном свете…"></textarea><div class="row"><div><label class="label" for="imageModel">Модель</label><select id="imageModel"><option value="flux">Flux</option><option value="gptimage">GPT Image</option><option value="seedream5">Seedream</option><option value="nanobanana-2">Nano Banana</option></select></div><div><label class="label" for="imageRatio">Формат</label><select id="imageRatio"><option value="1:1">Квадрат</option><option value="9:16">Вертикальный</option><option value="16:9">Горизонтальный</option></select></div></div><button class="primary" id="makeImage">✦ Создать изображение</button><div class="note">Запрос может расходовать баланс Pollinations.</div><div class="status" id="imageStatus"></div><div class="result" id="imageResult"></div></div></section>
+<section class="view" id="view-video"><div class="head"><div class="eyebrow">AI creation</div><h1>Создать видео</h1><p>Опиши сцену и движение камеры для короткого ролика.</p></div><div class="panel"><label class="label" for="videoPrompt">Опиши видео</label><textarea class="prompt" id="videoPrompt" maxlength="1200" placeholder="Волны на закате, камера плавно летит над водой…"></textarea><div class="row"><div><label class="label" for="videoModel">Модель</label><select id="videoModel"><option value="veo">Veo</option><option value="seedance-2.0">Seedance 2.0</option><option value="seedance-pro">Seedance Pro</option><option value="wan-fast">Wan Fast</option><option value="ltx-2">LTX</option></select></div><div><label class="label" for="videoRatio">Кадр</label><select id="videoRatio"><option value="16:9">Горизонтальный</option><option value="9:16">Вертикальный</option><option value="1:1">Квадрат</option></select></div></div><div style="margin-top:10px"><label class="label" for="duration">Длительность</label><select id="duration"><option value="4">4 секунды</option><option value="6">6 секунд</option><option value="8">8 секунд</option></select></div><button class="primary" id="makeVideo">▻ Создать видео</button><div class="note">Видео создаётся дольше фото; запрос может расходовать баланс Pollinations.</div><div class="status" id="videoStatus"></div><div class="result" id="videoResult"></div></div></section>
+<section class="view" id="view-history"><div class="head"><div class="eyebrow">Твои диалоги</div><h1>История</h1><p>Последние сообщения твоего Telegram-аккаунта.</p></div><div class="history" id="historyList"></div></section>
+<section class="view" id="view-profile"><div class="head"><div class="eyebrow">Аккаунт</div><h1>Профиль</h1><p>Профиль связан с Telegram.</p></div><div class="profile"><div class="avatar" id="avatar">✦</div><h2 id="profileName">Пользователь Telegram</h2><div class="username" id="profileUsername">Открой через Telegram</div><div class="meta"><div><b>Telegram ID</b><span id="profileId">—</span></div><div><b>История</b><span>Переписка сохраняется для этого Telegram-аккаунта</span></div></div></div></section>
 </div>
-<section class="chat" id="chat"></section>
-<form id="form">
- <textarea id="message" rows="1" maxlength="4000"
-  placeholder="Напиши сообщение…" aria-label="Сообщение"></textarea>
- <button id="send" type="submit" aria-label="Отправить">➤</button>
-</form>
-<footer>ANNIVEO AI · Твой интеллектуальный помощник</footer>
-</main>
+<nav><button class="active" data-view="home"><i>⌂</i><span>Главная</span></button><button data-view="history"><i>◷</i><span>История</span></button><button data-view="chat"><i>✦</i><span>Чат</span></button><button data-view="profile"><i>○</i><span>Профиль</span></button></nav>
 <script>
-const API_URL =
- "https://anniveo-ai-api.yaylaevismail.workers.dev/";
-const tg = window.Telegram?.WebApp;
-const chat = document.getElementById("chat");
-const form = document.getElementById("form");
-const input = document.getElementById("message");
-const send = document.getElementById("send");
-const modeSwitch = document.getElementById("modeSwitch");
-const modeStatus = document.getElementById("modeStatus");
-if (tg) {
- tg.ready();
- tg.expand();
-}
-const initData = tg?.initData || "";
-const userId = tg?.initDataUnsafe?.user?.id;
-const CACHE_KEY = userId
- ? "anniveo_chat_cache_v3_" + userId
- : null;
-let history = [];
-let temporaryHistory = [];
-let anonymous = false;
-let busy = false;
-let loaded = false;
-let historyVersion = 0;
-let syncing = false;
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-function validMessages(messages) {
- if (!Array.isArray(messages)) return [];
- return messages.filter(item =>
-  item &&
-  ["user","assistant"].includes(item.role) &&
-  typeof item.content === "string"
- ).slice(-40).map(item => ({
-  role:item.role,
-  content:item.content
- }));
-}
-function saveCache(messages) {
- if (!CACHE_KEY) return;
- try {
-  localStorage.setItem(CACHE_KEY, JSON.stringify(validMessages(messages)));
- } catch(e) {}
-}
-function readCache() {
- if (!CACHE_KEY) return [];
- try {
-  return validMessages(JSON.parse(localStorage.getItem(CACHE_KEY) || "[]"));
- } catch(e) {
-  return [];
- }
-}
-function showWelcome() {
- const welcome = document.createElement("div");
- welcome.className = "welcome";
- welcome.id = "welcome";
- welcome.innerHTML = `
-  <div class="orb">✦</div>
-  <h1>Привет! Я ANNIVEO AI</h1>
-  <p>Твой интеллектуальный помощник.
-  Задай вопрос, чтобы начать диалог.</p>
- `;
- chat.appendChild(welcome);
-}
-/* Безопасно оформляет Markdown: текст ответа не вставляется как HTML. */
-function formatAnswer(element, text) {
- element.replaceChildren();
- function inline(parent, value) {
-  const pattern =
-   /(\*\*[^*]+?\*\*|__[^_]+?__|`[^`]+`|\*[^*\n]+?\*|_[^_\n]+?_)/g;
-  let last = 0;
-  let match;
-  while ((match = pattern.exec(value)) !== null) {
-   if (match.index > last) {
-    parent.appendChild(
-     document.createTextNode(value.slice(last, match.index))
-    );
-   }
-   const token = match[0];
-   let node;
-   if (token.startsWith("**") || token.startsWith("__")) {
-    node = document.createElement("strong");
-    node.textContent = token.slice(2, -2);
-   } else if (token.startsWith("`")) {
-    node = document.createElement("code");
-    node.textContent = token.slice(1, -1);
-   } else {
-    node = document.createElement("em");
-    node.textContent = token.slice(1, -1);
-   }
-   parent.appendChild(node);
-   last = pattern.lastIndex;
-  }
-  if (last < value.length) {
-   parent.appendChild(document.createTextNode(value.slice(last)));
-  }
- }
- const lines = String(text).replace(/\r/g, "").split("\n");
- let paragraph = [];
- let list = null;
- let listType = "";
- let quote = [];
- let code = [];
- let inCode = false;
- function flushParagraph() {
-  if (!paragraph.length) return;
-  const p = document.createElement("p");
-  inline(p, paragraph.join(" "));
-  element.appendChild(p);
-  paragraph = [];
- }
- function flushList() {
-  list = null;
-  listType = "";
- }
- function flushQuote() {
-  if (!quote.length) return;
-  const block = document.createElement("blockquote");
-  const p = document.createElement("p");
-  inline(p, quote.join(" "));
-  block.appendChild(p);
-  element.appendChild(block);
-  quote = [];
- }
- function flushCode() {
-  const pre = document.createElement("pre");
-  const codeElement = document.createElement("code");
-  codeElement.textContent = code.join("\n");
-  pre.appendChild(codeElement);
-  element.appendChild(pre);
-  code = [];
- }
- for (const line of lines) {
-  if (/^\s*```/.test(line)) {
-   flushParagraph();
-   flushList();
-   flushQuote();
-   if (inCode) {
-    flushCode();
-    inCode = false;
-   } else {
-    inCode = true;
-   }
-   continue;
-  }
-  if (inCode) {
-   code.push(line);
-   continue;
-  }
-  if (!line.trim()) {
-   flushParagraph();
-   flushList();
-   flushQuote();
-   continue;
-  }
-  const heading = line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
-  if (heading) {
-   flushParagraph();
-   flushList();
-   flushQuote();
-   const h = document.createElement("h" + heading[1].length);
-   inline(h, heading[2]);
-   element.appendChild(h);
-   continue;
-  }
-  if (/^\s*(---+|\*\*\*+|___+)\s*$/.test(line)) {
-   flushParagraph();
-   flushList();
-   flushQuote();
-   element.appendChild(document.createElement("hr"));
-   continue;
-  }
-  const bullet = line.match(/^\s*[-*+]\s+(.+)$/);
-  const numbered = line.match(/^\s*\d+[.)]\s+(.+)$/);
-  const item = bullet || numbered;
-  if (item) {
-   flushParagraph();
-   flushQuote();
-   const type = bullet ? "ul" : "ol";
-   if (!list || listType !== type) {
-    flushList();
-    list = document.createElement(type);
-    listType = type;
-    element.appendChild(list);
-   }
-   const li = document.createElement("li");
-   inline(li, item[1]);
-   list.appendChild(li);
-   continue;
-  }
-  const quoted = line.match(/^\s*>\s?(.*)$/);
-  if (quoted) {
-   flushParagraph();
-   flushList();
-   quote.push(quoted[1]);
-   continue;
-  }
-  flushList();
-  flushQuote();
-  paragraph.push(line.trim());
- }
- if (inCode) flushCode();
- flushParagraph();
- flushList();
- flushQuote();
-}
-function scrollChat(force = false) {
- const distance = chat.scrollHeight - chat.scrollTop - chat.clientHeight;
- if (force || distance < 180) chat.scrollTop = chat.scrollHeight;
-}
-const COPY_ICON = `
-<svg viewBox="0 0 24 24" aria-hidden="true">
-<rect x="8" y="8" width="12" height="12" rx="2"/>
-<path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>
-</svg>`;
-async function copyText(text) {
- if (navigator.clipboard?.writeText) {
-  try {
-   await navigator.clipboard.writeText(text);
-   return true;
-  } catch {}
- }
- const area = document.createElement("textarea");
- area.value = text;
- area.style.position = "fixed";
- area.style.opacity = "0";
- area.style.pointerEvents = "none";
- document.body.appendChild(area);
- area.focus();
- area.select();
- let copied = false;
- try {
-  copied = document.execCommand("copy");
- } catch {}
- area.remove();
- return copied;
-}
-function add(text, role) {
- document.getElementById("welcome")?.remove();
- const row = document.createElement("div");
- row.className = "message-row " + role + "-row";
- if (role === "assistant") {
-  const label = document.createElement("div");
-  label.className = "assistant-label";
-  label.textContent = "✦ ANNIVEO AI";
-  row.appendChild(label);
- }
- const el = document.createElement("div");
- el.className = "msg " + role;
- if (role === "assistant") formatAnswer(el, text);
- else el.textContent = text;
- row.appendChild(el);
- const actions = document.createElement("div");
- actions.className = "actions";
- const copy = document.createElement("button");
- copy.type = "button";
- copy.className = "copy-btn";
- copy.innerHTML = COPY_ICON;
- const copyLabel = document.createElement("span");
- copyLabel.textContent = "Копировать";
- copy.appendChild(copyLabel);
- let rawText = String(text);
- copy.addEventListener("click", async () => {
-  const ok = await copyText(rawText);
-  copyLabel.textContent = ok ? "Скопировано" : "Не удалось скопировать";
-  setTimeout(() => { copyLabel.textContent = "Копировать"; }, 1800);
- });
- actions.appendChild(copy);
- row.appendChild(actions);
- chat.appendChild(row);
- scrollChat(true);
- el.setRawText = value => { rawText = String(value); };
- return el;
-}
-function renderMessages(messages) {
- chat.replaceChildren();
- if (!messages.length) {
-  showWelcome();
-  return;
- }
- messages.forEach(item => add(item.content, item.role));
-}
-function showNotice(text) {
- const el = document.createElement("div");
- el.className = "notice";
- el.textContent = text;
- chat.prepend(el);
-}
-function updateMode() {
- modeSwitch.classList.toggle("active", anonymous);
- modeSwitch.setAttribute("aria-checked", String(anonymous));
- modeStatus.textContent = anonymous
-  ? "История не сохраняется"
-  : "История сохраняется";
-}
-function setBusy(value) {
- busy = value;
- send.disabled = value || !loaded;
- modeSwitch.disabled = value;
-}
-function createRequestId() {
- if (crypto.randomUUID) return crypto.randomUUID();
- const bytes = new Uint8Array(16);
- crypto.getRandomValues(bytes);
- return Array.from(bytes)
-  .map(n => n.toString(16).padStart(2,"0"))
-  .join("");
-}
-async function api(payload, timeoutMs = 42000) {
- const controller = new AbortController();
- const timer = setTimeout(() => controller.abort(), timeoutMs);
- try {
-  const response = await fetch(API_URL, {
-   method:"POST",
-   signal:controller.signal,
-   headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({...payload, initData})
-  });
-  let data;
-  try {
-   data = await response.json();
-  } catch {
-   const error = new Error("Сервер вернул некорректный ответ");
-   error.retryable = response.status >= 500;
-   throw error;
-  }
-  if (response.status === 202 && data.processing) {
-   return {processing:true};
-  }
-  if (!response.ok) {
-   const error = new Error(data.error || "Ошибка сервера");
-   error.status = response.status;
-   throw error;
-  }
-  return data;
- } catch(error) {
-  if (error.name === "AbortError") {
-   const e = new Error("Превышено время ожидания ответа");
-   e.retryable = true;
-   throw e;
-  }
-  if (error instanceof TypeError) {
-   const e = new Error("Соединение временно недоступно");
-   e.retryable = true;
-   throw e;
-  }
-  throw error;
- } finally {
-  clearTimeout(timer);
- }
-}
-function canRetry(error) {
- return error.retryable ||
-  error.status === 408 ||
-  error.status === 429 ||
-  error.status >= 500;
-}
-function createSmoothWriter(element) {
- let target = "";
- let shown = "";
- let frame = null;
- let lastTime = 0;
- let finished = false;
- const cursor = document.createElement("span");
- cursor.className = "streaming-cursor";
- const draw = () => {
-  formatAnswer(element, shown);
-  if (!finished) element.appendChild(cursor);
-  element.setRawText(shown);
-  scrollChat();
- };
- const step = timestamp => {
-  frame = null;
-  const delta = lastTime ? Math.min(timestamp - lastTime, 100) : 16;
-  lastTime = timestamp;
-  if (shown.length < target.length) {
-   const remaining = target.length - shown.length;
-   const amount = Math.max(1, Math.min(
-    remaining,
-    Math.ceil((delta / 1000) *
-     (remaining > 350 ? 180 : remaining > 120 ? 110 : 70))
-   ));
-   shown = target.slice(0, shown.length + amount);
-   draw();
-  }
-  if (shown.length < target.length) {
-   frame = requestAnimationFrame(step);
-  }
- };
- const schedule = () => {
-  if (frame === null && shown.length < target.length) {
-   frame = requestAnimationFrame(step);
-  }
- };
- return {
-  update(text) {
-   target = String(text);
-   finished = false;
-   schedule();
-  },
-  async finish(text) {
-   target = String(text);
-   while (shown.length < target.length) {
-    schedule();
-    await sleep(30);
-   }
-   finished = true;
-   draw();
-  },
-  stop(text) {
-   if (frame !== null) {
-    cancelAnimationFrame(frame);
-    frame = null;
-   }
-   finished = true;
-   shown = String(text);
-   target = shown;
-   draw();
-  },
-  getText() { return target; }
- };
-}
-async function streamAPI(payload, onToken) {
- const controller = new AbortController();
- let timer;
- let reader;
- let receivedText = false;
- let completed = false;
- let answer = "";
- let buffer = "";
- const decoder = new TextDecoder();
- const resetTimer = () => {
-  clearTimeout(timer);
-  timer = setTimeout(() => controller.abort(), 45000);
- };
- const processEvent = rawEvent => {
-  const raw = rawEvent.split("\n")
-   .filter(line => line.startsWith("data:"))
-   .map(line => line.slice(5).trimStart())
-   .join("\n");
-  if (!raw.trim()) return;
-  let data;
-  try { data = JSON.parse(raw); }
-  catch { return; }
-  if (data.type === "token" && typeof data.content === "string") {
-   answer += data.content;
-   receivedText = true;
-   onToken(answer);
-  }
-  if (data.type === "done") {
-   completed = true;
-   if (typeof data.reply === "string") {
-    answer = data.reply;
-    onToken(answer);
-   }
-  }
-  if (data.type === "error") {
-   const error = new Error(data.error || "Ошибка генерации");
-   error.partial = receivedText;
-   throw error;
-  }
- };
- try {
-  resetTimer();
-  const response = await fetch(API_URL, {
-   method:"POST",
-   signal:controller.signal,
-   headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({...payload, stream:true, initData})
-  });
-  if (response.status === 202) return {processing:true};
-  if (!response.ok) {
-   let data = {};
-   try { data = await response.json(); } catch {}
-   const error = new Error(data.error || "Ошибка сервера");
-   error.status = response.status;
-   throw error;
-  }
-  const contentType = response.headers.get("content-type") || "";
-  if (!contentType.includes("text/event-stream")) {
-   const data = await response.json();
-   if (typeof data.reply !== "string") {
-    throw new Error("Сервер вернул некорректный ответ");
-   }
-   answer = data.reply;
-   completed = true;
-   onToken(answer);
-   return {reply:answer};
-  }
-  if (!response.body) {
-   throw new Error("Потоковая передача недоступна");
-  }
-  reader = response.body.getReader();
-  while (true) {
-   resetTimer();
-   const {done,value} = await reader.read();
-   if (done) break;
-   buffer += decoder.decode(value, {stream:true})
-    .replace(/\r\n/g,"\n");
-   let boundary;
-   while ((boundary = buffer.indexOf("\n\n")) !== -1) {
-    const eventText = buffer.slice(0,boundary);
-    buffer = buffer.slice(boundary + 2);
-    processEvent(eventText);
-   }
-   if (completed) break;
-  }
-  if (!completed) {
-   throw new Error("Соединение прервалось до завершения ответа");
-  }
-  if (!answer.trim()) throw new Error("ИИ вернул пустой ответ");
-  return {reply:answer};
- } catch(error) {
-  if (error.name === "AbortError") {
-   const e = new Error("Превышено время ожидания ответа");
-   e.retryable = true;
-   e.partial = receivedText;
-   throw e;
-  }
-  if (error instanceof TypeError) {
-   const e = new Error("Соединение временно недоступно");
-   e.retryable = true;
-   e.partial = receivedText;
-   throw e;
-  }
-  if (receivedText) error.partial = true;
-  throw error;
- } finally {
-  clearTimeout(timer);
-  if (reader) {
-   try { await reader.cancel(); } catch {}
-  }
-  controller.abort();
- }
-}
-async function sendWithRecovery(payload, pending, onToken) {
- const isAnonymous = payload.action === "anonymous";
- const maxAttempts = isAnonymous ? 3 : 5;
- for (let attempt = 0; attempt < maxAttempts; attempt++) {
-  if (attempt > 0) {
-   pending.textContent =
-    "Восстанавливаю соединение…\nПопытка " +
-    (attempt + 1) + " из " + maxAttempts;
-   pending.setRawText(pending.textContent);
-   scrollChat();
-   await sleep(Math.min(1200 * attempt, 3500));
-  }
-  let receivedText = false;
-  try {
-   const data = await streamAPI(payload, text => {
-    receivedText = true;
-    onToken(text);
-   });
-   if (data.processing) {
-    if (attempt === maxAttempts - 1) {
-     throw new Error(
-      "Запрос ещё обрабатывается. Подожди немного и открой чат снова."
-     );
-    }
-    continue;
-   }
-   if (typeof data.reply !== "string" || !data.reply.trim()) {
-    throw new Error("ИИ вернул пустой ответ");
-   }
-   return data;
-  } catch(error) {
-   if (
-    receivedText ||
-    error.partial ||
-    !canRetry(error) ||
-    attempt === maxAttempts - 1
-   ) {
-    throw error;
-   }
-  }
- }
- throw new Error("Не удалось получить ответ сервера");
-}
-async function fetchHistory() {
- const data = await api({action:"history"}, 15000);
- return validMessages(data.messages);
-}
-async function synchronizeHistory() {
- if (syncing || !initData || !userId) return;
- syncing = true;
- const version = historyVersion;
- try {
-  const serverHistory = await fetchHistory();
-  if (version !== historyVersion) return;
-  history = serverHistory;
-  saveCache(history);
-  if (!anonymous && !busy) renderMessages(history);
- } catch(error) {
-  if (!anonymous && !busy) {
-   showNotice("Облачная синхронизация временно недоступна");
-  }
- } finally {
-  syncing = false;
- }
-}
-async function loadHistory() {
- if (!initData || !userId) {
-  renderMessages([]);
-  add("Открой ANNIVEO AI через Telegram.", "assistant");
-  return;
- }
- history = readCache();
- renderMessages(history);
- loaded = true;
- send.disabled = false;
- await synchronizeHistory();
-}
-modeSwitch.addEventListener("click", () => {
- if (busy || !loaded) return;
- anonymous = !anonymous;
- input.value = "";
- if (anonymous) {
-  temporaryHistory = [];
-  renderMessages([]);
-  showNotice(
-   "🔒 Анонимный чат включён. История не сохраняется в ANNIVEO AI."
-  );
- } else {
-  temporaryHistory = [];
-  renderMessages(history);
-  synchronizeHistory();
- }
- updateMode();
-});
-form.addEventListener("submit", async event => {
- event.preventDefault();
- if (busy || !loaded) return;
- const text = input.value.trim();
- if (!text) return;
- const currentMode = anonymous;
- const context = currentMode
-  ? validMessages(temporaryHistory).slice(-12)
-  : [];
- const payload = currentMode
-  ? {action:"anonymous", message:text, messages:context}
-  : {action:"chat", message:text, requestId:createRequestId()};
- setBusy(true);
- add(text,"user");
- input.value = "";
- const pending = add("ANNIVEO AI думает…","assistant");
- const writer = createSmoothWriter(pending);
- let partialAnswer = "";
- try {
-  const data = await sendWithRecovery(payload, pending, text => {
-   partialAnswer = text;
-   writer.update(text);
-  });
-  await writer.finish(data.reply);
-  scrollChat();
-  const pair = [
-   {role:"user",content:text},
-   {role:"assistant",content:data.reply}
-  ];
-  if (currentMode) {
-   temporaryHistory = validMessages([...temporaryHistory,...pair]);
-  } else {
-   history = validMessages([...history,...pair]);
-   historyVersion++;
-   saveCache(history);
-  }
- } catch(error) {
-  if (partialAnswer.trim()) {
-   writer.stop(partialAnswer);
-   const note = document.createElement("div");
-   note.className = "notice";
-   note.textContent =
-    "Ответ прервался. Попробуй отправить вопрос ещё раз.";
-   chat.appendChild(note);
-  } else {
-   writer.stop(
-    "Не удалось получить ответ.\n" +
-    error.message +
-    "\nПроверь соединение и попробуй позже."
-   );
-  }
-  if (!currentMode) {
-   await sleep(1000);
-   try {
-    const serverHistory = await fetchHistory();
-    history = serverHistory;
-    historyVersion++;
-    saveCache(history);
-    if (!partialAnswer.trim()) renderMessages(history);
-   } catch {}
-  }
- } finally {
-  setBusy(false);
-  input.focus();
- }
-});
-input.addEventListener("keydown", event => {
- if (event.key === "Enter" && !event.shiftKey) {
-  event.preventDefault();
-  form.requestSubmit();
- }
-});
-if (initData && userId) {
- history = readCache();
- renderMessages(history);
-} else {
- showWelcome();
-}
-updateMode();
-loadHistory();
-</script>
-</body>
-</html>
+const API_URL="https://anniveo-ai-api.yaylaevismail.workers.dev/",tg=window.Telegram&&window.Telegram.WebApp;
+if(tg){tg.ready();tg.expand();}
+const initData=tg&&tg.initData?tg.initData:"",user=tg&&tg.initDataUnsafe?tg.initDataUnsafe.user:null,$=id=>document.getElementById(id);
+let busy=false,anonymous=false,rec=null,mic=null,parts=[],tick=null,started=0,tempHistory=[],chatLoaded=false;
+function toast(t){const old=document.querySelector(".toast");if(old)old.remove();const n=document.createElement("div");n.className="toast";n.textContent=t;document.body.appendChild(n);setTimeout(()=>n.remove(),3500);}
+function view(name){document.querySelectorAll(".view").forEach(x=>x.classList.toggle("active",x.id==="view-"+name));document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("active",x.dataset.view===name));window.scrollTo({top:0,behavior:"smooth"});if(name==="history")loadHistory();if(name==="chat")loadChat();}
+document.querySelectorAll("[data-view]").forEach(x=>x.onclick=()=>view(x.dataset.view));document.querySelectorAll("[data-open]").forEach(x=>x.onclick=()=>view(x.dataset.open));
+if(user){const n=[user.first_name,user.last_name].filter(Boolean).join(" ");$("profileName").textContent=n||"Пользователь Telegram";$("profileUsername").textContent=user.username?"@"+user.username:"Telegram-профиль";$("profileId").textContent=String(user.id||"");if(user.photo_url){const i=document.createElement("img");i.src=user.photo_url;i.alt="Фото профиля";$("avatar").replaceChildren(i);}else $("avatar").textContent=(n||"✦").slice(0,1).toUpperCase();}
+function inline(el,s){const r=/(\*\*[^*]+?\*\*|\*[^*\n]+?\*)/g;let i=0,m;while((m=r.exec(s))!==null){if(m.index>i)el.appendChild(document.createTextNode(s.slice(i,m.index)));const n=document.createElement(m[0].startsWith("**")?"strong":"em");n.textContent=m[0].startsWith("**")?m[0].slice(2,-2):m[0].slice(1,-1);el.appendChild(n);i=r.lastIndex;}if(i<s.length)el.appendChild(document.createTextNode(s.slice(i)));}
+function format(el,s){el.replaceChildren();let p=[],list=null,type="";const flush=()=>{if(!p.length)return;const n=document.createElement("p");inline(n,p.join(" "));el.appendChild(n);p=[];},close=()=>{list=null;type="";};String(s).replace(/\r/g,"").split("\n").forEach(line=>{if(!line.trim()){flush();close();return;}const h=line.match(/^\s{0,3}(#{1,3})\s+(.+?)\s*#*\s*$/);if(h){flush();close();const n=document.createElement("h"+h[1].length);inline(n,h[2]);el.appendChild(n);return;}const b=line.match(/^\s*[-*+]\s+(.+)$/),o=line.match(/^\s*\d+[.)]\s+(.+)$/);if(b||o){flush();const t=b?"ul":"ol";if(!list||t!==type){close();list=document.createElement(t);type=t;el.appendChild(list);}const li=document.createElement("li");inline(li,(b||o)[1]);list.appendChild(li);return;}close();p.push(line.trim());});flush();}
+function add(text,role,audio){const w=document.querySelector(".welcome");if(w)w.remove();const row=document.createElement("div");row.className="msgrow "+role;if(role==="assistant"){const l=document.createElement("div");l.className="labelname";l.textContent="✦ ANNIVEO AI";row.appendChild(l);}const box=document.createElement("div");box.className="msg "+role;if(audio){const a=document.createElement("audio");a.controls=true;a.src=audio;box.appendChild(a);}if(role==="assistant")format(box,text);else if(audio){const t=document.createElement("div");t.textContent="Распознано: "+text;box.appendChild(t);}else box.textContent=text;row.appendChild(box);$("messages").appendChild(row);$("messages").scrollTop=$("messages").scrollHeight;return box;}
+function welcome(){if($("messages").children.length)return;const w=document.createElement("div");w.className="welcome";w.innerHTML='<i>✦</i><b>Привет! Я ANNIVEO AI</b><p>Напиши вопрос или нажми на микрофон, чтобы записать голосовое.</p>';$("messages").appendChild(w);}welcome();
+async function post(data,timeout){if(!initData||!user)throw Error("Открой ANNIVEO AI через Telegram");const c=new AbortController(),tm=setTimeout(()=>c.abort(),timeout||90000);try{const r=await fetch(API_URL,{method:"POST",signal:c.signal,headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.assign({},data,{initData:initData}))});if(!r.ok){let d={};try{d=await r.json();}catch{}throw Error(d.error||"Ошибка сервера ("+r.status+")");}return r;}finally{clearTimeout(tm);}}
+function rid(){return crypto.randomUUID?crypto.randomUUID():"r"+Date.now().toString(36)+Math.random().toString(36).slice(2);}
+async function loadChat(){if(chatLoaded||anonymous||!user)return;chatLoaded=true;try{const r=await post({action:"history"},20000),d=await r.json();$("messages").replaceChildren();(d.messages||[]).forEach(m=>add(m.content,m.role));if(!d.messages||!d.messages.length)welcome();}catch(e){chatLoaded=false;toast(e.message);}}
+async function sendChat(text,audio){if(busy)return;busy=true;$("send").disabled=true;$("mic").disabled=true;add(text,"user",audio);const wait=add("ANNIVEO AI думает…","assistant");$("chatStatus").textContent="Отправляю вопрос…";try{const p=anonymous?{action:"anonymous",message:text,messages:tempHistory.slice(-12)}:{action:"chat",message:text,requestId:rid()};const r=await post(p,90000),d=await r.json();if(!d.reply)throw Error(d.error||"Не удалось получить ответ");format(wait,d.reply);if(anonymous)tempHistory.push({role:"user",content:text},{role:"assistant",content:d.reply});$("chatStatus").textContent="";}catch(e){wait.textContent=e.name==="AbortError"?"Ответ задержался. Попробуй ещё раз.":e.message;$("chatStatus").textContent="";}finally{busy=false;$("send").disabled=false;$("mic").disabled=false;}}
+$("send").onclick=()=>{const t=$("chatInput").value.trim();if(t){$("chatInput").value="";sendChat(t,"");}};$("chatInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("send").click();}});
+function mime(){if(!MediaRecorder.isTypeSupported)return "";return["audio/mp4","audio/webm;codecs=opus","audio/webm","audio/aac"].find(x=>MediaRecorder.isTypeSupported(x))||"";}
+function clock(){const s=Math.floor((Date.now()-started)/1000);$("chatStatus").textContent="Запись "+String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")+" · нажми ещё раз для отправки";}
+async function voice(){if(rec&&rec.state==="recording"){rec.stop();return;}if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){toast("Запись недоступна в этом окне. Обнови Telegram или открой Safari.");return;}try{mic=await navigator.mediaDevices.getUserMedia({audio:true});parts=[];const mt=mime();rec=mt?new MediaRecorder(mic,{mimeType:mt}):new MediaRecorder(mic);rec.ondataavailable=e=>{if(e.data?.size)parts.push(e.data);};rec.onstop=finish;rec.start();started=Date.now();$("mic").classList.add("recording");$("mic").textContent="■";clock();tick=setInterval(clock,500);}catch(e){toast("Разреши доступ к микрофону в Telegram.");}}
+async function finish(){clearInterval(tick);if(mic)mic.getTracks().forEach(x=>x.stop());mic=null;$("mic").classList.remove("recording");$("mic").textContent="🎙";const blob=new Blob(parts,{type:rec.mimeType||"audio/webm"});if(!blob.size){$("chatStatus").textContent="";return;}if(blob.size>20*1024*1024){toast("Запись больше 20 МБ. Запиши покороче.");return;}const ext=blob.type.includes("mp4")?"m4a":blob.type.includes("aac")?"aac":"webm",url=URL.createObjectURL(blob);$("chatStatus").textContent="Распознаю голосовое…";try{const f=new FormData();f.append("action","transcribe");f.append("initData",initData);f.append("file",blob,"voice."+ext);const r=await fetch(API_URL,{method:"POST",body:f}),d=await r.json();if(!r.ok||!d.text)throw Error(d.error||"Не удалось распознать голос");$("chatStatus").textContent="";await sendChat(d.text,url);}catch(e){URL.revokeObjectURL(url);$("chatStatus").textContent="";toast(e.message);}}
+$("mic").onclick=voice;
+async function generate(kind){const v=kind==="video",prompt=$(v?"videoPrompt":"imagePrompt").value.trim(),btn=$(v?"makeVideo":"makeImage"),status=$(v?"videoStatus":"imageStatus"),box=$(v?"videoResult":"imageResult");if(!prompt){toast("Сначала опиши, что создать");return;}if(box.dataset.url)URL.revokeObjectURL(box.dataset.url);box.replaceChildren();box.classList.remove("show");btn.disabled=true;btn.textContent="⏳ Генерирую…";status.textContent="Запрос отправлен. Это может занять время…";const c=new AbortController(),tm=setTimeout(()=>c.abort(),v?240000:120000);try{const data={action:kind,prompt:prompt,model:$(v?"videoModel":"imageModel").value,ratio:$(v?"videoRatio":"imageRatio").value,initData:initData};if(v)data.duration=Number($("duration").value);const r=await fetch(API_URL,{method:"POST",signal:c.signal,headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});if(!r.ok){let d={};try{d=await r.json();}catch{}throw Error(d.error||"Ошибка генерации ("+r.status+")");}const url=URL.createObjectURL(await r.blob());box.dataset.url=url;if(v){const el=document.createElement("video");el.controls=true;el.playsInline=true;el.src=url;box.appendChild(el);}else{const el=document.createElement("img");el.alt="Созданное изображение";el.src=url;box.appendChild(el);}const a=document.createElement("a");a.className="download";a.href=url;a.download=v?"anniveo-video.mp4":"anniveo-image";a.textContent="Скачать результат";box.appendChild(a);box.classList.add("show");status.textContent="Готово";}catch(e){status.textContent="";toast(e.name==="AbortError"?"Генерация долго не отвечает. Попробуй ещё раз.":e.message);}finally{clearTimeout(tm);btn.disabled=false;btn.textContent=v?"▻ Создать видео":"✦ Создать изображение";}}
+$("makeImage").onclick=()=>generate("image");$("makeVideo").onclick=()=>generate("video");
+document.querySelectorAll("[data-template]").forEach(b=>b.onclick=()=>{$("videoPrompt").value=b.dataset.template;view("video");});
+async function loadHistory(){const list=$("historyList");if(!user){list.innerHTML='<div class="empty">Открой Mini App через Telegram.</div>';return;}list.innerHTML='<div class="empty">Загружаю…</div>';try{const r=await post({action:"history"},20000),d=await r.json(),items=d.messages||[];list.replaceChildren();if(!items.length){list.innerHTML='<div class="empty">История пока пуста.<br>Начни диалог.</div>';return;}items.slice(-30).reverse().forEach(x=>{const row=document.createElement("div"),b=document.createElement("b"),s=document.createElement("span");row.className="historyitem";b.textContent=x.role==="user"?"Ты":"✦ ANNIVEO AI";s.textContent=x.content||"";row.append(b,s);list.appendChild(row);});}catch(e){list.innerHTML="";const n=document.createElement("div");n.className="empty";n.textContent=e.message;list.appendChild(n);}}
+</script></body></html>
