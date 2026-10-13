@@ -53,15 +53,16 @@ export default {
           body: JSON.stringify({
             model: "openai",
             messages: [
-              {
-                role: "system",
-                content: "Ты ANNIVEO AI, дружелюбный интеллектуальный помощник. Отвечай на языке пользователя."
-              },
-              {
-                role: "user",
-                content: message
-              }
-            ]
+  {
+    role: "system",
+    content: "Ты ANNIVEO AI, дружелюбный интеллектуальный помощник. Отвечай на языке пользователя."
+  },
+  ...history.slice(0, -1),
+  {
+    role: "user",
+    content: message
+  }
+]
           })
         }
       );
