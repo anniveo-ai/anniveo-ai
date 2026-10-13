@@ -5,15 +5,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ANNIVEO AI</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;background:#090b13;color:#f5f6ff;font:16px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
-main{max-width:760px;margin:auto;min-height:100dvh;display:flex;flex-direction:column;padding:22px 18px max(18px,env(safe-area-inset-bottom))}
+main{max-width:760px;margin:auto;height:100dvh;display:flex;flex-direction:column;padding:22px 18px max(18px,env(safe-area-inset-bottom))}
 header{display:flex;align-items:center;justify-content:space-between;padding:5px 0 22px;border-bottom:1px solid #25283a}
 header strong{letter-spacing:2px;font-size:19px}
 .tag{font-size:11px;background:#252044;color:#bcaaff;border:1px solid #51448c;border-radius:99px;padding:6px 10px}
-.chat{flex:1;overflow:auto;display:flex;flex-direction:column;gap:14px;padding:24px 0}
+.chat{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:14px;padding:24px 0}
 .welcome{margin:auto;text-align:center}
 .orb{width:92px;height:92px;border-radius:28px;margin:0 auto 24px;background:linear-gradient(135deg,#7c3aed,#2563eb,#06b6d4);display:grid;place-items:center;font-size:40px;box-shadow:0 0 60px #6d28d955}
 .welcome h1{font-size:32px;margin:0 0 12px}
@@ -22,7 +23,7 @@ header strong{letter-spacing:2px;font-size:19px}
 .user{align-self:flex-end;background:#5133aa}
 .assistant{align-self:flex-start;background:#1b2030;border:1px solid #30374d}
 form{display:flex;gap:10px;background:#171b2a;border:1px solid #33384d;border-radius:20px;padding:9px;align-items:end}
-textarea{flex:1;background:transparent;color:white;border:0;outline:0;resize:none;font:inherit;padding:11px 7px;max-height:130px}
+textarea{flex:1;min-width:0;background:transparent;color:white;border:0;outline:0;resize:none;font:inherit;padding:11px 7px;max-height:130px}
 button{border:0;border-radius:13px;background:linear-gradient(135deg,#8b5cf6,#2563eb);color:white;font-size:22px;width:48px;height:48px;cursor:pointer}
 button:disabled{opacity:.5}
 footer{text-align:center;color:#777e97;font-size:11px;padding:12px 0 0}
@@ -34,7 +35,6 @@ footer{text-align:center;color:#777e97;font-size:11px;padding:12px 0 0}
 <strong>✦ ANNIVEO AI</strong>
 <span class="tag">MINI APP</span>
 </header>
-
 <section class="chat" id="chat">
 <div class="welcome" id="welcome">
 <div class="orb">✦</div>
@@ -42,168 +42,113 @@ footer{text-align:center;color:#777e97;font-size:11px;padding:12px 0 0}
 <p>Твой интеллектуальный помощник. Задай вопрос, чтобы начать диалог.</p>
 </div>
 </section>
-
 <form id="form">
-<textarea id="message" rows="1" placeholder="Напиши сообщение…" aria-label="Сообщение"></textarea>
+<textarea id="message" rows="1" maxlength="4000" placeholder="Напиши сообщение…" aria-label="Сообщение"></textarea>
 <button id="send" type="submit" aria-label="Отправить">➤</button>
 </form>
 <footer>ANNIVEO AI · Твой интеллектуальный помощник</footer>
 </main>
-
 <script>
-const chat = document.getElementById('chat');
-const form = document.getElementById('form');
-const input = document.getElementById('message');
-const sendButton = document.getElementById('send');
+const API_URL = "https://anniveo-ai-api.yaylaevismail.workers.dev/";
+const tg = window.Telegram?.WebApp;
+const chat = document.getElementById("chat");
+const form = document.getElementById("form");
+const input = document.getElementById("message");
+const send = document.getElementById("send");
 
-const API_URL = 'https://anniveo-ai-api.yaylaevismail.workers.dev/';
-const HISTORY_KEY = 'anniveo_history_v1';
-const MEMORY_KEY = 'anniveo_memories_v1';
-
-function readSaved(key, fallback) {
-  try {
-    const value = localStorage.getItem(key);
-    return value ? JSON.parse(value) : fallback;
-  } catch {
-    return fallback;
-  }
+if (tg) {
+  tg.ready();
+  tg.expand();
 }
 
-let chatHistory = readSaved(HISTORY_KEY, []);
-let memories = readSaved(MEMORY_KEY, []);
+const initData = tg?.initData || "";
+let history = [];
+let busy = false;
+let loaded = false;
 
-if (!Array.isArray(chatHistory)) chatHistory = [];
-if (!Array.isArray(memories)) memories = [];
-
-chatHistory = chatHistory.filter(item =>
-  item &&
-  ['user', 'assistant'].includes(item.role) &&
-  typeof item.content === 'string'
-).slice(-40);
-
-memories = memories.filter(item =>
-  typeof item === 'string'
-).slice(-30);
-
-function saveState() {
-  try {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(chatHistory.slice(-40)));
-    localStorage.setItem(MEMORY_KEY, JSON.stringify(memories.slice(-30)));
-  } catch (error) {
-    console.warn('Не удалось сохранить локальные данные.');
-  }
-}
-
-function add(text, who) {
-  const el = document.createElement('div');
-  el.className = 'msg ' + who;
-
-  if (who === 'assistant') {
-    const parts = text.split(/(\*\*[^*]+\*\*)/g);
-
-    parts.forEach(part => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        const bold = document.createElement('strong');
-        bold.textContent = part.slice(2, -2);
-        el.appendChild(bold);
-      } else {
-        el.appendChild(document.createTextNode(part));
-      }
-    });
-  } else {
-    el.textContent = text;
-  }
-
+function add(text, role) {
+  document.getElementById("welcome")?.remove();
+  const el = document.createElement("div");
+  el.className = "msg " + role;
+  el.textContent = text;
   chat.appendChild(el);
   chat.scrollTop = chat.scrollHeight;
+  return el;
 }
 
-function renderHistory() {
-  if (chatHistory.length > 0) {
-    document.getElementById('welcome')?.remove();
-    chatHistory.forEach(item => add(item.content, item.role));
+async function api(payload) {
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({...payload, initData})
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || "Ошибка сервера");
+  }
+  return data;
+}
+
+async function loadHistory() {
+  send.disabled = true;
+  if (!initData) {
+    add("Открой ANNIVEO AI через кнопку меню своего Telegram-бота.", "assistant");
+    return;
+  }
+  try {
+    const data = await api({action:"history"});
+    history = Array.isArray(data.messages) ? data.messages : [];
+    history.forEach(item => {
+      if (["user","assistant"].includes(item.role) &&
+          typeof item.content === "string") {
+        add(item.content, item.role);
+      }
+    });
+    loaded = true;
+    send.disabled = false;
+  } catch (error) {
+    add("Не удалось загрузить историю: " + error.message, "assistant");
   }
 }
 
-function rememberIfRequested(text) {
-  const match = text.match(
-    /^\s*запомни(?:\s*,?\s*что)?\s*[:\-]?\s*(.+)$/i
-  );
-
-  if (!match || !match[1].trim()) return;
-
-  const fact = match[1].trim();
-
-  if (!memories.some(item => item.toLowerCase() === fact.toLowerCase())) {
-    memories.push(fact);
-    memories = memories.slice(-30);
-    saveState();
-  }
-}
-
-renderHistory();
-
-form.addEventListener('submit', async event => {
+form.addEventListener("submit", async event => {
   event.preventDefault();
+  if (busy || !loaded) return;
 
   const text = input.value.trim();
-  if (!text || sendButton.disabled) return;
+  if (!text) return;
 
-  document.getElementById('welcome')?.remove();
+  busy = true;
+  send.disabled = true;
+  add(text, "user");
+  input.value = "";
 
-  add(text, 'user');
-  chatHistory.push({ role: 'user', content: text });
-  chatHistory = chatHistory.slice(-40);
-
-  rememberIfRequested(text);
-  saveState();
-
-  input.value = '';
-  sendButton.disabled = true;
+  const pending = add("ANNIVEO AI думает…", "assistant");
 
   try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: text,
-        messages: chatHistory.slice(-20),
-        memories: memories.slice(-30)
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Ошибка сервера: ' + response.status);
+    const data = await api({action:"chat",message:text});
+    if (typeof data.reply !== "string" || !data.reply.trim()) {
+      throw new Error("Пустой ответ ИИ");
     }
-
-    const data = await response.json();
-
-    
-const answer = data.reply;
-
-if (typeof answer !== 'string' || !answer.trim()) {
-  throw new Error('Сервер не прислал ответ');
-}
-
-chatHistory.push({ role: 'assistant', content: answer });
-chatHistory = chatHistory.slice(-40);
-
-saveState();
-add(answer, 'assistant');
-
+    pending.textContent = data.reply;
   } catch (error) {
-    console.error('ANNIVEO AI:', error);
-    add('Не удалось получить ответ ИИ. Проверь подключение и попробуй ещё раз.', 'assistant');
+    pending.textContent = "Ошибка: " + error.message +
+      "\nПопробуй отправить сообщение ещё раз.";
   } finally {
-    sendButton.disabled = false;
+    busy = false;
+    send.disabled = false;
     input.focus();
   }
 });
 
-if (window.Telegram?.WebApp) {
-  window.Telegram.WebApp.ready();
-  window.Telegram.WebApp.expand();
-}
+input.addEventListener("keydown", event => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    form.requestSubmit();
+  }
+});
+
+loadHistory();
 </script>
 </body>
 </html>
