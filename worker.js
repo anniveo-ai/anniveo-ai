@@ -9,10 +9,11 @@ async function verifyTelegram(initData, token) {
   const hash = params.get("hash");
   const authDate = Number(params.get("auth_date"));
 
-  if (!hash || !authDate ||
-      Math.abs(Date.now() / 1000 - authDate) > 86400) {
-    return null;
-  }
+  if (
+    !hash ||
+    !authDate ||
+    Math.abs(Date.now() / 1000 - authDate) > 86400
+  ) return null;
 
   const dataCheck = [...params.entries()]
     .filter(([key]) => key !== "hash")
@@ -55,9 +56,11 @@ async function verifyTelegram(initData, token) {
   if (!/^[a-f0-9]{64}$/i.test(hash)) return null;
 
   let mismatch = 0;
+  const actual = hash.toLowerCase();
+
   for (let i = 0; i < 64; i++) {
     mismatch |= expected.charCodeAt(i) ^
-      hash.toLowerCase().charCodeAt(i);
+      actual.charCodeAt(i);
   }
 
   if (mismatch !== 0) return null;
@@ -73,6 +76,87 @@ async function verifyTelegram(initData, token) {
   } catch {
     return null;
   }
+}
+
+const wait = ms =>
+  new Promise(resolve => setTimeout(resolve, ms));
+
+async function askAI(messages, apiKey) {
+  const url =
+    "https://gen.pollinations.ai/v1/chat/completions";
+
+  let lastError;
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      18000
+    );
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          Authorization: "Bearer " + apiKey,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "openai/gpt-5.4-nano",
+          messages,
+          stream: false
+        })
+      });
+
+      if (!response.ok) {
+        const retryable =
+          response.status === 408 ||
+          response.status === 429 ||
+          response.status >= 500;
+
+        if (retryable && attempt === 0) {
+          lastError = new Error(
+            "Сервис ИИ временно недоступен"
+          );
+          continue;
+        }
+
+        throw new Error(
+          response.status === 429
+            ? "Сервис ИИ перегружен. Попробуй позже."
+            : "Ошибка сервиса ИИ: " + response.status
+        );
+      }
+
+      const data = await response.json();
+      const answer = data.choices?.[0]?.message?.content;
+
+      if (typeof answer !== "string" || !answer.trim()) {
+        throw new Error("ИИ вернул пустой ответ");
+      }
+
+      return answer;
+
+    } catch (error) {
+      lastError = error;
+
+      const retryable =
+        error.name === "AbortError" ||
+        error instanceof TypeError;
+
+      if (!retryable || attempt === 1) {
+        throw error;
+      }
+
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (attempt === 0) await wait(400);
+  }
+
+  throw lastError || new Error("Сервис ИИ недоступен");
 }
 
 export default {
@@ -154,7 +238,11 @@ export default {
       }
 
       if (!env.POLLINATIONS_API_KEY) {
-        throw new Error("API key not configured");
+        return json(
+          { error: "Ключ ИИ не настроен" },
+          503,
+          headers
+        );
       }
 
       const message = String(body.message || "").trim();
@@ -170,10 +258,8 @@ export default {
       let history = [];
 
       if (anonymous) {
-        // Только временная история из запроса.
-        // В базу данных не обращаемся.
         history = Array.isArray(body.messages)
-          ? body.messages.slice(-20).filter(item =>
+          ? body.messages.slice(-12).filter(item =>
               item &&
               ["user", "assistant"].includes(item.role) &&
               typeof item.content === "string" &&
@@ -186,7 +272,7 @@ export default {
       } else {
         const rows = await env.DB.prepare(
           "SELECT role, content FROM chat_messages " +
-          "WHERE user_id = ? ORDER BY id DESC LIMIT 20"
+          "WHERE user_id = ? ORDER BY id DESC LIMIT 12"
         ).bind(userId).all();
 
         history = (rows.results || [])
@@ -211,45 +297,12 @@ export default {
         { role: "user", content: message }
       ];
 
-      const response = await fetch(
-        "https://gen.pollinations.ai/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization:
-              "Bearer " + env.POLLINATIONS_API_KEY,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            model: "openai/gpt-5.4-nano",
-            messages,
-            stream: false
-          })
-        }
+      const answer = await askAI(
+        messages,
+        env.POLLINATIONS_API_KEY
       );
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        return json(
-          {
-            error:
-              data.error?.message ||
-              "Ошибка подключения к ИИ"
-          },
-          response.status,
-          headers
-        );
-      }
-
-      const answer = data.choices?.[0]?.message?.content;
-
-      if (typeof answer !== "string" || !answer.trim()) {
-        throw new Error("ИИ не вернул ответ");
-      }
-
       if (!anonymous) {
-        // Сохраняем только обычный чат.
         await env.DB.batch([
           env.DB.prepare(
             "INSERT INTO chat_messages " +
@@ -270,9 +323,18 @@ export default {
     } catch (error) {
       console.error("ANNIVEO AI error:", error);
 
+      const message =
+        error.name === "AbortError"
+          ? "ИИ отвечает слишком долго. Попробуй ещё раз."
+          : error.message?.startsWith("Ошибка сервиса ИИ") ||
+            error.message?.startsWith("Сервис ИИ") ||
+            error.message === "ИИ вернул пустой ответ"
+          ? error.message
+          : "Временная ошибка. Попробуй ещё раз.";
+
       return json(
-        { error: "Ошибка обработки запроса" },
-        500,
+        { error: message },
+        503,
         headers
       );
     }
