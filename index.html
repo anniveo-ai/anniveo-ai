@@ -731,9 +731,6 @@ select {
   transition: none !important;
 }
 
-body.keyboard-open .dock {
-  bottom: 10px !important;
-}
 
 body.keyboard-open nav {
   display: none !important;
@@ -2046,8 +2043,71 @@ showWelcome = true;
 renderChat();
 loadHistory();
 
-/* Управление клавиатурой на iPhone */
+/* ANNIVEO AI — клавиатура iPhone */
 (function () {
+  const input = document.getElementById("messageInput");
+  const dock = document.getElementById("dock");
+  const nav = document.querySelector("nav");
+
+  if (!input || !dock) return;
+
+  const viewport = window.visualViewport;
+  let keyboardOpen = false;
+
+  function update() {
+    if (!viewport) return;
+
+    const focused = document.activeElement === input;
+    const keyboardHeight = Math.max(
+      0,
+      window.innerHeight -
+      viewport.height -
+      viewport.offsetTop
+    );
+
+    keyboardOpen = focused && keyboardHeight > 120;
+
+    document.body.classList.toggle(
+      "keyboard-open",
+      keyboardOpen
+    );
+
+    if (keyboardOpen) {
+      nav.style.display = "none";
+
+      /* Положение относительно видимой части экрана */
+      dock.style.position = "fixed";
+      dock.style.bottom = "auto";
+      dock.style.top =
+        Math.max(
+          0,
+          viewport.offsetTop + viewport.height -
+          dock.offsetHeight - 10
+        ) + "px";
+    } else {
+      nav.style.display = "";
+      dock.style.top = "";
+      dock.style.bottom = "";
+    }
+  }
+
+  input.addEventListener("focus", () => {
+    requestAnimationFrame(update);
+  });
+
+  input.addEventListener("blur", () => {
+    keyboardOpen = false;
+    document.body.classList.remove("keyboard-open");
+    nav.style.display = "";
+    dock.style.top = "";
+    dock.style.bottom = "";
+  });
+
+  viewport?.addEventListener("resize", update);
+  viewport?.addEventListener("scroll", update);
+  window.addEventListener("resize", update);
+})();
+
   const input = document.getElementById("messageInput");
   const dock = document.getElementById("dock");
 
