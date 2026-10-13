@@ -24,6 +24,7 @@ header strong{letter-spacing:2px;font-size:19px}
 form{display:flex;gap:10px;background:#171b2a;border:1px solid #33384d;border-radius:20px;padding:9px;align-items:end}
 textarea{flex:1;background:transparent;color:white;border:0;outline:0;resize:none;font:inherit;padding:11px 7px;max-height:130px}
 button{border:0;border-radius:13px;background:linear-gradient(135deg,#8b5cf6,#2563eb);color:white;font-size:22px;width:48px;height:48px;cursor:pointer}
+button:disabled{opacity:.5}
 footer{text-align:center;color:#777e97;font-size:11px;padding:12px 0 0}
 </style>
 </head>
@@ -33,6 +34,7 @@ footer{text-align:center;color:#777e97;font-size:11px;padding:12px 0 0}
 <strong>✦ ANNIVEO AI</strong>
 <span class="tag">MINI APP</span>
 </header>
+
 <section class="chat" id="chat">
 <div class="welcome" id="welcome">
 <div class="orb">✦</div>
@@ -40,64 +42,163 @@ footer{text-align:center;color:#777e97;font-size:11px;padding:12px 0 0}
 <p>Твой интеллектуальный помощник. Задай вопрос, чтобы начать диалог.</p>
 </div>
 </section>
+
 <form id="form">
 <textarea id="message" rows="1" placeholder="Напиши сообщение…" aria-label="Сообщение"></textarea>
-<button type="submit" aria-label="Отправить">➤</button>
+<button id="send" type="submit" aria-label="Отправить">➤</button>
 </form>
 <footer>ANNIVEO AI · Твой интеллектуальный помощник</footer>
 </main>
+
 <script>
-const chat=document.getElementById('chat'),form=document.getElementById('form'),input=document.getElementById('message');
-const history = [];
-function add(text,who){
-const el=document.createElement('div');
-el.className='msg '+who;
-if(who==='assistant'){
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  parts.forEach(part => {
-    if(part.startsWith('**') && part.endsWith('**')){
-      const b = document.createElement('strong');
-      b.textContent = part.slice(2,-2);
-      el.appendChild(b);
-    } else {
-      el.appendChild(document.createTextNode(part));
+const chat = document.getElementById('chat');
+const form = document.getElementById('form');
+const input = document.getElementById('message');
+const sendButton = document.getElementById('send');
+
+const API_URL = 'https://anniveo-ai-api.yaylaevismail.workers.dev/';
+const HISTORY_KEY = 'anniveo_history_v1';
+const MEMORY_KEY = 'anniveo_memories_v1';
+
+function readSaved(key, fallback) {
+  try {
+    const value = localStorage.getItem(key);
+    return value ? JSON.parse(value) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+let chatHistory = readSaved(HISTORY_KEY, []);
+let memories = readSaved(MEMORY_KEY, []);
+
+if (!Array.isArray(chatHistory)) chatHistory = [];
+if (!Array.isArray(memories)) memories = [];
+
+chatHistory = chatHistory.filter(item =>
+  item &&
+  ['user', 'assistant'].includes(item.role) &&
+  typeof item.content === 'string'
+).slice(-40);
+
+memories = memories.filter(item =>
+  typeof item === 'string'
+).slice(-30);
+
+function saveState() {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(chatHistory.slice(-40)));
+    localStorage.setItem(MEMORY_KEY, JSON.stringify(memories.slice(-30)));
+  } catch (error) {
+    console.warn('Не удалось сохранить локальные данные.');
+  }
+}
+
+function add(text, who) {
+  const el = document.createElement('div');
+  el.className = 'msg ' + who;
+
+  if (who === 'assistant') {
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+
+    parts.forEach(part => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        const bold = document.createElement('strong');
+        bold.textContent = part.slice(2, -2);
+        el.appendChild(bold);
+      } else {
+        el.appendChild(document.createTextNode(part));
+      }
+    });
+  } else {
+    el.textContent = text;
+  }
+
+  chat.appendChild(el);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function renderHistory() {
+  if (chatHistory.length > 0) {
+    document.getElementById('welcome')?.remove();
+    chatHistory.forEach(item => add(item.content, item.role));
+  }
+}
+
+function rememberIfRequested(text) {
+  const match = text.match(
+    /^\s*запомни(?:\s*,?\s*что)?\s*[:\-]?\s*(.+)$/i
+  );
+
+  if (!match || !match[1].trim()) return;
+
+  const fact = match[1].trim();
+
+  if (!memories.some(item => item.toLowerCase() === fact.toLowerCase())) {
+    memories.push(fact);
+    memories = memories.slice(-30);
+    saveState();
+  }
+}
+
+renderHistory();
+
+form.addEventListener('submit', async event => {
+  event.preventDefault();
+
+  const text = input.value.trim();
+  if (!text || sendButton.disabled) return;
+
+  document.getElementById('welcome')?.remove();
+
+  add(text, 'user');
+  chatHistory.push({ role: 'user', content: text });
+  chatHistory = chatHistory.slice(-40);
+
+  rememberIfRequested(text);
+  saveState();
+
+  input.value = '';
+  sendButton.disabled = true;
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        messages: chatHistory.slice(-20),
+        memories: memories.slice(-30)
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Ошибка сервера: ' + response.status);
     }
-  });
-} else {
-  el.textContent=text;
-}
-chat.appendChild(el);
-chat.scrollTop=chat.scrollHeight;
-}
-form.addEventListener('submit',async e=>{
-e.preventDefault();
-const text=input.value.trim();
-if(!text)return;
-document.getElementById('welcome')?.remove();
-add(text,'user');
-history.push({role:'user',content:text});
-input.value='';
 
+    const data = await response.json();
 
-try {
-  const response = await fetch('https://anniveo-ai-api.yaylaevismail.workers.dev/', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({message: text, messages: history.slice(-20)})
-  });
-  if (!response.ok) throw new Error('Ошибка сервера');
-  const data = await response.json();
-  history.push({role:'assistant',content:data.answer});
-  add(data.answer || 'Сервер не прислал ответ.', 'assistant');
-} catch (error) {
-  add('Не удалось связаться с ИИ. Проверь подключение сервера.', 'assistant');
-}
+    if (typeof data.answer !== 'string' || !data.answer.trim()) {
+      throw new Error('Сервер не прислал ответ');
+    }
 
+    chatHistory.push({ role: 'assistant', content: data.answer });
+    chatHistory = chatHistory.slice(-40);
 
+    saveState();
+    add(data.answer, 'assistant');
+  } catch (error) {
+    console.error('ANNIVEO AI:', error);
+    add('Не удалось получить ответ ИИ. Проверь подключение и попробуй ещё раз.', 'assistant');
+  } finally {
+    sendButton.disabled = false;
+    input.focus();
+  }
 });
-if(window.Telegram?.WebApp){
-window.Telegram.WebApp.ready();
-window.Telegram.WebApp.expand();
+
+if (window.Telegram?.WebApp) {
+  window.Telegram.WebApp.ready();
+  window.Telegram.WebApp.expand();
 }
 </script>
 </body>
