@@ -1390,10 +1390,15 @@ function setupMicGestures(){
   button.addEventListener("pointermove",event=>{
     const state=micGesture;
     if(!state||state.id!==event.pointerId) return;
-    if(state.y-event.clientY>lockDistance&&(recording||state.held)){
+    if(state.y-event.clientY>lockDistance){
       state.locked=true;
       button.classList.add("locked");
       button.classList.remove("gesture-active");
+      clearTimeout(state.timer);
+      if(!state.started&&!state.held){
+        state.held=true;
+        void handleMic();
+      }
       $("chatStatus").textContent="Запись закреплена · нажми микрофон, чтобы отправить";
     }
   });
