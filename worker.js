@@ -4,8 +4,8 @@ export default {
     const headers = {
       "Access-Control-Allow-Origin": "https://anniveo-ai-app.pages.dev",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Content-Type": "application/json"
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Content-Type": "application/json; charset=utf-8"
     };
 
     if (request.method === "OPTIONS") {
@@ -26,69 +26,84 @@ export default {
 
       const body = await request.json();
       const message = String(body.message || "").trim();
+
       const history = Array.isArray(body.messages)
-  ? body.messages.slice(-20).filter(item =>
-      item &&
-      ["user", "assistant"].includes(item.role) &&
-      typeof item.content === "string" &&
-      item.content.length <= 4000
-    )
-  : [];
+        ? body.messages.slice(-20).filter(item =>
+            item &&
+            ["user", "assistant"].includes(item.role) &&
+            typeof item.content === "string" &&
+            item.content.length <= 4000
+          )
+        : [];
 
       if (!message || message.length > 4000) {
         return new Response(
-          JSON.stringify({ error: "Некорректное сообщение" }),
+          JSON.stringify({
+            error: "Сообщение пустое или слишком длинное"
+          }),
           { status: 400, headers }
         );
       }
+
+      const messages = [
+        {
+          role: "system",
+          content:
+            "Ты ANNIVEO AI — полезный, умный и дружелюбный ИИ-помощник. Отвечай на русском языке, если пользователь не просит другой язык. Отвечай понятно и по существу."
+        },
+        ...history,
+        {
+          role: "user",
+          content: message
+        }
+      ];
 
       const response = await fetch(
         "https://gen.pollinations.ai/v1/chat/completions",
         {
           method: "POST",
           headers: {
-            "Authorization": "Bearer " + env.POLLINATIONS_API_KEY,
+            "Authorization": `Bearer ${env.POLLINATIONS_API_KEY}`,
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            model: "openai",
-            messages: [
-  {
-    role: "system",
-    content: "Ты ANNIVEO AI, дружелюбный интеллектуальный помощник. Отвечай на языке пользователя."
-  },
-  ...history.slice(0, -1),
-  {
-    role: "user",
-    content: message
-  }
-]
+            model: "openai/gpt-5.4-nano",
+            messages,
+            stream: false
           })
         }
       );
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("AI provider error: " + response.status);
+        return new Response(
+          JSON.stringify({
+            error: data.error?.message ||
+              "Ошибка подключения к ИИ",
+          }),
+          { status: response.status, headers }
+        );
       }
 
-      const data = await response.json();
-      const answer = data.choices?.[0]?.message?.content;
+      const answer =
+        data.choices?.[0]?.message?.content;
 
-      if (typeof answer !== "string") {
-        throw new Error("Empty AI response");
+      if (!answer) {
+        throw new Error("ИИ не вернул ответ");
       }
 
       return new Response(
-        JSON.stringify({ answer }),
-        { headers }
+        JSON.stringify({ reply: answer }),
+        { status: 200, headers }
       );
+
     } catch (error) {
-      console.error("ANNIVEO AI:", error.message);
       return new Response(
         JSON.stringify({
-          error: "Не удалось получить ответ ИИ"
+          error: error.message || "Внутренняя ошибка сервера"
         }),
-        { status: 502, headers }
+        { status: 500, headers }
       );
     }
   }
