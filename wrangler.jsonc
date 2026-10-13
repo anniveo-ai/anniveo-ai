@@ -2,5 +2,12 @@
   "name": "anniveo-ai-api",
   "main": "worker.js",
   "compatibility_date": "2026-10-13",
-  "workers_dev": true
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "anniveo-memory",
+      "database_id": "eff39674-26e0-486d-9c90-f2374c9e7e64"
+    }
+  ]
 }
