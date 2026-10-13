@@ -79,6 +79,7 @@ header strong{letter-spacing:2px;font-size:19px}
  white-space:pre-wrap;overflow-wrap:anywhere
 }
 .user{align-self:flex-end;background:#5133aa}
+.msg strong{font-weight:700}
 .assistant{
  align-self:flex-start;background:#1b2030;
  border:1px solid #30374d
@@ -242,12 +243,43 @@ function showWelcome() {
  chat.appendChild(welcome);
 }
 
+// Безопасное отображение жирного Markdown-текста.
+function formatAnswer(element, text) {
+ element.replaceChildren();
+
+ const parts = String(text).split(
+  /(\*\*[\s\S]+?\*\*)/g
+ );
+
+ parts.forEach(part => {
+  if (
+   part.startsWith("**") &&
+   part.endsWith("**") &&
+   part.length > 4
+  ) {
+   const strong = document.createElement("strong");
+   strong.textContent = part.slice(2, -2);
+   element.appendChild(strong);
+  } else {
+   element.appendChild(
+    document.createTextNode(part)
+   );
+  }
+ });
+}
+
 function add(text, role) {
  document.getElementById("welcome")?.remove();
 
  const el = document.createElement("div");
  el.className = "msg " + role;
- el.textContent = text;
+
+ if (role === "assistant") {
+  formatAnswer(el, text);
+ } else {
+  el.textContent = text;
+ }
+
  chat.appendChild(el);
  chat.scrollTop = chat.scrollHeight;
  return el;
@@ -561,7 +593,7 @@ form.addEventListener("submit", async event => {
    pending
   );
 
-  pending.textContent = data.reply;
+  formatAnswer(pending, data.reply);
 
   const pair = [
    {role:"user",content:text},
