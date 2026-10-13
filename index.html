@@ -35,21 +35,20 @@ footer{text-align:center;color:#777e97;font-size:11px;padding:12px 0 0}
 <strong>✦ ANNIVEO AI</strong>
 <span class="tag">MINI APP</span>
 </header>
-<section class="chat" id="chat">
-<div class="welcome" id="welcome">
-<div class="orb">✦</div>
-<h1>Привет! Я ANNIVEO AI</h1>
-<p>Твой интеллектуальный помощник. Задай вопрос, чтобы начать диалог.</p>
-</div>
-</section>
+
+<section class="chat" id="chat"></section>
+
 <form id="form">
 <textarea id="message" rows="1" maxlength="4000" placeholder="Напиши сообщение…" aria-label="Сообщение"></textarea>
 <button id="send" type="submit" aria-label="Отправить">➤</button>
 </form>
+
 <footer>ANNIVEO AI · Твой интеллектуальный помощник</footer>
 </main>
+
 <script>
 const API_URL = "https://anniveo-ai-api.yaylaevismail.workers.dev/";
+
 const tg = window.Telegram?.WebApp;
 const chat = document.getElementById("chat");
 const form = document.getElementById("form");
@@ -62,81 +61,159 @@ if (tg) {
 }
 
 const initData = tg?.initData || "";
+const userId = tg?.initDataUnsafe?.user?.id;
 
-const CACHE_KEY = "anniveo_chat_cache_v2_" +
-  String(tg?.initDataUnsafe?.user?.id || "telegram");
-
-function saveCache(messages) {
-  try {
-    localStorage.setItem(
-      CACHE_KEY,
-      JSON.stringify(messages.slice(-40))
-    );
-  } catch (e) {}
-}
-
-function readCache() {
-  try {
-    const data = JSON.parse(
-      localStorage.getItem(CACHE_KEY) || "[]"
-    );
-    return Array.isArray(data) ? data : [];
-  } catch (e) {
-    return [];
-  }
-}
+const CACHE_KEY = userId
+  ? "anniveo_chat_cache_v3_" + userId
+  : null;
 
 let history = [];
 let busy = false;
 let loaded = false;
 
+function validMessages(messages) {
+  if (!Array.isArray(messages)) return [];
+
+  return messages.filter(item =>
+    item &&
+    ["user", "assistant"].includes(item.role) &&
+    typeof item.content === "string"
+  ).slice(-40).map(item => ({
+    role: item.role,
+    content: item.content
+  }));
+}
+
+function saveCache(messages) {
+  if (!CACHE_KEY) return;
+
+  try {
+    localStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify(validMessages(messages))
+    );
+  } catch (e) {}
+}
+
+function readCache() {
+  if (!CACHE_KEY) return [];
+
+  try {
+    return validMessages(
+      JSON.parse(localStorage.getItem(CACHE_KEY) || "[]")
+    );
+  } catch (e) {
+    return [];
+  }
+}
+
+function showWelcome() {
+  const welcome = document.createElement("div");
+  welcome.className = "welcome";
+  welcome.id = "welcome";
+  welcome.innerHTML = `
+    <div class="orb">✦</div>
+    <h1>Привет! Я ANNIVEO AI</h1>
+    <p>Твой интеллектуальный помощник.
+    Задай вопрос, чтобы начать диалог.</p>
+  `;
+  chat.appendChild(welcome);
+}
+
 function add(text, role) {
   document.getElementById("welcome")?.remove();
+
   const el = document.createElement("div");
   el.className = "msg " + role;
   el.textContent = text;
+
   chat.appendChild(el);
   chat.scrollTop = chat.scrollHeight;
+
   return el;
+}
+
+function renderMessages(messages) {
+  chat.replaceChildren();
+
+  if (!messages.length) {
+    showWelcome();
+    return;
+  }
+
+  messages.forEach(item => {
+    add(item.content, item.role);
+  });
 }
 
 async function api(payload) {
   const response = await fetch(API_URL, {
     method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({...payload, initData})
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      ...payload,
+      initData
+    })
   });
+
   const data = await response.json();
+
   if (!response.ok) {
-    throw new Error(data.error || "Ошибка сервера");
+    throw new Error(
+      data.error || "Ошибка сервера"
+    );
   }
+
   return data;
 }
 
 async function loadHistory() {
   send.disabled = true;
-  if (!initData) {
-    add("Открой ANNIVEO AI через кнопку меню своего Telegram-бота.", "assistant");
+
+  if (!initData || !userId) {
+    add(
+      "Открой ANNIVEO AI через Telegram.",
+      "assistant"
+    );
     return;
   }
+
+  // Показываем локальную историю сразу.
+  const cached = readCache();
+  history = cached;
+  renderMessages(history);
+
   try {
-    const data = await api({action:"history"});
-    history = Array.isArray(data.messages) ? data.messages : [];
-    history.forEach(item => {
-      if (["user","assistant"].includes(item.role) &&
-          typeof item.content === "string") {
-        add(item.content, item.role);
-      }
+    // Затем получаем актуальную историю из D1.
+    const data = await api({
+      action: "history"
     });
+
+    const serverHistory = validMessages(data.messages);
+
+    history = serverHistory;
+    saveCache(history);
+
+    // Перерисовываем только после получения облачной истории.
+    renderMessages(history);
+
     loaded = true;
     send.disabled = false;
+
   } catch (error) {
-    add("Не удалось загрузить историю: " + error.message, "assistant");
+    add(
+      "Не удалось синхронизировать историю: " +
+      error.message,
+      "assistant"
+    );
   }
 }
 
 form.addEventListener("submit", async event => {
   event.preventDefault();
+
   if (busy || !loaded) return;
 
   const text = input.value.trim();
@@ -144,20 +221,43 @@ form.addEventListener("submit", async event => {
 
   busy = true;
   send.disabled = true;
+
   add(text, "user");
   input.value = "";
 
-  const pending = add("ANNIVEO AI думает…", "assistant");
+  const pending = add(
+    "ANNIVEO AI думает…",
+    "assistant"
+  );
 
   try {
-    const data = await api({action:"chat",message:text});
-    if (typeof data.reply !== "string" || !data.reply.trim()) {
+    const data = await api({
+      action: "chat",
+      message: text
+    });
+
+    if (
+      typeof data.reply !== "string" ||
+      !data.reply.trim()
+    ) {
       throw new Error("Пустой ответ ИИ");
     }
+
     pending.textContent = data.reply;
+
+    history.push(
+      {role: "user", content: text},
+      {role: "assistant", content: data.reply}
+    );
+
+    history = validMessages(history);
+    saveCache(history);
+
   } catch (error) {
-    pending.textContent = "Ошибка: " + error.message +
+    pending.textContent =
+      "Ошибка: " + error.message +
       "\nПопробуй отправить сообщение ещё раз.";
+
   } finally {
     busy = false;
     send.disabled = false;
@@ -166,12 +266,24 @@ form.addEventListener("submit", async event => {
 });
 
 input.addEventListener("keydown", event => {
-  if (event.key === "Enter" && !event.shiftKey) {
+  if (
+    event.key === "Enter" &&
+    !event.shiftKey
+  ) {
     event.preventDefault();
     form.requestSubmit();
   }
 });
 
+// Мгновенно отображаем кэш до запроса к серверу.
+if (initData && userId) {
+  history = readCache();
+  renderMessages(history);
+} else {
+  showWelcome();
+}
+
+// Синхронизируем с облачной памятью.
 loadHistory();
 </script>
 </body>
