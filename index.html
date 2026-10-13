@@ -2594,6 +2594,45 @@ body.keyboard-open .dock {
 
   updateKeyboard();
 })();
+
+/* ANNIVEO AI — разделение нижних панелей */
+
+:root {
+  --bottom-gap: 15px;
+}
+
+/* Поле ввода сообщения */
+.composer,
+.input-bar,
+.chat-input-container {
+  margin-bottom: var(--bottom-gap) !important;
+  flex-shrink: 0;
+}
+
+/* Нижняя навигация */
+.bottom-nav,
+.nav-bar,
+.tab-bar {
+  margin-top: 0 !important;
+  border-radius: 38px;
+  background: rgba(55, 53, 72, 0.83);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+
+/* Плавное нажатие */
+.bottom-nav button,
+.nav-bar button,
+.tab-bar button {
+  transition: transform .2s ease, background .2s ease;
+}
+
+.bottom-nav button:active,
+.nav-bar button:active,
+.tab-bar button:active {
+  transform: scale(.94);
+}
+
 </script>
 
 </body>
