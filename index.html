@@ -178,15 +178,19 @@ form.addEventListener('submit', async event => {
 
     const data = await response.json();
 
-    if (typeof data.answer !== 'string' || !data.answer.trim()) {
-      throw new Error('Сервер не прислал ответ');
-    }
+    
+const answer = data.reply;
 
-    chatHistory.push({ role: 'assistant', content: data.answer });
-    chatHistory = chatHistory.slice(-40);
+if (typeof answer !== 'string' || !answer.trim()) {
+  throw new Error('Сервер не прислал ответ');
+}
 
-    saveState();
-    add(data.answer, 'assistant');
+chatHistory.push({ role: 'assistant', content: answer });
+chatHistory = chatHistory.slice(-40);
+
+saveState();
+add(answer, 'assistant');
+
   } catch (error) {
     console.error('ANNIVEO AI:', error);
     add('Не удалось получить ответ ИИ. Проверь подключение и попробуй ещё раз.', 'assistant');
