@@ -1,6 +1,9 @@
 
 const json = (data, status, headers) =>
-  new Response(JSON.stringify(data), { status, headers });
+  new Response(JSON.stringify(data), {
+    status,
+    headers
+  });
 
 const sleep = ms =>
   new Promise(resolve => setTimeout(resolve, ms));
@@ -114,6 +117,104 @@ async function getHistory(db, userId, limit = 40) {
   return (rows.results || []).reverse();
 }
 
+async function saveConversation(
+  db,
+  userId,
+  requestId,
+  message,
+  answer
+) {
+  await db.batch([
+    db.prepare(
+      "INSERT INTO chat_messages " +
+      "(user_id, role, content) " +
+      "VALUES (?, 'user', ?)"
+    ).bind(userId, message),
+
+    db.prepare(
+      "INSERT INTO chat_messages " +
+      "(user_id, role, content) " +
+      "VALUES (?, 'assistant', ?)"
+    ).bind(userId, answer),
+
+    db.prepare(
+      "UPDATE chat_requests " +
+      "SET status = 'done', reply = ? " +
+      "WHERE user_id = ? AND request_id = ?"
+    ).bind(answer, userId, requestId)
+  ]);
+}
+
+async function cleanupRequest(
+  db,
+  userId,
+  requestId
+) {
+  if (!db || !userId || !requestId) return;
+
+  try {
+    await db.prepare(
+      "DELETE FROM chat_requests " +
+      "WHERE user_id = ? " +
+      "AND request_id = ? " +
+      "AND status = 'processing'"
+    ).bind(userId, requestId).run();
+  } catch (error) {
+    console.error(
+      "ANNIVEO AI cleanup error",
+      error.message
+    );
+  }
+}
+
+function isRetryable(error) {
+  return (
+    error.retryable ||
+    error.name === "AbortError" ||
+    error instanceof TypeError
+  );
+}
+
+async function fetchAI(
+  messages,
+  apiKey,
+  mode,
+  streaming,
+  controller
+) {
+  const response = await fetch(
+    "https://gen.pollinations.ai/v1/chat/completions",
+    {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: "Bearer " + apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "openai/gpt-5.4-nano",
+        messages,
+        stream: streaming
+      })
+    }
+  );
+
+  if (!response.ok) {
+    const error = new Error(
+      "Pollinations HTTP " + response.status
+    );
+
+    error.retryable =
+      response.status === 408 ||
+      response.status === 429 ||
+      response.status >= 500;
+
+    throw error;
+  }
+
+  return response;
+}
+
 async function askAI(messages, apiKey, mode) {
   let lastError;
 
@@ -121,7 +222,6 @@ async function askAI(messages, apiKey, mode) {
     const started = Date.now();
     const controller = new AbortController();
 
-    // Больше времени для сложных вопросов.
     const timer = setTimeout(
       () => controller.abort(),
       30000
@@ -131,38 +231,17 @@ async function askAI(messages, apiKey, mode) {
       console.log("ANNIVEO AI request", {
         mode,
         attempt,
-        messageCount: messages.length
+        messageCount: messages.length,
+        streaming: false
       });
 
-      const response = await fetch(
-        "https://gen.pollinations.ai/v1/chat/completions",
-        {
-          method: "POST",
-          signal: controller.signal,
-          headers: {
-            Authorization: "Bearer " + apiKey,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            model: "openai/gpt-5.4-nano",
-            messages,
-            stream: false
-          })
-        }
+      const response = await fetchAI(
+        messages,
+        apiKey,
+        mode,
+        false,
+        controller
       );
-
-      if (!response.ok) {
-        const error = new Error(
-          "Pollinations HTTP " + response.status
-        );
-
-        error.retryable =
-          response.status === 408 ||
-          response.status === 429 ||
-          response.status >= 500;
-
-        throw error;
-      }
 
       const data = await response.json();
       const answer =
@@ -194,12 +273,7 @@ async function askAI(messages, apiKey, mode) {
         errorMessage: error.message
       });
 
-      const retryable =
-        error.retryable ||
-        error.name === "AbortError" ||
-        error instanceof TypeError;
-
-      if (!retryable || attempt === 2) {
+      if (!isRetryable(error) || attempt === 2) {
         throw error;
       }
 
@@ -214,8 +288,389 @@ async function askAI(messages, apiKey, mode) {
     new Error("Сервис ИИ недоступен");
 }
 
+// Открывает потоковый запрос к нейросети.
+// Повторная попытка возможна до начала
+// передачи ответа пользователю.
+async function openAIStream(
+  messages,
+  apiKey,
+  mode
+) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const controller = new AbortController();
+    const started = Date.now();
+
+    // Ограничиваем ожидание первых данных.
+    const timer = setTimeout(
+      () => controller.abort(),
+      30000
+    );
+
+    try {
+      console.log("ANNIVEO AI request", {
+        mode,
+        attempt,
+        messageCount: messages.length,
+        streaming: true
+      });
+
+      const response = await fetchAI(
+        messages,
+        apiKey,
+        mode,
+        true,
+        controller
+      );
+
+      if (!response.body) {
+        throw new Error(
+          "Pollinations не вернул поток"
+        );
+      }
+
+      const contentType =
+        response.headers.get("content-type") || "";
+
+      if (!contentType.includes("text/event-stream")) {
+        throw new Error(
+          "Pollinations не поддержал потоковый ответ"
+        );
+      }
+
+      // Таймер далее контролируется при чтении.
+      clearTimeout(timer);
+
+      return {
+        response,
+        controller,
+        attempt,
+        started
+      };
+
+    } catch (error) {
+      clearTimeout(timer);
+      controller.abort();
+      lastError = error;
+
+      console.error("ANNIVEO AI failure", {
+        mode,
+        attempt,
+        durationMs: Date.now() - started,
+        errorName: error.name,
+        errorMessage: error.message,
+        streaming: true
+      });
+
+      if (!isRetryable(error) || attempt === 2) {
+        throw error;
+      }
+
+      await sleep(300);
+    }
+  }
+
+  throw lastError ||
+    new Error("Сервис ИИ недоступен");
+}
+
+// Читает SSE-события от Pollinations AI.
+async function readAIStream(
+  response,
+  onToken,
+  controller
+) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+
+  let buffer = "";
+  let answer = "";
+  let completed = false;
+
+  // Таймер бездействия между порциями данных.
+  let timer;
+
+  const resetTimer = () => {
+    clearTimeout(timer);
+    timer = setTimeout(
+      () => controller.abort(),
+      30000
+    );
+  };
+
+  const processEvent = eventText => {
+    const dataLines = eventText
+      .split("\n")
+      .filter(line => line.startsWith("data:"))
+      .map(line => line.slice(5).trimStart());
+
+    if (!dataLines.length) return;
+
+    const raw = dataLines.join("\n").trim();
+
+    if (raw === "[DONE]") {
+      completed = true;
+      return;
+    }
+
+    if (!raw) return;
+
+    let data;
+
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      return;
+    }
+
+    if (data.error) {
+      throw new Error(
+        typeof data.error === "string"
+          ? data.error
+          : data.error.message ||
+            "Ошибка потоковой генерации"
+      );
+    }
+
+    const choice = data.choices?.[0];
+
+    let token = choice?.delta?.content;
+
+    if (Array.isArray(token)) {
+      token = token
+        .filter(part => part?.type === "text")
+        .map(part => part.text || "")
+        .join("");
+    }
+
+    if (typeof token === "string" && token) {
+      answer += token;
+      onToken(token);
+    }
+  };
+
+  try {
+    resetTimer();
+
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) break;
+
+      resetTimer();
+
+      buffer += decoder
+        .decode(value, { stream: true })
+        .replace(/\r\n/g, "\n");
+
+      let boundary;
+
+      while ((boundary = buffer.indexOf("\n\n")) !== -1) {
+        const eventText = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+
+        processEvent(eventText);
+      }
+
+      if (completed) break;
+    }
+
+    buffer += decoder.decode();
+
+    if (buffer.trim() && !completed) {
+      processEvent(buffer);
+    }
+
+    if (!answer.trim()) {
+      throw new Error(
+        "ИИ вернул пустой потоковый ответ"
+      );
+    }
+
+    if (!completed) {
+      throw new Error(
+        "Поток ответа завершился преждевременно"
+      );
+    }
+
+    return answer.trim();
+
+  } finally {
+    clearTimeout(timer);
+
+    try {
+      await reader.cancel();
+    } catch {
+      // Поток уже мог завершиться.
+    }
+
+    try {
+      reader.releaseLock();
+    } catch {
+      // Блокировка уже снята.
+    }
+  }
+}
+
+function makeStreamResponse(
+  aiStream,
+  options,
+  headers,
+  ctx
+) {
+  const encoder = new TextEncoder();
+
+  const streamHeaders = {
+    ...headers,
+    "Content-Type":
+      "text/event-stream; charset=utf-8",
+    "X-Accel-Buffering": "no",
+    "Cache-Control": "no-cache, no-transform"
+  };
+
+  const {
+    anonymous,
+    db,
+    userId,
+    requestId,
+    message,
+    started
+  } = options;
+
+  const output = new TransformStream();
+  const writer = output.writable.getWriter();
+
+  const send = async data => {
+    await writer.write(
+      encoder.encode(
+        "data: " + JSON.stringify(data) + "\n\n"
+      )
+    );
+  };
+
+  const task = (async () => {
+    let saved = false;
+    let answer = "";
+    let pendingTokens = [];
+
+    const flushTokens = async () => {
+      if (!pendingTokens.length) return;
+
+      const tokens = pendingTokens;
+      pendingTokens = [];
+
+      for (const token of tokens) {
+        await send({
+          type: "token",
+          content: token
+        });
+      }
+    };
+
+    try {
+      await send({ type: "start" });
+
+      const aiStarted = Date.now();
+
+      // Чтение нейросети и отправка текста
+      // происходят одновременно.
+      const tokenWrites = [];
+
+      answer = await readAIStream(
+        aiStream.response,
+        token => {
+          const write = send({
+            type: "token",
+            content: token
+          });
+
+          tokenWrites.push(write);
+        },
+        aiStream.controller
+      );
+
+      await Promise.all(tokenWrites);
+
+      if (!anonymous) {
+        await saveConversation(
+          db,
+          userId,
+          requestId,
+          message,
+          answer
+        );
+
+        saved = true;
+      }
+
+      const totalDuration = Date.now() - started;
+
+      console.log("ANNIVEO AI completed", {
+        mode: anonymous ? "anonymous" : "normal",
+        aiDurationMs: Date.now() - aiStarted,
+        totalDurationMs: totalDuration,
+        saved,
+        streaming: true
+      });
+
+      await send({
+        type: "done",
+        reply: answer,
+        durationMs: totalDuration
+      });
+
+    } catch (error) {
+      console.error("ANNIVEO AI stream error", {
+        name: error.name,
+        message: error.message,
+        durationMs: Date.now() - started
+      });
+
+      if (!anonymous && !saved) {
+        await cleanupRequest(
+          db,
+          userId,
+          requestId
+        );
+      }
+
+      try {
+        await send({
+          type: "error",
+          error:
+            "Ошибка генерации ответа. " +
+            "Попробуй ещё раз."
+        });
+      } catch {
+        // Клиент мог закрыть соединение.
+      }
+
+    } finally {
+      aiStream.controller.abort();
+
+      try {
+        await writer.close();
+      } catch {
+        // Соединение могло быть закрыто.
+      }
+    }
+  })();
+
+  // Позволяет Cloudflare завершить работу,
+  // даже если клиент временно отключился.
+  if (ctx?.waitUntil) {
+    ctx.waitUntil(task);
+  }
+
+  return new Response(output.readable, {
+    status: 200,
+    headers: streamHeaders
+  });
+}
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const headers = {
       "Access-Control-Allow-Origin":
         "https://anniveo-ai-app.pages.dev",
@@ -241,6 +696,7 @@ export default {
     }
 
     const started = Date.now();
+
     let db = null;
     let userId = null;
     let requestId = null;
@@ -336,6 +792,10 @@ export default {
         );
       }
 
+      // Потоковый режим включается только
+      // если интерфейс явно передал stream: true.
+      const streaming = body.stream === true;
+
       let history = [];
 
       if (anonymous) {
@@ -343,6 +803,7 @@ export default {
           body.messages,
           12
         );
+
       } else {
         db = env.DB;
 
@@ -429,6 +890,31 @@ export default {
         }
       ];
 
+      // Новый потоковый режим.
+      if (streaming) {
+        const aiStream = await openAIStream(
+          messages,
+          env.POLLINATIONS_API_KEY,
+          anonymous ? "anonymous" : "normal"
+        );
+
+        return makeStreamResponse(
+          aiStream,
+          {
+            anonymous,
+            db,
+            userId,
+            requestId,
+            message,
+            started
+          },
+          headers,
+          ctx
+        );
+      }
+
+      // Старый режим оставлен без изменений
+      // для совместимости с текущим index.html.
       const aiStarted = Date.now();
 
       const answer = await askAI(
@@ -440,25 +926,13 @@ export default {
       const aiDuration = Date.now() - aiStarted;
 
       if (!anonymous) {
-        await db.batch([
-          db.prepare(
-            "INSERT INTO chat_messages " +
-            "(user_id, role, content) " +
-            "VALUES (?, 'user', ?)"
-          ).bind(userId, message),
-
-          db.prepare(
-            "INSERT INTO chat_messages " +
-            "(user_id, role, content) " +
-            "VALUES (?, 'assistant', ?)"
-          ).bind(userId, answer),
-
-          db.prepare(
-            "UPDATE chat_requests " +
-            "SET status = 'done', reply = ? " +
-            "WHERE user_id = ? AND request_id = ?"
-          ).bind(answer, userId, requestId)
-        ]);
+        await saveConversation(
+          db,
+          userId,
+          requestId,
+          message,
+          answer
+        );
 
         saved = true;
       }
@@ -469,7 +943,8 @@ export default {
         mode: anonymous ? "anonymous" : "normal",
         aiDurationMs: aiDuration,
         totalDurationMs: totalDuration,
-        saved: !anonymous
+        saved: !anonymous,
+        streaming: false
       });
 
       return json(
@@ -495,19 +970,11 @@ export default {
         userId &&
         requestId
       ) {
-        try {
-          await db.prepare(
-            "DELETE FROM chat_requests " +
-            "WHERE user_id = ? " +
-            "AND request_id = ? " +
-            "AND status = 'processing'"
-          ).bind(userId, requestId).run();
-        } catch (cleanupError) {
-          console.error(
-            "ANNIVEO AI cleanup error",
-            cleanupError.message
-          );
-        }
+        await cleanupRequest(
+          db,
+          userId,
+          requestId
+        );
       }
 
       return json(
