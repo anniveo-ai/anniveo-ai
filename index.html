@@ -136,6 +136,39 @@ header{
   transform:scale(calc(1 + var(--voice-level,0) * .18));
   transition:transform .06s linear;
 }
+.quick-prompts{
+  display:flex;
+  justify-content:center;
+  gap:8px;
+  max-width:100%;
+  margin:-3px auto 17px;
+  padding:2px 1px 7px;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+}
+.quick-prompts::-webkit-scrollbar{display:none}
+.quick-prompt{
+  flex:none;
+  min-height:36px;
+  padding:8px 12px;
+  border:1px solid rgba(195,164,238,.24);
+  border-radius:999px;
+  background:rgba(36,32,49,.62);
+  color:#d7c9eb;
+  font-size:11px;
+  line-height:1.2;
+  white-space:nowrap;
+  -webkit-backdrop-filter:blur(12px);
+  backdrop-filter:blur(12px);
+  transition:transform .18s,border-color .18s,background .18s;
+}
+.quick-prompt:active{
+  transform:scale(.96);
+  border-color:rgba(198,166,255,.62);
+  background:rgba(105,76,139,.42);
+}
 .voice-status{
   display:table;
   max-width:calc(100% - 28px);
@@ -993,6 +1026,11 @@ select{
   </div>
 
   <div id="voiceStatus" class="voice-status" role="status">Нажми на шар, чтобы поговорить</div>
+  <div class="quick-prompts" role="group" aria-label="Примеры запросов">
+    <button class="quick-prompt" type="button" onclick="sendQuickPrompt('Помоги придумать интересную идею')">✨ Идея</button>
+    <button class="quick-prompt" type="button" onclick="sendQuickPrompt('Объясни эту тему простыми словами')">💡 Объясни</button>
+    <button class="quick-prompt" type="button" onclick="sendQuickPrompt('Помоги написать текст')">✍️ Текст</button>
+  </div>
   <button id="endVoice" type="button" class="end-voice hidden" onclick="endVoiceSession()">Завершить разговор</button>
 
   <p>
@@ -1738,6 +1776,11 @@ function updateControls(){
   $("mic").disabled=busy||transcribing||openingMic;
   $("messageInput").disabled=
     recording||transcribing||openingMic;
+}
+
+/* БЫСТРЫЕ ПОДСКАЗКИ */
+function sendQuickPrompt(text){
+  void sendMessage(text);
 }
 
 /* ОТПРАВКА */
