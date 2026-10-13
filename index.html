@@ -495,6 +495,11 @@ header{
   width:min(730px,calc(100% - 32px));
   transition:bottom .18s ease-out;
 }
+.home-create{margin-bottom:8px}
+.home-create .heading{margin:0 0 10px}
+.home-create .heading h2{font-weight:400}
+body.home-screen .app{padding-bottom:410px}
+body.keyboard-open .home-create{display:none}
 .composer{
   display:flex;
   align-items:center;
@@ -949,15 +954,6 @@ select{
     Добро пожаловать в мою вселенную возможностей.
   </p>
 
-  <div class="heading">
-    <h2>Создать</h2>
-    <button onclick="openView('studio')">
-      Больше возможностей ›
-    </button>
-  </div>
-
-  <div class="tiles" id="homeTiles"></div>
-
   <div class="ideas">
     <button class="idea" onclick="openView('image')">
       <span class="symbol">✦</span>
@@ -1125,6 +1121,16 @@ select{
 
 <!-- ПОЛЕ ВВОДА -->
 <div id="dock" class="dock">
+  <div id="homeCreate" class="home-create">
+  <div class="heading">
+    <h2>Создать</h2>
+    <button onclick="openView('studio')">
+      Больше возможностей ›
+    </button>
+  </div>
+
+  <div class="tiles" id="homeTiles"></div>
+  </div>
   <form id="chatForm" class="composer">
     <button type="button" class="circle"
       onclick="openView('studio')">＋</button>
@@ -1377,9 +1383,10 @@ function openView(name){
 
 /* ГЛАВНЫЙ ЭКРАН */
 function updateWelcome(){
-  $("welcome").classList.toggle(
-    "hidden",!showWelcome||anonymous
-  );
+  const welcomeVisible=showWelcome&&!anonymous;
+  $("welcome").classList.toggle("hidden",!welcomeVisible);
+  $("homeCreate").classList.toggle("hidden",!welcomeVisible);
+  document.body.classList.toggle("home-screen",welcomeVisible);
 }
 
 /* ФОРМАТИРОВАНИЕ */
