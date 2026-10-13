@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#101119">
 <title>ANNIVEO AI</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
 <style>
 :root{
   color-scheme:dark;
@@ -34,15 +35,19 @@ button:disabled{opacity:.5}
   max-width:760px;
   height:100dvh;
   margin:auto;
-  padding:15px 16px 190px;
+  padding:99px 16px 190px;
   overflow-y:auto;
   overflow-x:hidden;
   overscroll-behavior:contain;
   -webkit-overflow-scrolling:touch;
 }
 header{
-  display:flex;align-items:center;
-  gap:10px;padding-bottom:10px;
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding-bottom:18px;
+  min-height:72px;
 }
 .logo{
   font-size:19px;font-weight:800;
@@ -50,55 +55,84 @@ header{
 }
 .logo span{color:var(--purple)}
 .credit{
-  margin-left:auto;display:flex;
-  align-items:center;gap:6px;
-  background:#252231;
-  border:1px solid #71598c;
-  border-radius:25px;padding:8px 12px;
+  position:absolute;
+  top:34px;left:0;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  background:transparent;
+  border:0;
+  padding:0;
   color:#e2caff;
 }
 .credit:active{transform:scale(.95)}
-.balance-label{font-size:11px}
-.balance-number{font-size:15px;font-weight:700}
+.balance-label{
+  font-size:15px;
+  color:#b9aecb;
+}
+.balance-number{
+  font-size:21px;
+  font-weight:700;
+  color:#fff;
+}
 .balance-star{
-  font-size:25px;line-height:18px;
+  font-size:25px;
+  line-height:1;
   color:#c9a2ff;
   text-shadow:0 0 12px #b887ff99;
 }
-.gear{border:0;background:none;font-size:22px}
+.gear{
+  margin-left:auto;
+  border:0;
+  background:none;
+  font-size:22px;
+}
 .view{display:none;min-width:0}
 .view.active{display:block}
 
 /* ПРИВЕТСТВИЕ */
 .welcome{text-align:center}
 .welcome h1{
-  font-size:30px;margin:12px 0 4px;
+  font-size:30px;
+  margin:12px 0 4px;
 }
 .welcome h2{
-  font-size:22px;font-weight:400;
-  color:#b3abc5;margin:0;
+  font-size:22px;
+  font-weight:400;
+  color:#b3abc5;
+  margin:0;
 }
 .welcome p{
-  color:var(--muted);
-  font-size:12px;line-height:1.5;
-  max-width:470px;
-  margin:0 auto 8px;
+  color:#b9b0c9;
+  font-size:13px;
+  line-height:1.7;
+  max-width:480px;
+  margin:8px auto 18px;
+}
+.fox-highlight{
+  color:#c6a6ff;
+  font-weight:600;
 }
 
-/* ВРАЩАЮЩИЙСЯ ШАР */
+/* КОСМИЧЕСКИЙ ШАР */
 .universe{
   position:relative;
-  width:100%;height:185px;
-  margin:0 auto;
-  display:grid;place-items:center;
+  width:100%;
+  height:260px;
+  margin:10px auto 15px;
+  display:grid;
+  place-items:center;
   perspective:750px;
   transform-style:preserve-3d;
   isolation:isolate;
+  overflow:visible;
 }
 .planet{
   position:relative;
-  width:116px;height:116px;
-  border-radius:50%;z-index:3;
+  width:126px;
+  height:126px;
+  border-radius:50%;
+  z-index:3;
   background:
     radial-gradient(circle at 68% 18%,#f3d0ff 0%,#ba93ff 12%,transparent 32%),
     radial-gradient(circle at 20% 78%,#a27dff,transparent 48%),
@@ -106,17 +140,20 @@ header{
   box-shadow:
     inset -9px -12px 20px #21183f88,
     inset 7px 6px 13px #fff4,
-    0 0 50px #ad7cff66;
+    0 0 55px #ad7cff88;
   animation:planetSpin 14s linear infinite;
 }
 .planet:before{
-  content:"";position:absolute;
-  inset:20% -12%;border-radius:50%;
+  content:"";
+  position:absolute;
+  inset:20% -12%;
+  border-radius:50%;
   border:2px solid #f3dcff55;
   transform:rotate(-26deg);
 }
 .planet:after{
-  content:"";position:absolute;
+  content:"";
+  position:absolute;
   left:13%;top:45%;
   width:80%;height:30%;
   border-radius:50%;
@@ -124,9 +161,11 @@ header{
   transform:rotate(25deg);
 }
 .axis-ring{
-  position:absolute;left:50%;top:50%;
+  position:absolute;
+  left:50%;top:50%;
   width:250px;height:115px;
-  margin-left:-125px;margin-top:-57.5px;
+  margin-left:-125px;
+  margin-top:-57.5px;
   border:2px solid #b28cff9c;
   border-radius:50%;
   box-shadow:0 0 12px #ae7cff38;
@@ -134,19 +173,24 @@ header{
   pointer-events:none;
 }
 .axis-ring.one{
-  z-index:4;animation:axisOne 7s linear infinite;
+  z-index:4;
+  animation:axisOne 7s linear infinite;
 }
 .axis-ring.two{
   width:218px;height:95px;
-  margin-left:-109px;margin-top:-47.5px;
+  margin-left:-109px;
+  margin-top:-47.5px;
   border-color:#c2a4ff77;
-  z-index:2;animation:axisTwo 10s linear infinite;
+  z-index:2;
+  animation:axisTwo 10s linear infinite;
 }
 .axis-ring.three{
   width:278px;height:125px;
-  margin-left:-139px;margin-top:-62.5px;
+  margin-left:-139px;
+  margin-top:-62.5px;
   border-color:#8b6fc04d;
-  z-index:1;animation:axisThree 13s linear infinite;
+  z-index:1;
+  animation:axisThree 13s linear infinite;
 }
 @keyframes planetSpin{
   to{transform:rotate(360deg)}
@@ -164,8 +208,10 @@ header{
   to{transform:rotateZ(20deg) rotateY(-360deg)}
 }
 .spark{
-  position:absolute;width:4px;height:4px;
-  background:#d7b6ff;border-radius:50%;
+  position:absolute;
+  width:4px;height:4px;
+  background:#d7b6ff;
+  border-radius:50%;
   box-shadow:0 0 10px #c39aff;
   animation:blink 2.5s ease-in-out infinite alternate;
 }
@@ -177,16 +223,76 @@ header{
   to{opacity:1;transform:scale(1.4)}
 }
 
-/* СОЗДАТЬ — БЛИЖЕ К ШАРУ */
+/* ЛИСЁНОК */
+.fox-orbit{
+  position:absolute;
+  inset:0;
+  z-index:8;
+  pointer-events:none;
+  animation:foxOrbit 10s linear infinite;
+}
+.cosmic-fox{
+  position:absolute;
+  left:50%;
+  top:50%;
+  font-size:43px;
+  line-height:1;
+  transform:translate(-50%,-50%) translateX(102px);
+  filter:drop-shadow(0 0 16px #c6a6ff);
+  animation:foxUpright 10s linear infinite;
+}
+.fox-glow{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  background:#b887ff66;
+  filter:blur(20px);
+  transform:translate(-50%,-50%) translateX(102px);
+}
+@keyframes foxOrbit{
+  from{transform:rotate(0deg)}
+  to{transform:rotate(360deg)}
+}
+@keyframes foxUpright{
+  from{
+    transform:translate(-50%,-50%)
+      translateX(102px) rotate(0deg);
+  }
+  to{
+    transform:translate(-50%,-50%)
+      translateX(102px) rotate(-360deg);
+  }
+}
+.fox-star{
+  position:absolute;
+  width:4px;height:4px;
+  border-radius:50%;
+  background:#e8c8ff;
+  box-shadow:0 0 12px #c48aff;
+  animation:foxSparkle 2.5s infinite alternate;
+  pointer-events:none;
+}
+@keyframes foxSparkle{
+  from{opacity:.2;transform:scale(.5)}
+  to{opacity:1;transform:scale(1.7)}
+}
+
+/* СОЗДАТЬ */
 .heading{
-  display:flex;justify-content:space-between;
-  align-items:center;gap:10px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
   margin:9px 0 11px;
 }
 .heading h2{font-size:21px;margin:0}
 .heading button{
   background:none;border:0;
-  color:var(--muted);font-size:11px;
+  color:var(--muted);
+  font-size:11px;
   text-align:right;
 }
 .tiles,.ideas{
@@ -195,11 +301,14 @@ header{
   gap:10px;
 }
 .tile{
-  position:relative;height:155px;
+  position:relative;
+  height:155px;
   border-radius:16px;
   border:1px solid #ffffff22;
-  overflow:hidden;text-align:left;
-  background:#2a2436;padding:0;
+  overflow:hidden;
+  text-align:left;
+  background:#2a2436;
+  padding:0;
   transition:transform .2s;
 }
 .tile:active,.idea:active{transform:scale(.96)}
@@ -209,84 +318,122 @@ header{
   position:absolute;inset:0;
 }
 .tile:after{
-  content:"";position:absolute;inset:0;
+  content:"";
+  position:absolute;inset:0;
   background:linear-gradient(180deg,#0000 30%,#101019ed);
 }
 .tile-icon{
-  position:absolute;top:12px;left:12px;
-  z-index:1;padding:7px;border-radius:9px;
+  position:absolute;
+  top:12px;left:12px;
+  z-index:1;
+  padding:7px;
+  border-radius:9px;
   background:#15151cb9;
 }
 .tile-text{
-  position:absolute;z-index:1;
-  left:12px;bottom:13px;right:10px;
+  position:absolute;
+  z-index:1;
+  left:12px;
+  bottom:13px;
+  right:10px;
 }
 .tile b{font-size:16px}
 .tile small{
-  display:block;color:#c1bdce;
-  font-size:10px;margin-top:5px;
+  display:block;
+  color:#c1bdce;
+  font-size:10px;
+  margin-top:5px;
   line-height:1.4;
 }
 .ideas{margin-top:12px}
 .idea{
-  display:flex;gap:9px;
-  align-items:flex-start;text-align:left;
+  display:flex;
+  gap:9px;
+  align-items:flex-start;
+  text-align:left;
   background:#1d1e29;
   border:1px solid #353441;
   border-radius:15px;
-  padding:13px 9px;min-height:105px;
+  padding:13px 9px;
+  min-height:105px;
   transition:transform .2s;
 }
-.symbol{color:var(--purple);font-size:22px}
+.symbol{
+  color:var(--purple);
+  font-size:22px;
+}
 .idea strong{
-  font-size:12px;font-weight:550;
+  font-size:12px;
+  font-weight:550;
   line-height:1.45;
 }
 .idea small{
-  display:block;margin-top:8px;
+  display:block;
+  margin-top:8px;
   color:var(--muted);
-  font-size:10px;line-height:1.4;
+  font-size:10px;
+  line-height:1.4;
 }
 
 /* АНОНИМНЫЙ ЧАТ */
 .mode{
-  display:flex;align-items:center;gap:11px;
-  padding:14px;margin:14px 0;
+  display:flex;
+  align-items:center;
+  gap:11px;
+  padding:14px;
+  margin:14px 0;
   border:1px solid #373542;
-  background:#1d1e28;border-radius:16px;
+  background:#1d1e28;
+  border-radius:16px;
 }
-.shield{font-size:21px;color:var(--purple)}
+.shield{
+  font-size:21px;
+  color:var(--purple);
+}
 .mode b{display:block;font-size:12px}
 .mode small{
-  display:block;font-size:10px;
-  color:var(--muted);margin-top:4px;
+  display:block;
+  font-size:10px;
+  color:var(--muted);
+  margin-top:4px;
 }
 .switch{
-  margin-left:auto;border:0;
-  background:#474451;border-radius:30px;
-  width:45px;height:27px;padding:3px;flex:none;
+  margin-left:auto;
+  border:0;
+  background:#474451;
+  border-radius:30px;
+  width:45px;height:27px;
+  padding:3px;flex:none;
 }
 .switch:after{
-  content:"";display:block;
-  width:21px;height:21px;border-radius:50%;
-  background:white;transition:transform .2s;
+  content:"";
+  display:block;
+  width:21px;height:21px;
+  border-radius:50%;
+  background:white;
+  transition:transform .2s;
 }
 .switch.on{background:#9675c5}
 .switch.on:after{transform:translateX(18px)}
 
 /* СООБЩЕНИЯ */
 .messages{
-  display:flex;flex-direction:column;
-  gap:16px;padding:8px 0 20px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  padding:8px 0 20px;
   min-width:0;
 }
 .message{
-  min-width:0;max-width:100%;
-  line-height:1.65;font-size:14px;
+  min-width:0;
+  max-width:100%;
+  line-height:1.65;
+  font-size:14px;
   overflow-wrap:anywhere;
 }
 .message.user{
-  align-self:flex-end;max-width:87%;
+  align-self:flex-end;
+  max-width:87%;
   background:#2b2938;
   border:1px solid #454052;
   padding:11px 14px;
@@ -294,46 +441,62 @@ header{
   white-space:pre-wrap;
 }
 .message.assistant{
-  align-self:stretch;width:100%;
+  align-self:stretch;
+  width:100%;
 }
 .assistant-name{
   color:var(--purple);
-  font-size:11px;margin-bottom:6px;
+  font-size:11px;
+  margin-bottom:6px;
 }
-.answer{min-width:0;overflow-wrap:anywhere}
+.answer{
+  min-width:0;
+  overflow-wrap:anywhere;
+}
 .answer p{margin:0 0 10px}
 .answer h1,.answer h2,.answer h3{
-  font-size:17px;margin:14px 0 8px;
+  font-size:17px;
+  margin:14px 0 8px;
 }
 .answer ul,.answer ol{padding-left:22px}
 .answer pre{
-  max-width:100%;padding:12px;
-  border-radius:10px;overflow-x:auto;
-  background:#20212b;font-size:12px;
+  max-width:100%;
+  padding:12px;
+  border-radius:10px;
+  overflow-x:auto;
+  background:#20212b;
+  font-size:12px;
 }
 .answer code{
   background:#292a35;
-  border-radius:4px;padding:2px 4px;
+  border-radius:4px;
+  padding:2px 4px;
 }
 .answer pre code{background:none;padding:0}
 .copy{
   background:none;border:0;
-  color:#a9a2ba;font-size:11px;
+  color:#a9a2ba;
+  font-size:11px;
   padding:5px 0;
 }
 .message audio{max-width:100%;display:block}
 
-/* ОТДЕЛЬНОЕ ПОЛЕ ВВОДА */
+/* ПОЛЕ ВВОДА */
 .dock{
-  position:fixed;z-index:40;
-  left:50%;transform:translateX(-50%);
+  position:fixed;
+  z-index:40;
+  left:50%;
+  transform:translateX(-50%);
   bottom:calc(110px + env(safe-area-inset-bottom));
   width:min(730px,calc(100% - 32px));
   transition:bottom .18s ease-out;
 }
 .composer{
-  display:flex;align-items:center;gap:8px;
-  min-width:0;padding:7px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+  padding:7px;
   background:#242431f2;
   -webkit-backdrop-filter:blur(18px);
   backdrop-filter:blur(18px);
@@ -342,16 +505,25 @@ header{
   box-shadow:0 8px 25px #0005;
 }
 .composer textarea{
-  background:none;border:0;outline:none;
-  resize:none;flex:1;width:100%;
-  min-width:0;min-height:36px;
-  max-height:95px;padding:8px 0;
-  font-size:16px;line-height:20px;
+  background:none;
+  border:0;
+  outline:none;
+  resize:none;
+  flex:1;
+  width:100%;
+  min-width:0;
+  min-height:36px;
+  max-height:95px;
+  padding:8px 0;
+  font-size:16px;
+  line-height:20px;
 }
 .circle{
-  border:0;border-radius:50%;
+  border:0;
+  border-radius:50%;
   width:37px;height:37px;
-  background:#393947;flex:none;
+  background:#393947;
+  flex:none;
   font-size:20px;
 }
 .send{
@@ -360,20 +532,24 @@ header{
 }
 .recording{background:#8e3f58}
 .status{
-  font-size:11px;color:#cdb7e9;
+  font-size:11px;
+  color:#cdb7e9;
   padding:6px 14px;
 }
 .status:empty{display:none}
 
-/* СТЕКЛЯННОЕ НИЖНЕЕ МЕНЮ */
+/* НИЖНЕЕ МЕНЮ */
 nav{
-  position:fixed;z-index:50;
-  left:50%;transform:translateX(-50%);
+  position:fixed;
+  z-index:50;
+  left:50%;
+  transform:translateX(-50%);
   bottom:calc(12px + env(safe-area-inset-bottom));
   width:min(720px,calc(100% - 32px));
   display:grid;
   grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:2px;padding:7px;
+  gap:2px;
+  padding:7px;
   border:1px solid rgba(225,205,255,.22);
   border-radius:38px;
   background:rgba(80,77,96,.46);
@@ -382,26 +558,33 @@ nav{
   box-shadow:0 10px 32px #0005,inset 0 1px 1px #ffffff30;
 }
 nav button{
-  position:relative;z-index:2;
-  min-width:0;min-height:62px;
+  position:relative;
+  z-index:2;
+  min-width:0;
+  min-height:62px;
   padding:8px 2px;
-  border:0;border-radius:30px;
+  border:0;
+  border-radius:30px;
   background:transparent;
   color:#c6c1d2;
-  display:flex;flex-direction:column;
-  align-items:center;gap:5px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:5px;
   font-size:11px;
   transition:color .3s,transform .22s;
 }
 nav button span{
-  font-size:23px;line-height:27px;
+  font-size:23px;
+  line-height:27px;
   transition:transform .25s;
 }
 nav button.active{color:#f5eaff}
 nav button.active span{transform:scale(1.08)}
 nav button:active{transform:scale(.91)}
 #navGlider{
-  position:absolute;z-index:1;
+  position:absolute;
+  z-index:1;
   top:7px;left:7px;
   height:calc(100% - 14px);
   border-radius:31px;
@@ -419,8 +602,10 @@ body.keyboard-open .dock{
   bottom:calc(var(--keyboard-height) + 10px);
 }
 #hideKeyboard{
-  position:fixed;z-index:999;
-  right:20px;top:50%;
+  position:fixed;
+  z-index:999;
+  right:20px;
+  top:50%;
   width:46px;height:46px;
   border-radius:50%;
   border:1px solid #c4a1f5aa;
@@ -429,14 +614,18 @@ body.keyboard-open .dock{
   -webkit-backdrop-filter:blur(16px);
   backdrop-filter:blur(16px);
   box-shadow:0 0 22px #ac7aff55;
-  display:flex;align-items:center;justify-content:center;
-  opacity:0;visibility:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  opacity:0;
+  visibility:hidden;
   pointer-events:none;
   transform:translateY(16px) scale(.8);
   transition:top .16s,opacity .25s,transform .3s,visibility .25s;
 }
 #hideKeyboard.visible{
-  opacity:1;visibility:visible;
+  opacity:1;
+  visibility:visible;
   pointer-events:auto;
   transform:translateY(0) scale(1);
 }
@@ -445,63 +634,84 @@ body.keyboard-open .dock{
 /* СТРАНИЦЫ */
 .page-title{font-size:27px;margin:15px 0 5px}
 .subtitle{
-  color:var(--muted);font-size:12px;
-  margin:0 0 20px;line-height:1.6;
+  color:var(--muted);
+  font-size:12px;
+  margin:0 0 20px;
+  line-height:1.6;
 }
 .panel{
   background:#1d1e29;
   border:1px solid #373542;
   border-radius:17px;
-  padding:16px;margin:13px 0;
+  padding:16px;
+  margin:13px 0;
 }
 label{
-  display:block;color:#c5b9d5;
-  font-size:12px;margin:0 0 8px;
+  display:block;
+  color:#c5b9d5;
+  font-size:12px;
+  margin:0 0 8px;
 }
 .prompt{
-  width:100%;min-height:120px;
-  resize:vertical;background:#12141c;
+  width:100%;
+  min-height:120px;
+  resize:vertical;
+  background:#12141c;
   border:1px solid #3b3948;
-  border-radius:12px;padding:12px;
-  outline:none;font-size:16px;
+  border-radius:12px;
+  padding:12px;
+  outline:none;
+  font-size:16px;
 }
 .fields{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:10px;margin-top:13px;
+  gap:10px;
+  margin-top:13px;
 }
 select{
-  width:100%;background:#14151e;
+  width:100%;
+  background:#14151e;
   border:1px solid #403d4c;
-  border-radius:10px;padding:10px;
+  border-radius:10px;
+  padding:10px;
   font-size:16px;
 }
 .primary{
-  display:block;width:100%;border:0;
+  display:block;
+  width:100%;
+  border:0;
   border-radius:12px;
   background:linear-gradient(120deg,#9676c5,#655589);
-  padding:14px;margin-top:16px;
+  padding:14px;
+  margin-top:16px;
   font-weight:600;
 }
 .result img,.result video{
-  width:100%;max-height:60vh;
-  object-fit:contain;border-radius:12px;
+  width:100%;
+  max-height:60vh;
+  object-fit:contain;
+  border-radius:12px;
   margin-top:12px;
 }
 .result a{
-  color:#d7b9ff;display:inline-block;
+  color:#d7b9ff;
+  display:inline-block;
   margin-top:12px;
 }
 .avatar{
   width:75px;height:75px;
   margin:5px auto 12px;
-  display:grid;place-items:center;
+  display:grid;
+  place-items:center;
   border-radius:50%;
-  background:#74569d;font-size:30px;
+  background:#74569d;
+  font-size:30px;
   overflow:hidden;
 }
 .avatar img{
-  width:100%;height:100%;object-fit:cover;
+  width:100%;height:100%;
+  object-fit:cover;
 }
 .profile{text-align:center}
 .profile h2{margin:0 0 6px}
@@ -509,74 +719,94 @@ select{
 .wallet{
   background:linear-gradient(120deg,#30263e,#1d1e29);
   border:1px solid #55466a;
-  border-radius:17px;padding:20px;
+  border-radius:17px;
+  padding:20px;
 }
 .wallet small{color:#c5b5d6}
 .wallet strong{
-  display:block;font-size:29px;margin:10px 0;
+  display:block;
+  font-size:29px;
+  margin:10px 0;
 }
 .wallet button{
-  background:#80649d;border:0;
-  border-radius:10px;padding:11px 15px;
+  background:#80649d;
+  border:0;
+  border-radius:10px;
+  padding:11px 15px;
 }
 .note{
-  color:var(--muted);font-size:11px;
+  color:var(--muted);
+  font-size:11px;
   line-height:1.5;
 }
 .history-item{
   background:#1d1e29;
   border:1px solid #343442;
   border-radius:13px;
-  padding:13px;margin-bottom:9px;
+  padding:13px;
+  margin-bottom:9px;
 }
 .history-item b{
-  color:var(--purple);font-size:11px;
+  color:var(--purple);
+  font-size:11px;
 }
 .history-item p{
-  font-size:12px;color:#c0b9cc;
+  font-size:12px;
+  color:#c0b9cc;
   margin:7px 0 0;
-  white-space:nowrap;overflow:hidden;
+  white-space:nowrap;
+  overflow:hidden;
   text-overflow:ellipsis;
 }
 .empty{
-  text-align:center;padding:35px 15px;
-  color:var(--muted);font-size:13px;
+  text-align:center;
+  padding:35px 15px;
+  color:var(--muted);
+  font-size:13px;
 }
 .toast{
-  position:fixed;z-index:1000;
-  bottom:155px;left:50%;
+  position:fixed;
+  z-index:1000;
+  bottom:155px;
+  left:50%;
   transform:translateX(-50%);
   max-width:90%;
   background:#343040;
   border:1px solid #6b587e;
-  padding:12px 15px;border-radius:12px;
+  padding:12px 15px;
+  border-radius:12px;
   font-size:12px;
 }
 
-/* АНИМАЦИЯ ЗАПУСКА */
+/* ЗАСТАВКА */
 #splash{
-  position:fixed;inset:0;z-index:10000;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
+  position:fixed;
+  inset:0;
+  z-index:10000;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
   gap:22px;
   background:radial-gradient(circle at center,#322244,#101119 70%);
   transition:opacity .65s ease,visibility .65s;
 }
 #splash.finished{
-  opacity:0;visibility:hidden;
+  opacity:0;
+  visibility:hidden;
   pointer-events:none;
 }
 .splash-orb{
   position:relative;
   width:130px;height:130px;
   border-radius:50%;
-  background:
-    radial-gradient(circle at 32% 22%,#f0d3ff,#ad7de6 35%,#483365 78%);
+  background:radial-gradient(circle at 32% 22%,#f0d3ff,#ad7de6 35%,#483365 78%);
   box-shadow:0 0 35px #a777ff99,0 0 85px #9460e855;
   animation:splashPulse 2s ease-in-out infinite;
 }
 .splash-orb:before,.splash-orb:after{
-  content:"";position:absolute;
+  content:"";
+  position:absolute;
   inset:17px -32px;
   border:2px solid #d6b2ffb0;
   border-radius:50%;
@@ -588,21 +818,25 @@ select{
   border-color:#ac86ff88;
 }
 .splash-logo{
-  font-size:24px;font-weight:800;
+  font-size:24px;
+  font-weight:800;
   letter-spacing:3px;
 }
 .splash-logo span{color:#c6a6ff}
 .splash-subtitle{
-  color:#b7a7c9;font-size:12px;
+  color:#b7a7c9;
+  font-size:12px;
   letter-spacing:2px;
 }
 .splash-progress{
   width:145px;height:3px;
   border-radius:10px;
-  overflow:hidden;background:#453852;
+  overflow:hidden;
+  background:#453852;
 }
 .splash-progress:before{
-  content:"";display:block;
+  content:"";
+  display:block;
   width:45%;height:100%;
   background:#d3aaff;
   border-radius:10px;
@@ -618,12 +852,14 @@ select{
   from{transform:translateX(-100%)}
   to{transform:translateX(330%)}
 }
+
 @media(min-width:600px){
-  .universe{height:220px}
+  .universe{height:280px}
   .planet{width:145px;height:145px}
   .tile{height:220px}
 }
-@media(max-width:360px){
+@media(max-width:390px){
+  .cosmic-fox{font-size:37px}
   .welcome h1{font-size:27px}
   .idea{padding:12px 8px}
   .idea strong{font-size:11px}
@@ -631,12 +867,14 @@ select{
   nav{width:calc(100% - 18px)}
 }
 @media(prefers-reduced-motion:reduce){
-  .planet,.axis-ring,.spark,.splash-orb,
+  .planet,.axis-ring,.spark,.fox-orbit,
+  .cosmic-fox,.fox-star,.splash-orb,
   .splash-orb:before,.splash-orb:after,
-  .splash-progress:before{animation:none}
+  .splash-progress:before{animation:none!important}
 }
 </style>
 </head>
+
 <body>
 
 <!-- ЗАСТАВКА -->
@@ -669,39 +907,27 @@ select{
     <div class="axis-ring two"></div>
     <div class="axis-ring three"></div>
     <div class="planet"></div>
-    
-.cosmic-fox {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  font-size: 34px;
-  z-index: 8;
-  pointer-events: none;
-  transform-origin: center;
-  animation: foxOrbit 9s linear infinite;
-  filter: drop-shadow(0 0 12px #c6a6ff);
-}
 
-@keyframes foxOrbit {
-  0% {
-    transform: translate(-50%, -50%) rotate(0deg)
-               translateX(95px) rotate(0deg);
-  }
-  100% {
-    transform: translate(-50%, -50%) rotate(360deg)
-               translateX(95px) rotate(-360deg);
-  }
-}
+    <div class="fox-orbit">
+      <div class="fox-glow"></div>
+      <span class="cosmic-fox">🦊</span>
+    </div>
 
     <i class="spark a"></i>
     <i class="spark b"></i>
     <i class="spark c"></i>
+    <i class="fox-star" style="left:10%;top:20%"></i>
+    <i class="fox-star" style="left:85%;top:15%;animation-delay:.4s"></i>
+    <i class="fox-star" style="left:5%;top:65%;animation-delay:.8s"></i>
+    <i class="fox-star" style="left:90%;top:75%;animation-delay:1.2s"></i>
+    <i class="fox-star" style="left:28%;top:90%;animation-delay:1.6s"></i>
   </div>
 
   <p>
-    Я твой AI-ассистент. Могу отвечать на вопросы,
-    создавать изображения и видео, помогать с идеями
-    и решать повседневные задачи.
+    Я твой <span class="fox-highlight">AI-ассистент</span>.
+    Вместе мы найдём ответы на любые вопросы,
+    оживим твои идеи и создадим нечто удивительное.
+    Добро пожаловать в мою вселенную возможностей.
   </p>
 
   <div class="heading">
@@ -915,7 +1141,7 @@ select{
   </button>
 </nav>
 
-<!-- КНОПКА СКРЫТИЯ КЛАВИАТУРЫ -->
+<!-- СКРЫТЬ КЛАВИАТУРУ -->
 <button id="hideKeyboard" type="button"
   aria-label="Скрыть клавиатуру">
   <svg viewBox="0 0 24 24"
@@ -1222,7 +1448,8 @@ function addMessage(text,role,audioURL){
   }
   if(audioURL){
     const audio=document.createElement("audio");
-    audio.controls=true;audio.src=audioURL;
+    audio.controls=true;
+    audio.src=audioURL;
     el.append(audio);
   }
   const content=document.createElement("div");
@@ -1376,7 +1603,8 @@ async function sendMessage(text,audioURL){
   );
 
   $("chatStatus").textContent="Готовлю ответ…";
-  busy=true;updateControls();
+  busy=true;
+  updateControls();
   scrollAppToBottom();
 
   try{
@@ -1826,240 +2054,6 @@ window.addEventListener("pagehide",()=>{
 showWelcome=true;
 renderChat();
 loadHistory();
-</script>
-
-<style>
-/* ANNIVEO AI — БАЛАНС ВАРИАНТ 2 */
-
-/* Сохраняем расположение верхней панели */
-header {
-  position: relative !important;
-  display: flex !important;
-  align-items: center !important;
-  flex-wrap: nowrap !important;
-  padding-bottom: 18px !important;
-  row-gap: 0 !important;
-}
-
-/* Название остаётся на месте */
-header .logo {
-  flex-shrink: 0;
-  margin: 0 !important;
-}
-
-/* Баланс под названием */
-header .credit {
-  position: absolute !important;
-  top: 34px !important;
-  left: 0 !important;
-
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-
-  width: auto !important;
-  margin: 0 !important;
-  padding: 0 !important;
-
-  background: transparent !important;
-  border: none !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
-
-/* Слово Баланс */
-header .anniveo-balance-label {
-  font-size: 15px !important;
-  font-weight: 400 !important;
-  color: #b9aecb !important;
-}
-
-/* Цифра баланса */
-header .anniveo-balance-number {
-  font-size: 21px !important;
-  font-weight: 700 !important;
-  color: #ffffff !important;
-}
-
-/* Звёздочка */
-header .anniveo-balance-star {
-  font-size: 25px !important;
-  color: #c6a6ff !important;
-  line-height: 1 !important;
-  text-shadow: 0 0 12px #b887ff88;
-}
-
-/* Настройки остаются справа */
-header .gear {
-  margin-left: auto !important;
-}
-
-/* Не сдвигаем остальные элементы */
-.welcome {
-  margin-top: 0 !important;
-}
-</style>
-
-<style>
-/* Опускаем всё верхнее содержимое */
-.app {
-  padding-top: 99px !important;
-}
-
-/* Убираем дополнительное смещение шапки */
-header {
-  top: 0 !important;
-}
-</style>
-
-<!-- ANNIVEO AI — КОСМИЧЕСКИЙ ЛИСЁНОК -->
-<style>
-/* Увеличиваем пространство для шара */
-.universe {
-  height: 260px !important;
-  margin: 10px auto 15px !important;
-  overflow: visible !important;
-}
-
-/* Шар */
-.universe .planet {
-  width: 126px;
-  height: 126px;
-  box-shadow:
-    inset -9px -12px 20px #21183f88,
-    inset 7px 6px 13px #fff4,
-    0 0 55px #ad7cff88 !important;
-}
-
-/* Лисёнок */
-.anniveo-fox {
-  position: absolute;
-  z-index: 8;
-  width: 115px;
-  height: 115px;
-  left: calc(50% - 145px);
-  top: 20px;
-  object-fit: contain;
-  pointer-events: none;
-  filter: drop-shadow(0 0 18px #ae77ff99);
-  animation: foxFloat 4s ease-in-out infinite;
-}
-
-/* Парение лисёнка */
-@keyframes foxFloat {
-  0%,100% {
-    transform: translateY(0) rotate(-5deg);
-  }
-  50% {
-    transform: translateY(-13px) rotate(5deg);
-  }
-}
-
-/* Волшебные частицы */
-.fox-star {
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #e8c8ff;
-  box-shadow: 0 0 12px #c48aff;
-  animation: foxSparkle 2.5s infinite alternate;
-  pointer-events: none;
-}
-
-@keyframes foxSparkle {
-  from {
-    opacity: .2;
-    transform: scale(.5);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1.7);
-  }
-}
-
-/* Красивое описание */
-.welcome p {
-  max-width: 480px !important;
-  font-size: 13px !important;
-  line-height: 1.7 !important;
-  color: #b9b0c9 !important;
-  margin: 8px auto 18px !important;
-}
-
-.welcome p .fox-highlight {
-  color: #c6a6ff;
-  font-weight: 600;
-}
-
-/* Маленькие экраны */
-@media(max-width:390px) {
-  .anniveo-fox {
-    width: 100px;
-    height: 100px;
-    left: calc(50% - 135px);
-  }
-}
-
-/* Отключение анимаций при необходимости */
-@media(prefers-reduced-motion:reduce) {
-  .anniveo-fox,
-  .fox-star {
-    animation: none !important;
-  }
-}
-</style>
-
-<script>
-(function() {
-  const universe = document.querySelector(".universe");
-  const description = document.querySelector(".welcome p");
-
-  if (!universe) return;
-
-  /* Лисёнок */
-  const fox = document.createElement("img");
-  fox.className = "anniveo-fox";
-  fox.alt = "Космический лисёнок ANNIVEO";
-
-  /*
-    Загрузи изображение лисёнка
-    в проект под именем fox.png
-  */
-  fox.src = "/fox.png";
-
-  universe.appendChild(fox);
-
-  /* Звёзды */
-  const positions = [
-    [10,20],
-    [85,15],
-    [5,65],
-    [90,75],
-    [28,90],
-    [70,5]
-  ];
-
-  positions.forEach(([x,y],i)=>{
-    const star = document.createElement("i");
-    star.className = "fox-star";
-    star.style.left = x + "%";
-    star.style.top = y + "%";
-    star.style.animationDelay = (i*.4) + "s";
-    universe.appendChild(star);
-  });
-
-  /* Новое описание */
-  if(description){
-    description.innerHTML = `
-      Я твой <span class="fox-highlight">
-      AI-ассистент</span>.
-      Вместе мы найдём ответы на любые вопросы,
-      оживим твои идеи и создадим нечто удивительное.
-      Добро пожаловать в мою вселенную возможностей.
-    `;
-  }
-})();
 </script>
 
 </body>
