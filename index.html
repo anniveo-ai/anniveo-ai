@@ -1888,5 +1888,155 @@ header {
 }
 </style>
 
+<!-- ANNIVEO AI — КОСМИЧЕСКИЙ ЛИСЁНОК -->
+<style>
+/* Увеличиваем пространство для шара */
+.universe {
+  height: 260px !important;
+  margin: 10px auto 15px !important;
+  overflow: visible !important;
+}
+
+/* Шар */
+.universe .planet {
+  width: 126px;
+  height: 126px;
+  box-shadow:
+    inset -9px -12px 20px #21183f88,
+    inset 7px 6px 13px #fff4,
+    0 0 55px #ad7cff88 !important;
+}
+
+/* Лисёнок */
+.anniveo-fox {
+  position: absolute;
+  z-index: 8;
+  width: 115px;
+  height: 115px;
+  left: calc(50% - 145px);
+  top: 20px;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 0 18px #ae77ff99);
+  animation: foxFloat 4s ease-in-out infinite;
+}
+
+/* Парение лисёнка */
+@keyframes foxFloat {
+  0%,100% {
+    transform: translateY(0) rotate(-5deg);
+  }
+  50% {
+    transform: translateY(-13px) rotate(5deg);
+  }
+}
+
+/* Волшебные частицы */
+.fox-star {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #e8c8ff;
+  box-shadow: 0 0 12px #c48aff;
+  animation: foxSparkle 2.5s infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes foxSparkle {
+  from {
+    opacity: .2;
+    transform: scale(.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.7);
+  }
+}
+
+/* Красивое описание */
+.welcome p {
+  max-width: 480px !important;
+  font-size: 13px !important;
+  line-height: 1.7 !important;
+  color: #b9b0c9 !important;
+  margin: 8px auto 18px !important;
+}
+
+.welcome p .fox-highlight {
+  color: #c6a6ff;
+  font-weight: 600;
+}
+
+/* Маленькие экраны */
+@media(max-width:390px) {
+  .anniveo-fox {
+    width: 100px;
+    height: 100px;
+    left: calc(50% - 135px);
+  }
+}
+
+/* Отключение анимаций при необходимости */
+@media(prefers-reduced-motion:reduce) {
+  .anniveo-fox,
+  .fox-star {
+    animation: none !important;
+  }
+}
+</style>
+
+<script>
+(function() {
+  const universe = document.querySelector(".universe");
+  const description = document.querySelector(".welcome p");
+
+  if (!universe) return;
+
+  /* Лисёнок */
+  const fox = document.createElement("img");
+  fox.className = "anniveo-fox";
+  fox.alt = "Космический лисёнок ANNIVEO";
+
+  /*
+    Загрузи изображение лисёнка
+    в проект под именем fox.png
+  */
+  fox.src = "/fox.png";
+
+  universe.appendChild(fox);
+
+  /* Звёзды */
+  const positions = [
+    [10,20],
+    [85,15],
+    [5,65],
+    [90,75],
+    [28,90],
+    [70,5]
+  ];
+
+  positions.forEach(([x,y],i)=>{
+    const star = document.createElement("i");
+    star.className = "fox-star";
+    star.style.left = x + "%";
+    star.style.top = y + "%";
+    star.style.animationDelay = (i*.4) + "s";
+    universe.appendChild(star);
+  });
+
+  /* Новое описание */
+  if(description){
+    description.innerHTML = `
+      Я твой <span class="fox-highlight">
+      AI-ассистент</span>.
+      Вместе мы найдём ответы на любые вопросы,
+      оживим твои идеи и создадим нечто удивительное.
+      Добро пожаловать в мою вселенную возможностей.
+    `;
+  }
+})();
+</script>
+
 </body>
 </html>
