@@ -809,22 +809,35 @@ select{
   position:relative;
   width:130px;height:130px;
   border-radius:50%;
-  background:radial-gradient(circle at 32% 22%,#f0d3ff,#ad7de6 35%,#483365 78%);
-  box-shadow:0 0 35px #a777ff99,0 0 85px #9460e855;
+  background:
+    radial-gradient(ellipse at 28% 18%,#ffffff 0%,#ffeaff 5%,#f8bdffcc 13%,transparent 31%),
+    radial-gradient(ellipse at 77% 30%,#ff5bdc 0%,#f12affbb 22%,transparent 48%),
+    radial-gradient(ellipse at 18% 73%,#94b6ff 0%,#7050ffdd 26%,transparent 53%),
+    radial-gradient(circle at 70% 86%,#eea0ff 0%,#c746ff77 22%,transparent 42%),
+    linear-gradient(140deg,#f0b2ff 0%,#be39ff 32%,#7420c9 62%,#d078ff 100%);
+  box-shadow:
+    inset -11px -15px 23px #270b58aa,
+    inset 6px 6px 15px #ffffff88,
+    inset 0 0 22px #f8c6ff99,
+    0 0 17px #eda6ffdd,
+    0 0 40px #cc55ffbb,
+    0 0 75px #a83cff88,
+    0 0 110px #862dff44;
   animation:splashPulse 2s ease-in-out infinite;
 }
 .splash-orb:before,.splash-orb:after{
   content:"";
   position:absolute;
   inset:17px -32px;
-  border:2px solid #d6b2ffb0;
+  border:2px solid #ffe1ffcc;
+  box-shadow:0 0 12px #e89aff99;
   border-radius:50%;
   animation:splashRing 2.5s linear infinite;
 }
 .splash-orb:after{
   transform:rotate(75deg);
   animation-duration:3.5s;
-  border-color:#ac86ff88;
+  border-color:#d999ffbb;
 }
 .splash-logo{
   font-size:24px;
@@ -852,7 +865,7 @@ select{
   animation:progress 1.2s ease-in-out infinite alternate;
 }
 @keyframes splashPulse{
-  50%{transform:scale(1.07);box-shadow:0 0 65px #b987ffaa}
+  50%{transform:scale(1.07)}
 }
 @keyframes splashRing{
   to{transform:rotate(360deg)}
