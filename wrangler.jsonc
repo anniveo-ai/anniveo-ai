@@ -1,0 +1,6 @@
+{
+  "name": "anniveo-ai-api",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-13",
+  "workers_dev": true
+}
