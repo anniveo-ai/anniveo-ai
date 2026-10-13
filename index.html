@@ -1368,68 +1368,126 @@ function setupMicGestures(){
   const button=$("mic");
   if(!button||button.dataset.gesturesReady) return;
   button.dataset.gesturesReady="1";
-  const lockDistance=58;
+  const lockDistance=52;
+  const suppressClick=()=>{ignoreMicClickUntil=Date.now()+700;};
+
+  if(("ontouchstart" in window)||navigator.maxTouchPoints>0){
+    const findTouch=(list,id)=>{
+      for(const item of list) if(item.identifier===id) return item;
+      return null;
+    };
+    const startHeldRecording=async state=>{
+      if(micGesture!==state) return;
+      state.held=true;
+      button.classList.remove("gesture-active");
+      await handleMic();
+      if(micGesture!==state) return;
+      if(state.released&&!state.locked&&recording) await handleMic();
+      if(micGesture===state) micGesture=null;
+    };
+    button.addEventListener("touchstart",event=>{
+      if(button.disabled||busy||transcribing||openingMic) return;
+      const touch=event.changedTouches[0];
+      if(!touch) return;
+      event.preventDefault();
+      const state={id:touch.identifier,y:touch.clientY,started:recording,held:false,locked:false,released:false,timer:null};
+      micGesture=state;
+      button.classList.add("gesture-active");
+      if(!state.started){
+        state.timer=setTimeout(()=>void startHeldRecording(state),220);
+      }
+    },{passive:false});
+    button.addEventListener("touchmove",event=>{
+      const state=micGesture;
+      if(!state) return;
+      if(event.cancelable) event.preventDefault();
+      const touch=findTouch(event.touches,state.id);
+      if(!touch||state.y-touch.clientY<lockDistance||state.locked) return;
+      state.locked=true;
+      clearTimeout(state.timer);
+      button.classList.add("locked");
+      button.classList.remove("gesture-active");
+      suppressClick();
+      if(!state.started&&!state.held){
+        state.held=true;
+        void handleMic();
+      }
+      $("chatStatus").textContent="Запись закреплена · нажми микрофон, чтобы отправить";
+    },{passive:false});
+    const finishTouch=event=>{
+      const state=micGesture;
+      if(!state) return;
+      const touch=findTouch(event.changedTouches,state.id);
+      if(!touch) return;
+      if(event.cancelable) event.preventDefault();
+      clearTimeout(state.timer);
+      state.released=true;
+      button.classList.remove("gesture-active");
+      suppressClick();
+      if(state.locked){micGesture=null;return;}
+      if(state.held){
+        if(recording){void handleMic();micGesture=null;}
+        // Если системный запрос доступа ещё открыт, startHeldRecording остановит запись после старта.
+        return;
+      }
+      if(state.started&&recording){
+        micGesture=null;
+        void handleMic();
+      }else{
+        micGesture=null;
+        void handleMic();
+      }
+    };
+    button.addEventListener("touchend",finishTouch,{passive:false});
+    button.addEventListener("touchcancel",finishTouch,{passive:false});
+    return;
+  }
+
+  // Fallback для устройств без сенсорного ввода.
   button.addEventListener("pointerdown",event=>{
     if(button.disabled||busy||transcribing||openingMic) return;
     const state={id:event.pointerId,y:event.clientY,started:recording,held:false,locked:false,released:false,timer:null};
     micGesture=state;
     button.setPointerCapture?.(event.pointerId);
     button.classList.add("gesture-active");
-    if(!state.started){
-      state.timer=setTimeout(async()=>{
-        if(micGesture!==state) return;
-        state.held=true;
-        button.classList.remove("gesture-active");
-        await handleMic();
-        if(micGesture!==state) return;
-        if(state.released&&!state.locked&&recording) await handleMic();
-        if(micGesture===state) micGesture=null;
-      },260);
-    }
+    if(!state.started) state.timer=setTimeout(async()=>{
+      if(micGesture!==state) return;
+      state.held=true;
+      button.classList.remove("gesture-active");
+      await handleMic();
+      if(micGesture!==state) return;
+      if(state.released&&!state.locked&&recording) await handleMic();
+      if(micGesture===state) micGesture=null;
+    },220);
   });
   button.addEventListener("pointermove",event=>{
     const state=micGesture;
-    if(!state||state.id!==event.pointerId) return;
-    if(state.y-event.clientY>lockDistance){
-      state.locked=true;
-      button.classList.add("locked");
-      button.classList.remove("gesture-active");
-      clearTimeout(state.timer);
-      if(!state.started&&!state.held){
-        state.held=true;
-        void handleMic();
-      }
-      $("chatStatus").textContent="Запись закреплена · нажми микрофон, чтобы отправить";
-    }
+    if(!state||state.id!==event.pointerId||state.y-event.clientY<lockDistance||state.locked) return;
+    state.locked=true;
+    clearTimeout(state.timer);
+    button.classList.add("locked");
+    button.classList.remove("gesture-active");
+    suppressClick();
+    if(!state.started&&!state.held){state.held=true;void handleMic();}
+    $("chatStatus").textContent="Запись закреплена · нажми микрофон, чтобы отправить";
   });
-  const finish=event=>{
+  const finishPointer=event=>{
     const state=micGesture;
     if(!state||state.id!==event.pointerId) return;
     clearTimeout(state.timer);
     state.released=true;
     button.classList.remove("gesture-active");
-    if(state.locked){
-      event.preventDefault();
-      ignoreMicClickUntil=Date.now()+700;
-      micGesture=null;
-      return;
-    }
+    suppressClick();
+    if(state.locked){micGesture=null;return;}
     if(state.held){
-      event.preventDefault();
-      ignoreMicClickUntil=Date.now()+700;
       if(recording){void handleMic();micGesture=null;}
-      // Если запрос разрешения ещё идёт, таймер завершит запись после старта.
       return;
     }
-    if(state.started&&recording){
-      event.preventDefault();
-      ignoreMicClickUntil=Date.now()+700;
-      micGesture=null;
-      void handleMic();
-    }else micGesture=null;
+    micGesture=null;
+    if(state.started&&recording) void handleMic();
   };
-  button.addEventListener("pointerup",finish);
-  button.addEventListener("pointercancel",finish);
+  button.addEventListener("pointerup",finishPointer);
+  button.addEventListener("pointercancel",finishPointer);
 }
 
 /* ИСТОРИЯ */
@@ -1860,7 +1918,7 @@ function updateControls(){
   const locked=busy||recording||transcribing||openingMic;
   $("send").disabled=locked;
   $("anonToggle").disabled=locked;
-  $("mic").disabled=busy||transcribing||openingMic;
+  $("mic").disabled=busy||transcribing||(openingMic&&!micGesture);
   $("messageInput").disabled=
     recording||transcribing||openingMic;
 }
