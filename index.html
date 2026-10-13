@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="ru">
 <head>
@@ -8,41 +9,220 @@
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
-body{margin:0;background:#090b13;color:#f5f6ff;font:16px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
-main{max-width:760px;margin:auto;height:100dvh;display:flex;flex-direction:column;padding:22px 18px max(18px,env(safe-area-inset-bottom))}
-header{display:flex;align-items:center;justify-content:space-between;padding:5px 0 22px;border-bottom:1px solid #25283a}
+body{
+  margin:0;
+  background:#090b13;
+  color:#f5f6ff;
+  font:16px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
+}
+main{
+  max-width:760px;
+  margin:auto;
+  height:100dvh;
+  display:flex;
+  flex-direction:column;
+  padding:22px 18px max(18px,env(safe-area-inset-bottom))
+}
+header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:5px 0 18px;
+  border-bottom:1px solid #25283a
+}
 header strong{letter-spacing:2px;font-size:19px}
-.tag{font-size:11px;background:#252044;color:#bcaaff;border:1px solid #51448c;border-radius:99px;padding:6px 10px}
-.chat{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:14px;padding:24px 0}
+.tag{
+  font-size:11px;
+  background:#252044;
+  color:#bcaaff;
+  border:1px solid #51448c;
+  border-radius:99px;
+  padding:6px 10px
+}
+.mode{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:15px 2px;
+  border-bottom:1px solid #25283a
+}
+.mode-title{
+  display:flex;
+  align-items:center;
+  gap:11px
+}
+.shield{font-size:23px}
+.mode-name{font-size:14px;font-weight:600}
+.mode-status{
+  font-size:12px;
+  color:#9299b0;
+  margin-top:4px
+}
+.switch{
+  position:relative;
+  flex-shrink:0;
+  width:62px;
+  height:34px;
+  border:0;
+  border-radius:99px;
+  background:#353849;
+  padding:3px;
+  cursor:pointer;
+  transition:background .2s
+}
+.switch::after{
+  content:"";
+  display:block;
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  background:white;
+  box-shadow:0 2px 6px #0005;
+  transition:transform .2s
+}
+.switch.active{
+  background:linear-gradient(135deg,#8b5cf6,#2563eb)
+}
+.switch.active::after{
+  transform:translateX(28px)
+}
+.switch:disabled{opacity:.5}
+.chat{
+  flex:1;
+  min-height:0;
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  padding:24px 0
+}
 .welcome{margin:auto;text-align:center}
-.orb{width:92px;height:92px;border-radius:28px;margin:0 auto 24px;background:linear-gradient(135deg,#7c3aed,#2563eb,#06b6d4);display:grid;place-items:center;font-size:40px;box-shadow:0 0 60px #6d28d955}
+.orb{
+  width:92px;
+  height:92px;
+  border-radius:28px;
+  margin:0 auto 24px;
+  background:linear-gradient(135deg,#7c3aed,#2563eb,#06b6d4);
+  display:grid;
+  place-items:center;
+  font-size:40px;
+  box-shadow:0 0 60px #6d28d955
+}
 .welcome h1{font-size:32px;margin:0 0 12px}
 .welcome p{color:#a7adc2;line-height:1.5}
-.msg{padding:14px 17px;border-radius:18px;max-width:88%;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
-.user{align-self:flex-end;background:#5133aa}
-.assistant{align-self:flex-start;background:#1b2030;border:1px solid #30374d}
-form{display:flex;gap:10px;background:#171b2a;border:1px solid #33384d;border-radius:20px;padding:9px;align-items:end}
-textarea{flex:1;min-width:0;background:transparent;color:white;border:0;outline:0;resize:none;font:inherit;padding:11px 7px;max-height:130px}
-button{border:0;border-radius:13px;background:linear-gradient(135deg,#8b5cf6,#2563eb);color:white;font-size:22px;width:48px;height:48px;cursor:pointer}
-button:disabled{opacity:.5}
-footer{text-align:center;color:#777e97;font-size:11px;padding:12px 0 0}
+.msg{
+  padding:14px 17px;
+  border-radius:18px;
+  max-width:88%;
+  line-height:1.5;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere
+}
+.user{
+  align-self:flex-end;
+  background:#5133aa
+}
+.assistant{
+  align-self:flex-start;
+  background:#1b2030;
+  border:1px solid #30374d
+}
+.notice{
+  align-self:center;
+  font-size:12px;
+  color:#bcaaff;
+  background:#252044;
+  border:1px solid #51448c;
+  padding:9px 13px;
+  border-radius:14px;
+  text-align:center
+}
+form{
+  display:flex;
+  gap:10px;
+  background:#171b2a;
+  border:1px solid #33384d;
+  border-radius:20px;
+  padding:9px;
+  align-items:end
+}
+textarea{
+  flex:1;
+  min-width:0;
+  background:transparent;
+  color:white;
+  border:0;
+  outline:0;
+  resize:none;
+  font:inherit;
+  padding:11px 7px;
+  max-height:130px
+}
+#send{
+  border:0;
+  border-radius:13px;
+  background:linear-gradient(135deg,#8b5cf6,#2563eb);
+  color:white;
+  font-size:22px;
+  width:48px;
+  height:48px;
+  cursor:pointer;
+  flex-shrink:0
+}
+#send:disabled{opacity:.5}
+footer{
+  text-align:center;
+  color:#777e97;
+  font-size:11px;
+  padding:12px 0 0
+}
 </style>
 </head>
 <body>
 <main>
+
 <header>
 <strong>✦ ANNIVEO AI</strong>
 <span class="tag">MINI APP</span>
 </header>
 
+<div class="mode">
+  <div class="mode-title">
+    <span class="shield">🛡️</span>
+    <div>
+      <div class="mode-name">Анонимный чат</div>
+      <div class="mode-status" id="modeStatus">
+        История сохраняется
+      </div>
+    </div>
+  </div>
+  <button
+    type="button"
+    id="modeSwitch"
+    class="switch"
+    role="switch"
+    aria-checked="false"
+    aria-label="Анонимный чат">
+  </button>
+</div>
+
 <section class="chat" id="chat"></section>
 
 <form id="form">
-<textarea id="message" rows="1" maxlength="4000" placeholder="Напиши сообщение…" aria-label="Сообщение"></textarea>
+<textarea
+  id="message"
+  rows="1"
+  maxlength="4000"
+  placeholder="Напиши сообщение…"
+  aria-label="Сообщение"></textarea>
 <button id="send" type="submit" aria-label="Отправить">➤</button>
 </form>
 
-<footer>ANNIVEO AI · Твой интеллектуальный помощник</footer>
+<footer>
+ANNIVEO AI · Твой интеллектуальный помощник
+</footer>
+
 </main>
 
 <script>
@@ -54,6 +234,8 @@ const chat = document.getElementById("chat");
 const form = document.getElementById("form");
 const input = document.getElementById("message");
 const send = document.getElementById("send");
+const modeSwitch = document.getElementById("modeSwitch");
+const modeStatus = document.getElementById("modeStatus");
 
 if (tg) {
   tg.ready();
@@ -68,21 +250,21 @@ const CACHE_KEY = userId
   : null;
 
 let history = [];
+let temporaryHistory = [];
+let anonymous = false;
 let busy = false;
 let loaded = false;
-let synced = false;
-let historyVersion = 0;
 
 function validMessages(messages) {
   if (!Array.isArray(messages)) return [];
 
   return messages.filter(item =>
     item &&
-    ["user", "assistant"].includes(item.role) &&
+    ["user","assistant"].includes(item.role) &&
     typeof item.content === "string"
   ).slice(-40).map(item => ({
-    role: item.role,
-    content: item.content
+    role:item.role,
+    content:item.content
   }));
 }
 
@@ -94,7 +276,7 @@ function saveCache(messages) {
       CACHE_KEY,
       JSON.stringify(validMessages(messages))
     );
-  } catch (e) {}
+  } catch(e) {}
 }
 
 function readCache() {
@@ -104,7 +286,7 @@ function readCache() {
     return validMessages(
       JSON.parse(localStorage.getItem(CACHE_KEY) || "[]")
     );
-  } catch (e) {
+  } catch(e) {
     return [];
   }
 }
@@ -150,166 +332,114 @@ function renderMessages(messages) {
   });
 }
 
-function sameMessages(a, b) {
-  return JSON.stringify(a) === JSON.stringify(b);
+function showNotice(text) {
+  const el = document.createElement("div");
+  el.className = "notice";
+  el.textContent = text;
+  chat.prepend(el);
 }
 
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+function updateMode() {
+  modeSwitch.classList.toggle("active", anonymous);
+  modeSwitch.setAttribute(
+    "aria-checked",
+    String(anonymous)
+  );
+
+  modeStatus.textContent = anonymous
+    ? "История не сохраняется"
+    : "История сохраняется";
 }
 
-async function api(payload, options = {}) {
-  const retries = options.retries ?? 1;
-  const timeout = options.timeout ?? 25000;
+function setBusy(value) {
+  busy = value;
+  send.disabled = value || !loaded;
+  modeSwitch.disabled = value;
+}
 
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeout);
+async function api(payload) {
+  const response = await fetch(API_URL, {
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json"
+    },
+    body:JSON.stringify({
+      ...payload,
+      initData
+    })
+  });
 
-    try {
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          ...payload,
-          initData
-        }),
-        signal: controller.signal
-      });
+  const data = await response.json();
 
-      let data;
-
-      try {
-        data = await response.json();
-      } catch {
-        throw new Error("Некорректный ответ сервера");
-      }
-
-      if (!response.ok) {
-        const error = new Error(
-          data.error || "Ошибка сервера"
-        );
-
-        error.status = response.status;
-        throw error;
-      }
-
-      return data;
-
-    } catch (error) {
-      const networkError =
-        error.name === "AbortError" ||
-        error instanceof TypeError;
-
-      const temporaryServerError =
-        error.status === 429 ||
-        error.status === 502 ||
-        error.status === 503 ||
-        error.status === 504;
-
-      // Историю можно безопасно запрашивать повторно.
-      // Чат автоматически повторяем только при явном
-      // отказе сервера, чтобы избежать двойных сообщений.
-      const canRetry =
-        payload.action === "history"
-          ? networkError || temporaryServerError
-          : temporaryServerError;
-
-      if (attempt < retries && canRetry) {
-        await delay(700 * (attempt + 1));
-        continue;
-      }
-
-      if (error.name === "AbortError") {
-        throw new Error(
-          "Сервер слишком долго отвечает. Попробуй ещё раз."
-        );
-      }
-
-      if (error instanceof TypeError) {
-        throw new Error(
-          "Проблема с соединением. Проверь интернет."
-        );
-      }
-
-      throw error;
-
-    } finally {
-      clearTimeout(timer);
-    }
+  if (!response.ok) {
+    throw new Error(
+      data.error || "Ошибка сервера"
+    );
   }
+
+  return data;
 }
 
 async function loadHistory() {
   if (!initData || !userId) {
-    add("Открой ANNIVEO AI через Telegram.", "assistant");
-    send.disabled = true;
+    renderMessages([]);
+    add(
+      "Открой ANNIVEO AI через Telegram.",
+      "assistant"
+    );
     return;
   }
 
-  // Сразу разрешаем пользоваться чатом.
-  // Серверную историю загружаем параллельно.
+  history = readCache();
+  renderMessages(history);
+
+  // Локальная история уже доступна.
   loaded = true;
   send.disabled = false;
 
-  const versionAtStart = historyVersion;
-
   try {
-    const data = await api(
-      {action: "history"},
-      {retries: 2, timeout: 12000}
-    );
+    const data = await api({
+      action:"history"
+    });
 
-    const serverHistory = validMessages(data.messages);
-    synced = true;
+    history = validMessages(data.messages);
+    saveCache(history);
 
-    // Не перезаписываем переписку, если пользователь
-    // уже успел отправить сообщение.
-    if (historyVersion !== versionAtStart || busy) {
-      return;
-    }
-
-    if (!sameMessages(history, serverHistory)) {
-      history = serverHistory;
-      saveCache(history);
+    if (!anonymous && !busy) {
       renderMessages(history);
     }
 
-  } catch (error) {
-    console.warn("Ошибка синхронизации:", error.message);
-
-    // При временном сбое сохраняем локальную историю.
-    // Не засоряем чат техническими ошибками.
-  }
-}
-
-async function refreshHistory() {
-  if (busy || !initData) return;
-
-  try {
-    const data = await api(
-      {action: "history"},
-      {retries: 1, timeout: 12000}
-    );
-
-    const serverHistory = validMessages(data.messages);
-
-    if (busy) return;
-
-    synced = true;
-
-    if (!sameMessages(history, serverHistory)) {
-      history = serverHistory;
-      saveCache(history);
-      renderMessages(history);
+  } catch(error) {
+    if (!anonymous) {
+      showNotice(
+        "Облачная синхронизация недоступна"
+      );
     }
-
-  } catch (error) {
-    console.warn("Не удалось обновить историю:", error.message);
   }
 }
+
+modeSwitch.addEventListener("click", () => {
+  if (busy || !loaded) return;
+
+  anonymous = !anonymous;
+  input.value = "";
+
+  if (anonymous) {
+    // Начинаем новый временный разговор.
+    temporaryHistory = [];
+    renderMessages([]);
+    showNotice(
+      "🔒 Анонимный чат включён. " +
+      "Сообщения не сохраняются."
+    );
+  } else {
+    // Уничтожаем временную историю.
+    temporaryHistory = [];
+    renderMessages(history);
+  }
+
+  updateMode();
+});
 
 form.addEventListener("submit", async event => {
   event.preventDefault();
@@ -319,11 +449,14 @@ form.addEventListener("submit", async event => {
   const text = input.value.trim();
   if (!text) return;
 
-  busy = true;
-  historyVersion++;
-  send.disabled = true;
+  const currentMode = anonymous;
+  const context = currentMode
+    ? validMessages(temporaryHistory).slice(-20)
+    : [];
 
-  add(text, "user");
+  setBusy(true);
+
+  add(text,"user");
   input.value = "";
 
   const pending = add(
@@ -333,14 +466,16 @@ form.addEventListener("submit", async event => {
 
   try {
     const data = await api(
-      {
-        action: "chat",
-        message: text
-      },
-      {
-        retries: 1,
-        timeout: 45000
-      }
+      currentMode
+        ? {
+            action:"anonymous",
+            message:text,
+            messages:context
+          }
+        : {
+            action:"chat",
+            message:text
+          }
     );
 
     if (
@@ -352,28 +487,34 @@ form.addEventListener("submit", async event => {
 
     pending.textContent = data.reply;
 
-    history.push(
-      {role: "user", content: text},
-      {role: "assistant", content: data.reply}
-    );
+    const pair = [
+      {role:"user",content:text},
+      {role:"assistant",content:data.reply}
+    ];
 
-    history = validMessages(history);
-    saveCache(history);
+    if (currentMode) {
+      // Только оперативная память.
+      temporaryHistory = validMessages([
+        ...temporaryHistory,
+        ...pair
+      ]);
+    } else {
+      // Обычный чат сохраняем локально.
+      history = validMessages([
+        ...history,
+        ...pair
+      ]);
 
-  } catch (error) {
-    pending.textContent =
-      "Не удалось получить ответ: " +
-      error.message;
-
-    // Сохраняем текст, чтобы пользователь
-    // мог отправить его ещё раз.
-    if (!input.value.trim()) {
-      input.value = text;
+      saveCache(history);
     }
 
+  } catch(error) {
+    pending.textContent =
+      "Ошибка: " + error.message +
+      "\nПопробуй отправить сообщение ещё раз.";
   } finally {
-    busy = false;
-    send.disabled = false;
+    setBusy(false);
+    input.focus();
   }
 });
 
@@ -387,7 +528,7 @@ input.addEventListener("keydown", event => {
   }
 });
 
-// Мгновенно показываем историю из памяти телефона.
+// Сразу показываем сохранённую историю.
 if (initData && userId) {
   history = readCache();
   renderMessages(history);
@@ -395,16 +536,8 @@ if (initData && userId) {
   showWelcome();
 }
 
-// Подключаем облачную историю.
+updateMode();
 loadHistory();
-
-// Когда пользователь возвращается в приложение,
-// пробуем обновить историю.
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden && synced) {
-    refreshHistory();
-  }
-});
 </script>
 </body>
 </html>
