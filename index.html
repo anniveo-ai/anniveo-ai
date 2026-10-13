@@ -597,11 +597,24 @@ header{
   background:linear-gradient(130deg,#d7bbff,#a67cdb);
   color:#241833;
 }
-#mic{display:grid;place-items:center;padding:0}
+#mic{
+  display:grid;place-items:center;padding:0;position:relative;
+  touch-action:none;user-select:none;-webkit-user-select:none;
+  transition:transform .08s linear,box-shadow .08s linear,background .2s;
+}
 #mic svg{display:block;pointer-events:none}
 #mic .mic-stop-icon{display:none}
-#mic.recording .mic-icon{display:none}
-#mic.recording .mic-stop-icon{display:block}
+#mic.recording{
+  background:rgba(173,129,225,.32);
+  box-shadow:0 0 0 2px rgba(202,164,255,.5),0 0 18px rgba(177,120,255,.55);
+  transform:scale(var(--mic-scale,1)) translateY(var(--mic-lift,0px));
+}
+#mic.recording .mic-icon{filter:drop-shadow(0 0 5px #e8ccff)}
+#mic.locked:after{
+  content:"";position:absolute;inset:-5px;border-radius:50%;
+  border:1px solid rgba(226,205,255,.75);pointer-events:none;
+}
+#mic.gesture-active{transform:scale(.94)}
 .recording{background:#8e3f58}
 .status{
   font-size:11px;
@@ -1318,10 +1331,13 @@ let voiceHeard=false;
 let voiceAnalyser=null,voiceAudioContext=null,voiceFrame=0;
 let voiceSourceNode=null;
 let voiceUtterance=null;
+let micGesture=null;
 
 const cacheKey = user?.id
   ? "anniveo_chat_cache_v3_" + user.id
   : null;
+
+setupMicGestures();
 
 /* ЗАСТАВКА */
 window.addEventListener("load",()=>{
@@ -1341,6 +1357,60 @@ function toast(message){
   el.textContent = message;
   document.body.append(el);
   setTimeout(()=>el.remove(),3500);
+}
+
+function setupMicGestures(){
+  const button=$("mic");
+  if(!button||button.dataset.gesturesReady) return;
+  button.dataset.gesturesReady="1";
+  const lockDistance=58;
+  button.addEventListener("pointerdown",event=>{
+    if(button.disabled||busy||transcribing||openingMic) return;
+    const state={id:event.pointerId,y:event.clientY,started:recording,held:false,locked:false,released:false,timer:null};
+    micGesture=state;
+    button.setPointerCapture?.(event.pointerId);
+    button.classList.add("gesture-active");
+    if(!state.started){
+      state.timer=setTimeout(async()=>{
+        if(micGesture!==state) return;
+        state.held=true;
+        button.classList.remove("gesture-active");
+        await handleMic();
+        if(micGesture!==state) return;
+        if(state.released&&!state.locked&&recording) await handleMic();
+      },260);
+    }
+  });
+  button.addEventListener("pointermove",event=>{
+    const state=micGesture;
+    if(!state||state.id!==event.pointerId) return;
+    if(state.y-event.clientY>lockDistance&&(recording||state.held)){
+      state.locked=true;
+      button.classList.add("locked");
+      button.classList.remove("gesture-active");
+      $("chatStatus").textContent="Запись закреплена · нажми микрофон, чтобы отправить";
+    }
+  });
+  const finish=event=>{
+    const state=micGesture;
+    if(!state||state.id!==event.pointerId) return;
+    clearTimeout(state.timer);
+    state.released=true;
+    button.classList.remove("gesture-active");
+    if(state.locked){micGesture=null;return;}
+    if(state.held){
+      if(recording) void handleMic();
+      micGesture=null;
+      return;
+    }
+    if(state.started&&recording){
+      event.preventDefault();
+      micGesture=null;
+      void handleMic();
+    }else micGesture=null;
+  };
+  button.addEventListener("pointerup",finish);
+  button.addEventListener("pointercancel",finish);
 }
 
 /* ИСТОРИЯ */
@@ -1906,6 +1976,9 @@ function stopVoiceMeter(){
   cancelAnimationFrame(voiceFrame);voiceFrame=0;
   voiceSourceNode?.disconnect();voiceSourceNode=null;voiceAnalyser=null;
   $("planetResponse").style.setProperty("--voice-level","0");
+  $("mic").style.setProperty("--mic-scale","1");
+  $("mic").style.setProperty("--mic-lift","0px");
+  $("mic").classList.remove("locked","gesture-active");
 }
 function stopSpokenReply(){
   if(voiceUtterance){
@@ -1930,7 +2003,7 @@ function endVoiceSession(){
   }
   recording=false;
   stopVoiceMeter();stopSpokenReply();releaseMicrophone();
-  $("mic").classList.remove("recording");
+  $("mic").classList.remove("recording","locked");
   $("mic").setAttribute("aria-label","Записать голосовое сообщение");
   $("mic").title="Записать голосовое сообщение";
   $("voiceStatus").textContent="Разговор завершён. Нажми на шар, чтобы начать";
@@ -1980,8 +2053,10 @@ function startVoiceMeter(){
       const rms=Math.sqrt(energy/samples.length);
       level+=(Math.min(1,rms*12)-level)*.35;
       $("planetResponse").style.setProperty("--voice-level",level.toFixed(3));
-      if(rms>.018){voiceHeard=true;lastSpeech=now;}
-      if((voiceHeard&&now-lastSpeech>1800)||(!voiceHeard&&now-began>12000)){
+      $("mic").style.setProperty("--mic-scale",(1+level*.22).toFixed(3));
+      $("mic").style.setProperty("--mic-lift",(-level*2.2).toFixed(2)+"px");
+      if(orbVoiceActive&&rms>.018){voiceHeard=true;lastSpeech=now;}
+      if(orbVoiceActive&&((voiceHeard&&now-lastSpeech>1800)||(!voiceHeard&&now-began>12000))){
         if(recorder?.state==="recording") recorder.stop();
         return;
       }
@@ -2087,12 +2162,15 @@ async function handleMic(){
     };
     recorder.start();
     recording=true;
-    if(orbVoiceActive) startVoiceMeter();
+    voiceHeard=false;
+    const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+    if(!voiceAudioContext&&AudioContextClass) voiceAudioContext=new AudioContextClass();
+    if(voiceAudioContext?.state==="suspended") await voiceAudioContext.resume().catch(()=>{});
+    startVoiceMeter();
     $("mic").setAttribute("aria-label","Остановить запись и отправить");
-    $("mic").title="Остановить запись и отправить";
+    $("mic").title="Запись: нажми для отправки или потяни вверх, чтобы закрепить";
     $("mic").classList.add("recording");
-    $("chatStatus").textContent=
-      "Идёт запись · нажми ■ для отправки";
+    $("chatStatus").textContent="Запись… потяни микрофон вверх, чтобы закрепить";
 
     recordTimer=setTimeout(()=>{
       if(recorder?.state==="recording"){
@@ -2184,10 +2262,8 @@ async function finishVoice(){
       throw Error("Голосовое слишком длинное");
     }
 
-    const url=URL.createObjectURL(blob);
-    audioURLs.push(url);
     transcribing=false;
-    await sendMessage(text,url,spokenVoice);
+    await sendMessage(text,null,spokenVoice);
   }catch(e){
     if(spokenVoice) $("voiceStatus").textContent=e.message;
     toast(e.message);
