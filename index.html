@@ -7,127 +7,98 @@
 <meta name="theme-color" content="#101119">
 <title>ANNIVEO AI</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
 <style>
 :root{
   color-scheme:dark;
   --bg:#101119;
   --panel:#1c1d28;
-  --line:#343341;
   --purple:#c6a6ff;
   --muted:#aaa5bb;
-  --app-height:100dvh;
   --keyboard-height:0px;
 }
 *{box-sizing:border-box}
-html{
-  width:100%;
-  height:100%;
-  overflow:hidden;
-  -webkit-text-size-adjust:100%;
+html,body{
+  margin:0;width:100%;height:100%;
+  overflow:hidden;-webkit-text-size-adjust:100%;
 }
 body{
-  margin:0;
-  width:100%;
-  height:var(--app-height);
-  overflow:hidden;
   background:radial-gradient(ellipse at 50% 12%,#30213d55,transparent 60%),var(--bg);
   color:#f6f3ff;
   font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
-button,textarea,select{
-  font:inherit;
-  color:inherit;
-}
-button{cursor:pointer}
+button,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 button:disabled{opacity:.5}
 .hidden{display:none!important}
-
 .app{
-  position:relative;
-  width:100%;
   max-width:760px;
-  height:100%;
+  height:100dvh;
   margin:auto;
+  padding:15px 16px 190px;
   overflow-y:auto;
   overflow-x:hidden;
   overscroll-behavior:contain;
   -webkit-overflow-scrolling:touch;
-  padding:15px 16px 175px;
-}
-body.keyboard-open .app{
-  padding-bottom:110px;
 }
 header{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding-bottom:18px;
+  display:flex;align-items:center;
+  gap:10px;padding-bottom:10px;
 }
 .logo{
-  font-size:19px;
-  font-weight:800;
-  letter-spacing:1px;
-  white-space:nowrap;
+  font-size:19px;font-weight:800;
+  letter-spacing:1px;white-space:nowrap;
 }
 .logo span{color:var(--purple)}
 .credit{
-  margin-left:auto;
+  margin-left:auto;display:flex;
+  align-items:center;gap:6px;
   background:#252231;
-  color:#d4b7ff;
-  border:1px solid #4b405b;
-  padding:9px 13px;
-  border-radius:25px;
+  border:1px solid #71598c;
+  border-radius:25px;padding:8px 12px;
+  color:#e2caff;
 }
-.gear{
-  border:0;
-  background:none;
-  font-size:22px;
+.credit:active{transform:scale(.95)}
+.balance-label{font-size:11px}
+.balance-number{font-size:15px;font-weight:700}
+.balance-star{
+  font-size:25px;line-height:18px;
+  color:#c9a2ff;
+  text-shadow:0 0 12px #b887ff99;
 }
-.view{
-  display:none;
-  min-width:0;
-}
+.gear{border:0;background:none;font-size:22px}
+.view{display:none;min-width:0}
 .view.active{display:block}
 
 /* ПРИВЕТСТВИЕ */
 .welcome{text-align:center}
 .welcome h1{
-  font-size:31px;
-  margin:18px 0 5px;
+  font-size:30px;margin:12px 0 4px;
 }
 .welcome h2{
-  font-size:23px;
-  font-weight:400;
-  color:#b3abc5;
-  margin:0;
+  font-size:22px;font-weight:400;
+  color:#b3abc5;margin:0;
 }
 .welcome p{
   color:var(--muted);
-  font-size:13px;
-  line-height:1.7;
-  margin:5px auto 24px;
+  font-size:12px;line-height:1.5;
   max-width:470px;
+  margin:0 auto 8px;
 }
 
-/* ШАР И ВРАЩЕНИЕ КОЛЕЦ ПО ОСЯМ */
+/* ВРАЩАЮЩИЙСЯ ШАР */
 .universe{
   position:relative;
-  width:100%;
-  height:220px;
-  margin:5px auto;
-  display:grid;
-  place-items:center;
+  width:100%;height:185px;
+  margin:0 auto;
+  display:grid;place-items:center;
   perspective:750px;
   transform-style:preserve-3d;
   isolation:isolate;
 }
 .planet{
   position:relative;
-  width:126px;
-  height:126px;
-  border-radius:50%;
-  z-index:3;
+  width:116px;height:116px;
+  border-radius:50%;z-index:3;
   background:
     radial-gradient(circle at 68% 18%,#f3d0ff 0%,#ba93ff 12%,transparent 32%),
     radial-gradient(circle at 20% 78%,#a27dff,transparent 48%),
@@ -138,33 +109,24 @@ header{
     0 0 50px #ad7cff66;
   animation:planetSpin 14s linear infinite;
 }
-.planet::before{
-  content:"";
-  position:absolute;
-  inset:20% -12%;
-  border-radius:50%;
+.planet:before{
+  content:"";position:absolute;
+  inset:20% -12%;border-radius:50%;
   border:2px solid #f3dcff55;
   transform:rotate(-26deg);
 }
-.planet::after{
-  content:"";
-  position:absolute;
-  left:13%;
-  top:45%;
-  width:80%;
-  height:30%;
+.planet:after{
+  content:"";position:absolute;
+  left:13%;top:45%;
+  width:80%;height:30%;
   border-radius:50%;
   background:linear-gradient(#e9d0ff66,transparent);
   transform:rotate(25deg);
 }
 .axis-ring{
-  position:absolute;
-  left:50%;
-  top:50%;
-  width:250px;
-  height:115px;
-  margin-left:-125px;
-  margin-top:-57.5px;
+  position:absolute;left:50%;top:50%;
+  width:250px;height:115px;
+  margin-left:-125px;margin-top:-57.5px;
   border:2px solid #b28cff9c;
   border-radius:50%;
   box-shadow:0 0 12px #ae7cff38;
@@ -172,49 +134,38 @@ header{
   pointer-events:none;
 }
 .axis-ring.one{
-  z-index:4;
-  animation:axisOne 7s linear infinite;
+  z-index:4;animation:axisOne 7s linear infinite;
 }
 .axis-ring.two{
-  width:218px;
-  height:95px;
-  margin-left:-109px;
-  margin-top:-47.5px;
+  width:218px;height:95px;
+  margin-left:-109px;margin-top:-47.5px;
   border-color:#c2a4ff77;
-  z-index:2;
-  animation:axisTwo 10s linear infinite;
+  z-index:2;animation:axisTwo 10s linear infinite;
 }
 .axis-ring.three{
-  width:278px;
-  height:125px;
-  margin-left:-139px;
-  margin-top:-62.5px;
+  width:278px;height:125px;
+  margin-left:-139px;margin-top:-62.5px;
   border-color:#8b6fc04d;
-  z-index:1;
-  animation:axisThree 13s linear infinite;
+  z-index:1;animation:axisThree 13s linear infinite;
 }
 @keyframes planetSpin{
-  from{transform:rotate(0deg)}
   to{transform:rotate(360deg)}
 }
 @keyframes axisOne{
-  from{transform:rotateZ(-25deg) rotateY(0deg)}
+  from{transform:rotateZ(-25deg) rotateY(0)}
   to{transform:rotateZ(-25deg) rotateY(360deg)}
 }
 @keyframes axisTwo{
-  from{transform:rotateZ(65deg) rotateX(0deg)}
+  from{transform:rotateZ(65deg) rotateX(0)}
   to{transform:rotateZ(65deg) rotateX(360deg)}
 }
 @keyframes axisThree{
-  from{transform:rotateZ(20deg) rotateY(0deg)}
+  from{transform:rotateZ(20deg) rotateY(0)}
   to{transform:rotateZ(20deg) rotateY(-360deg)}
 }
 .spark{
-  position:absolute;
-  width:4px;
-  height:4px;
-  background:#d7b6ff;
-  border-radius:50%;
+  position:absolute;width:4px;height:4px;
+  background:#d7b6ff;border-radius:50%;
   box-shadow:0 0 10px #c39aff;
   animation:blink 2.5s ease-in-out infinite alternate;
 }
@@ -226,181 +177,116 @@ header{
   to{opacity:1;transform:scale(1.4)}
 }
 
-/* СОЗДАТЬ: ФОТО И ВИДЕО */
+/* СОЗДАТЬ — БЛИЖЕ К ШАРУ */
 .heading{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
-  margin:25px 0 12px;
+  display:flex;justify-content:space-between;
+  align-items:center;gap:10px;
+  margin:9px 0 11px;
 }
-.heading h2{
-  font-size:21px;
-  margin:0;
-}
+.heading h2{font-size:21px;margin:0}
 .heading button{
-  background:none;
-  border:0;
-  color:var(--muted);
-  font-size:11px;
+  background:none;border:0;
+  color:var(--muted);font-size:11px;
   text-align:right;
 }
-.tiles{
+.tiles,.ideas{
   display:grid;
-  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  grid-template-columns:repeat(2,minmax(0,1fr));
   gap:10px;
 }
 .tile{
-  position:relative;
-  height:170px;
+  position:relative;height:155px;
   border-radius:16px;
   border:1px solid #ffffff22;
-  overflow:hidden;
-  text-align:left;
-  background:#2a2436;
-  padding:0;
+  overflow:hidden;text-align:left;
+  background:#2a2436;padding:0;
+  transition:transform .2s;
 }
+.tile:active,.idea:active{transform:scale(.96)}
 .tile img{
-  width:100%;
-  height:100%;
+  width:100%;height:100%;
   object-fit:cover;
-  position:absolute;
-  inset:0;
+  position:absolute;inset:0;
 }
-.tile::after{
-  content:"";
-  position:absolute;
-  inset:0;
+.tile:after{
+  content:"";position:absolute;inset:0;
   background:linear-gradient(180deg,#0000 30%,#101019ed);
 }
-.tile .tile-icon{
-  position:absolute;
-  top:12px;
-  left:12px;
-  z-index:1;
-  padding:7px;
-  border-radius:9px;
+.tile-icon{
+  position:absolute;top:12px;left:12px;
+  z-index:1;padding:7px;border-radius:9px;
   background:#15151cb9;
 }
-.tile .tile-text{
-  position:absolute;
-  z-index:1;
-  left:12px;
-  bottom:13px;
-  right:10px;
+.tile-text{
+  position:absolute;z-index:1;
+  left:12px;bottom:13px;right:10px;
 }
 .tile b{font-size:16px}
 .tile small{
-  display:block;
-  color:#c1bdce;
-  font-size:10px;
-  margin-top:5px;
+  display:block;color:#c1bdce;
+  font-size:10px;margin-top:5px;
   line-height:1.4;
 }
-
-/* КАРТОЧКИ ИДЕЙ — ПОД ФОТО И ВИДЕО */
-.ideas{
-  display:grid;
-  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-  gap:10px;
-  margin-top:16px;
-}
+.ideas{margin-top:12px}
 .idea{
-  display:flex;
-  gap:10px;
-  align-items:flex-start;
-  text-align:left;
+  display:flex;gap:9px;
+  align-items:flex-start;text-align:left;
   background:#1d1e29;
   border:1px solid #353441;
   border-radius:15px;
-  padding:15px 10px;
-  min-height:115px;
+  padding:13px 9px;min-height:105px;
+  transition:transform .2s;
 }
-.idea .symbol{
-  color:var(--purple);
-  font-size:22px;
-}
+.symbol{color:var(--purple);font-size:22px}
 .idea strong{
-  font-size:12px;
-  font-weight:550;
+  font-size:12px;font-weight:550;
   line-height:1.45;
 }
 .idea small{
-  display:block;
-  margin-top:8px;
+  display:block;margin-top:8px;
   color:var(--muted);
-  font-size:10px;
-  line-height:1.4;
+  font-size:10px;line-height:1.4;
 }
 
 /* АНОНИМНЫЙ ЧАТ */
 .mode{
-  display:flex;
-  align-items:center;
-  gap:11px;
-  padding:14px;
-  margin:14px 0;
+  display:flex;align-items:center;gap:11px;
+  padding:14px;margin:14px 0;
   border:1px solid #373542;
-  background:#1d1e28;
-  border-radius:16px;
+  background:#1d1e28;border-radius:16px;
 }
-.mode .shield{
-  font-size:21px;
-  color:var(--purple);
-}
-.mode b{
-  display:block;
-  font-size:12px;
-}
+.shield{font-size:21px;color:var(--purple)}
+.mode b{display:block;font-size:12px}
 .mode small{
-  display:block;
-  font-size:10px;
-  color:var(--muted);
-  margin-top:4px;
+  display:block;font-size:10px;
+  color:var(--muted);margin-top:4px;
 }
 .switch{
-  margin-left:auto;
-  border:0;
-  background:#474451;
-  border-radius:30px;
-  width:45px;
-  height:27px;
-  padding:3px;
-  flex:none;
+  margin-left:auto;border:0;
+  background:#474451;border-radius:30px;
+  width:45px;height:27px;padding:3px;flex:none;
 }
-.switch::after{
-  content:"";
-  display:block;
-  width:21px;
-  height:21px;
-  border-radius:50%;
-  background:white;
-  transition:transform .2s;
+.switch:after{
+  content:"";display:block;
+  width:21px;height:21px;border-radius:50%;
+  background:white;transition:transform .2s;
 }
 .switch.on{background:#9675c5}
-.switch.on::after{
-  transform:translateX(18px);
-}
+.switch.on:after{transform:translateX(18px)}
 
 /* СООБЩЕНИЯ */
 .messages{
-  display:flex;
-  flex-direction:column;
-  gap:16px;
-  padding:8px 0 20px;
+  display:flex;flex-direction:column;
+  gap:16px;padding:8px 0 20px;
   min-width:0;
 }
 .message{
-  min-width:0;
-  max-width:100%;
-  line-height:1.65;
-  font-size:14px;
+  min-width:0;max-width:100%;
+  line-height:1.65;font-size:14px;
   overflow-wrap:anywhere;
-  word-break:break-word;
 }
 .message.user{
-  align-self:flex-end;
-  max-width:87%;
+  align-self:flex-end;max-width:87%;
   background:#2b2938;
   border:1px solid #454052;
   padding:11px 14px;
@@ -408,99 +294,64 @@ header{
   white-space:pre-wrap;
 }
 .message.assistant{
-  align-self:stretch;
-  width:100%;
+  align-self:stretch;width:100%;
 }
 .assistant-name{
   color:var(--purple);
-  font-size:11px;
-  margin-bottom:6px;
+  font-size:11px;margin-bottom:6px;
 }
-.answer{
-  min-width:0;
-  max-width:100%;
-  overflow-wrap:anywhere;
-}
+.answer{min-width:0;overflow-wrap:anywhere}
 .answer p{margin:0 0 10px}
 .answer h1,.answer h2,.answer h3{
-  font-size:17px;
-  margin:14px 0 8px;
+  font-size:17px;margin:14px 0 8px;
 }
-.answer ul,.answer ol{
-  padding-left:22px;
-}
+.answer ul,.answer ol{padding-left:22px}
 .answer pre{
-  max-width:100%;
-  padding:12px;
-  border-radius:10px;
-  overflow-x:auto;
-  background:#20212b;
-  font-size:12px;
+  max-width:100%;padding:12px;
+  border-radius:10px;overflow-x:auto;
+  background:#20212b;font-size:12px;
 }
 .answer code{
   background:#292a35;
-  border-radius:4px;
-  padding:2px 4px;
+  border-radius:4px;padding:2px 4px;
 }
-.answer pre code{
-  background:none;
-  padding:0;
-}
+.answer pre code{background:none;padding:0}
 .copy{
-  background:none;
-  border:0;
-  color:#a9a2ba;
-  font-size:11px;
+  background:none;border:0;
+  color:#a9a2ba;font-size:11px;
   padding:5px 0;
 }
-.message audio{
-  max-width:100%;
-  display:block;
-  margin-bottom:8px;
-}
+.message audio{max-width:100%;display:block}
 
-/* ПОЛЕ ВВОДА */
+/* ОТДЕЛЬНОЕ ПОЛЕ ВВОДА */
 .dock{
-  position:fixed;
-  z-index:40;
-  left:50%;
-  transform:translateX(-50%);
-  bottom:calc(75px + env(safe-area-inset-bottom));
-  width:min(730px,calc(100% - 30px));
-  max-width:calc(100vw - 30px);
+  position:fixed;z-index:40;
+  left:50%;transform:translateX(-50%);
+  bottom:calc(110px + env(safe-area-inset-bottom));
+  width:min(730px,calc(100% - 32px));
+  transition:bottom .18s ease-out;
 }
 .composer{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  min-width:0;
-  padding:7px;
+  display:flex;align-items:center;gap:8px;
+  min-width:0;padding:7px;
   background:#242431f2;
+  -webkit-backdrop-filter:blur(18px);
   backdrop-filter:blur(18px);
   border:1px solid #8e79b2;
   border-radius:30px;
+  box-shadow:0 8px 25px #0005;
 }
 .composer textarea{
-  background:none;
-  border:0;
-  outline:none;
-  resize:none;
-  flex:1;
-  width:100%;
-  min-width:0;
-  min-height:36px;
-  max-height:95px;
-  padding:8px 0;
-  font-size:16px;
-  line-height:20px;
+  background:none;border:0;outline:none;
+  resize:none;flex:1;width:100%;
+  min-width:0;min-height:36px;
+  max-height:95px;padding:8px 0;
+  font-size:16px;line-height:20px;
 }
 .circle{
-  border:0;
-  border-radius:50%;
-  width:37px;
-  height:37px;
-  background:#393947;
-  flex:none;
+  border:0;border-radius:50%;
+  width:37px;height:37px;
+  background:#393947;flex:none;
   font-size:20px;
 }
 .send{
@@ -509,236 +360,306 @@ header{
 }
 .recording{background:#8e3f58}
 .status{
-  font-size:11px;
-  color:#cdb7e9;
+  font-size:11px;color:#cdb7e9;
   padding:6px 14px;
 }
 .status:empty{display:none}
 
-/* НИЖНЕЕ МЕНЮ */
+/* СТЕКЛЯННОЕ НИЖНЕЕ МЕНЮ */
 nav{
-  position:fixed;
-  bottom:0;
-  left:0;
-  right:0;
-  z-index:30;
+  position:fixed;z-index:50;
+  left:50%;transform:translateX(-50%);
+  bottom:calc(12px + env(safe-area-inset-bottom));
+  width:min(720px,calc(100% - 32px));
   display:grid;
   grid-template-columns:repeat(4,minmax(0,1fr));
-  padding:10px max(10px,calc((100vw - 730px)/2))
-    calc(9px + env(safe-area-inset-bottom));
-  background:#1a1b25f2;
-  border-top:1px solid #353341;
-  border-radius:22px 22px 0 0;
-  backdrop-filter:blur(18px);
+  gap:2px;padding:7px;
+  border:1px solid rgba(225,205,255,.22);
+  border-radius:38px;
+  background:rgba(80,77,96,.46);
+  -webkit-backdrop-filter:blur(26px) saturate(145%);
+  backdrop-filter:blur(26px) saturate(145%);
+  box-shadow:0 10px 32px #0005,inset 0 1px 1px #ffffff30;
 }
 nav button{
-  min-width:0;
-  background:none;
-  border:0;
-  color:#9993a9;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:5px;
-  font-size:10px;
+  position:relative;z-index:2;
+  min-width:0;min-height:62px;
+  padding:8px 2px;
+  border:0;border-radius:30px;
+  background:transparent;
+  color:#c6c1d2;
+  display:flex;flex-direction:column;
+  align-items:center;gap:5px;
+  font-size:11px;
+  transition:color .3s,transform .22s;
 }
-nav button span{font-size:22px}
-nav button.active{color:#caaaff}
+nav button span{
+  font-size:23px;line-height:27px;
+  transition:transform .25s;
+}
+nav button.active{color:#f5eaff}
+nav button.active span{transform:scale(1.08)}
+nav button:active{transform:scale(.91)}
+#navGlider{
+  position:absolute;z-index:1;
+  top:7px;left:7px;
+  height:calc(100% - 14px);
+  border-radius:31px;
+  background:rgba(225,216,255,.19);
+  border:1px solid rgba(255,255,255,.13);
+  box-shadow:inset 0 1px 12px #ffffff12;
+  transition:transform .38s cubic-bezier(.2,.8,.2,1),
+             width .38s cubic-bezier(.2,.8,.2,1);
+  pointer-events:none;
+}
 
-/* КЛАВИАТУРА IPHONE */
-body.keyboard-open nav{
-  display:none;
-}
+/* КЛАВИАТУРА */
+body.keyboard-open nav{display:none}
 body.keyboard-open .dock{
   bottom:calc(var(--keyboard-height) + 10px);
 }
-
-/* СТУДИЯ / ИСТОРИЯ / ПРОФИЛЬ */
-.page-title{
-  font-size:27px;
-  margin:15px 0 5px;
+#hideKeyboard{
+  position:fixed;z-index:999;
+  right:20px;top:50%;
+  width:46px;height:46px;
+  border-radius:50%;
+  border:1px solid #c4a1f5aa;
+  background:rgba(65,49,91,.88);
+  color:#e0c8ff;
+  -webkit-backdrop-filter:blur(16px);
+  backdrop-filter:blur(16px);
+  box-shadow:0 0 22px #ac7aff55;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;visibility:hidden;
+  pointer-events:none;
+  transform:translateY(16px) scale(.8);
+  transition:top .16s,opacity .25s,transform .3s,visibility .25s;
 }
+#hideKeyboard.visible{
+  opacity:1;visibility:visible;
+  pointer-events:auto;
+  transform:translateY(0) scale(1);
+}
+#hideKeyboard svg{width:24px;height:24px}
+
+/* СТРАНИЦЫ */
+.page-title{font-size:27px;margin:15px 0 5px}
 .subtitle{
-  color:var(--muted);
-  font-size:12px;
-  margin:0 0 20px;
-  line-height:1.6;
+  color:var(--muted);font-size:12px;
+  margin:0 0 20px;line-height:1.6;
 }
 .panel{
   background:#1d1e29;
   border:1px solid #373542;
   border-radius:17px;
-  padding:16px;
-  margin:13px 0;
+  padding:16px;margin:13px 0;
 }
 label{
-  display:block;
-  color:#c5b9d5;
-  font-size:12px;
-  margin:0 0 8px;
+  display:block;color:#c5b9d5;
+  font-size:12px;margin:0 0 8px;
 }
 .prompt{
-  width:100%;
-  min-height:120px;
-  resize:vertical;
-  background:#12141c;
+  width:100%;min-height:120px;
+  resize:vertical;background:#12141c;
   border:1px solid #3b3948;
-  border-radius:12px;
-  padding:12px;
-  outline:none;
-  font-size:16px;
+  border-radius:12px;padding:12px;
+  outline:none;font-size:16px;
 }
 .fields{
   display:grid;
-  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-  gap:10px;
-  margin-top:13px;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;margin-top:13px;
 }
 select{
-  width:100%;
-  background:#14151e;
+  width:100%;background:#14151e;
   border:1px solid #403d4c;
-  border-radius:10px;
-  padding:10px;
+  border-radius:10px;padding:10px;
   font-size:16px;
 }
 .primary{
-  display:block;
-  width:100%;
-  border:0;
+  display:block;width:100%;border:0;
   border-radius:12px;
   background:linear-gradient(120deg,#9676c5,#655589);
-  padding:14px;
-  margin-top:16px;
+  padding:14px;margin-top:16px;
   font-weight:600;
 }
 .result img,.result video{
-  width:100%;
-  max-height:60vh;
-  object-fit:contain;
-  border-radius:12px;
+  width:100%;max-height:60vh;
+  object-fit:contain;border-radius:12px;
   margin-top:12px;
 }
 .result a{
-  color:#d7b9ff;
-  display:inline-block;
+  color:#d7b9ff;display:inline-block;
   margin-top:12px;
 }
 .avatar{
-  width:75px;
-  height:75px;
+  width:75px;height:75px;
   margin:5px auto 12px;
-  display:grid;
-  place-items:center;
+  display:grid;place-items:center;
   border-radius:50%;
-  background:#74569d;
-  font-size:30px;
+  background:#74569d;font-size:30px;
   overflow:hidden;
 }
 .avatar img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
+  width:100%;height:100%;object-fit:cover;
 }
 .profile{text-align:center}
 .profile h2{margin:0 0 6px}
-.profile p{
-  color:var(--muted);
-  font-size:12px;
-}
+.profile p{color:var(--muted);font-size:12px}
 .wallet{
   background:linear-gradient(120deg,#30263e,#1d1e29);
   border:1px solid #55466a;
-  border-radius:17px;
-  padding:20px;
+  border-radius:17px;padding:20px;
 }
 .wallet small{color:#c5b5d6}
 .wallet strong{
-  display:block;
-  font-size:29px;
-  margin:10px 0;
+  display:block;font-size:29px;margin:10px 0;
 }
 .wallet button{
-  background:#80649d;
-  border:0;
-  border-radius:10px;
-  padding:11px 15px;
+  background:#80649d;border:0;
+  border-radius:10px;padding:11px 15px;
 }
 .note{
-  color:var(--muted);
-  font-size:11px;
+  color:var(--muted);font-size:11px;
   line-height:1.5;
 }
 .history-item{
   background:#1d1e29;
   border:1px solid #343442;
   border-radius:13px;
-  padding:13px;
-  margin-bottom:9px;
+  padding:13px;margin-bottom:9px;
 }
 .history-item b{
-  color:var(--purple);
-  font-size:11px;
+  color:var(--purple);font-size:11px;
 }
 .history-item p{
-  font-size:12px;
-  color:#c0b9cc;
+  font-size:12px;color:#c0b9cc;
   margin:7px 0 0;
-  white-space:nowrap;
-  overflow:hidden;
+  white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;
 }
 .empty{
-  text-align:center;
-  padding:35px 15px;
-  color:var(--muted);
-  font-size:13px;
+  text-align:center;padding:35px 15px;
+  color:var(--muted);font-size:13px;
 }
 .toast{
-  position:fixed;
-  bottom:155px;
-  left:50%;
+  position:fixed;z-index:1000;
+  bottom:155px;left:50%;
   transform:translateX(-50%);
-  z-index:50;
   max-width:90%;
   background:#343040;
   border:1px solid #6b587e;
-  padding:12px 15px;
-  border-radius:12px;
+  padding:12px 15px;border-radius:12px;
   font-size:12px;
 }
+
+/* АНИМАЦИЯ ЗАПУСКА */
+#splash{
+  position:fixed;inset:0;z-index:10000;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:22px;
+  background:radial-gradient(circle at center,#322244,#101119 70%);
+  transition:opacity .65s ease,visibility .65s;
+}
+#splash.finished{
+  opacity:0;visibility:hidden;
+  pointer-events:none;
+}
+.splash-orb{
+  position:relative;
+  width:130px;height:130px;
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 32% 22%,#f0d3ff,#ad7de6 35%,#483365 78%);
+  box-shadow:0 0 35px #a777ff99,0 0 85px #9460e855;
+  animation:splashPulse 2s ease-in-out infinite;
+}
+.splash-orb:before,.splash-orb:after{
+  content:"";position:absolute;
+  inset:17px -32px;
+  border:2px solid #d6b2ffb0;
+  border-radius:50%;
+  animation:splashRing 2.5s linear infinite;
+}
+.splash-orb:after{
+  transform:rotate(75deg);
+  animation-duration:3.5s;
+  border-color:#ac86ff88;
+}
+.splash-logo{
+  font-size:24px;font-weight:800;
+  letter-spacing:3px;
+}
+.splash-logo span{color:#c6a6ff}
+.splash-subtitle{
+  color:#b7a7c9;font-size:12px;
+  letter-spacing:2px;
+}
+.splash-progress{
+  width:145px;height:3px;
+  border-radius:10px;
+  overflow:hidden;background:#453852;
+}
+.splash-progress:before{
+  content:"";display:block;
+  width:45%;height:100%;
+  background:#d3aaff;
+  border-radius:10px;
+  animation:progress 1.2s ease-in-out infinite alternate;
+}
+@keyframes splashPulse{
+  50%{transform:scale(1.07);box-shadow:0 0 65px #b987ffaa}
+}
+@keyframes splashRing{
+  to{transform:rotate(360deg)}
+}
+@keyframes progress{
+  from{transform:translateX(-100%)}
+  to{transform:translateX(330%)}
+}
 @media(min-width:600px){
-  .universe{height:270px}
-  .planet{
-    width:155px;
-    height:155px;
-  }
-  .tile{height:230px}
+  .universe{height:220px}
+  .planet{width:145px;height:145px}
+  .tile{height:220px}
 }
 @media(max-width:360px){
   .welcome h1{font-size:27px}
   .idea{padding:12px 8px}
   .idea strong{font-size:11px}
   .logo{font-size:16px}
+  nav{width:calc(100% - 18px)}
 }
 @media(prefers-reduced-motion:reduce){
-  .planet,.axis-ring,.spark{animation:none}
+  .planet,.axis-ring,.spark,.splash-orb,
+  .splash-orb:before,.splash-orb:after,
+  .splash-progress:before{animation:none}
 }
 </style>
 </head>
-
 <body>
-<div class="app" id="app">
 
+<!-- ЗАСТАВКА -->
+<div id="splash">
+  <div class="splash-orb"></div>
+  <div class="splash-logo">✦ ANNIVEO <span>AI</span></div>
+  <div class="splash-subtitle">ТВОЙ ИНТЕЛЛЕКТУАЛЬНЫЙ МИР</div>
+  <div class="splash-progress"></div>
+</div>
+
+<div class="app" id="app">
 <header>
   <div class="logo">✦ ANNIVEO <span>AI</span></div>
-  <button class="credit" onclick="openView('profile')">0 ✦</button>
+  <button class="credit" onclick="openView('profile')">
+    <span class="balance-label">Баланс</span>
+    <span class="balance-number">0</span>
+    <span class="balance-star">✦</span>
+  </button>
   <button class="gear" onclick="openView('profile')">⚙</button>
 </header>
 
 <!-- ЧАТ -->
 <section id="view-chat" class="view active">
-
 <div id="welcome" class="welcome">
   <h1 id="greeting">Привет 👋🏻</h1>
   <h2>С чего начнём?</h2>
@@ -759,7 +680,6 @@ select{
     и решать повседневные задачи.
   </p>
 
-  <!-- СНАЧАЛА ФОТО И ВИДЕО -->
   <div class="heading">
     <h2>Создать</h2>
     <button onclick="openView('studio')">
@@ -769,7 +689,6 @@ select{
 
   <div class="tiles" id="homeTiles"></div>
 
-  <!-- ПОТОМ КАРТОЧКИ ИДЕЙ -->
   <div class="ideas">
     <button class="idea" onclick="suggestIdea()">
       <span class="symbol">◇</span>
@@ -778,7 +697,6 @@ select{
         <small>Креативные идеи и план</small>
       </div>
     </button>
-
     <button class="idea" onclick="openView('image')">
       <span class="symbol">✦</span>
       <div>
@@ -800,9 +718,7 @@ select{
     aria-label="Включить анонимный чат"
     onclick="toggleAnonymous()"></button>
 </div>
-
 <div id="messages" class="messages"></div>
-
 </section>
 
 <!-- СТУДИЯ -->
@@ -826,13 +742,11 @@ select{
 <section id="view-image" class="view">
   <h1 class="page-title">Создать фото</h1>
   <p class="subtitle">Опиши изображение своей мечты.</p>
-
   <div class="panel">
     <label for="imagePrompt">Описание изображения</label>
     <textarea id="imagePrompt" class="prompt"
       maxlength="1200"
       placeholder="Портрет в кинематографичном стиле, мягкий свет..."></textarea>
-
     <div class="fields">
       <div>
         <label for="imageModel">Модель</label>
@@ -851,12 +765,10 @@ select{
         </select>
       </div>
     </div>
-
     <button id="makeImage" class="primary"
       onclick="generateMedia('image')">
       ✦ Создать изображение
     </button>
-
     <div id="imageStatus" class="status"></div>
     <div id="imageResult" class="result"></div>
   </div>
@@ -866,13 +778,11 @@ select{
 <section id="view-video" class="view">
   <h1 class="page-title">Создать видео</h1>
   <p class="subtitle">Преврати идею в движение.</p>
-
   <div class="panel">
     <label for="videoPrompt">Описание видео</label>
     <textarea id="videoPrompt" class="prompt"
       maxlength="1200"
       placeholder="Ночной город, неон, плавное движение камеры..."></textarea>
-
     <div class="fields">
       <div>
         <label for="videoModel">Модель</label>
@@ -891,7 +801,6 @@ select{
         </select>
       </div>
     </div>
-
     <div style="margin-top:14px">
       <label for="duration">Длительность</label>
       <select id="duration">
@@ -900,12 +809,10 @@ select{
         <option value="8">8 секунд</option>
       </select>
     </div>
-
     <button id="makeVideo" class="primary"
       onclick="generateMedia('video')">
       Создать видео
     </button>
-
     <div id="videoStatus" class="status"></div>
     <div id="videoResult" class="result"></div>
   </div>
@@ -922,13 +829,11 @@ select{
 <section id="view-profile" class="view">
   <h1 class="page-title">Профиль</h1>
   <p class="subtitle">Твоё пространство ANNIVEO.</p>
-
   <div class="panel profile">
     <div class="avatar" id="avatar">✦</div>
     <h2 id="profileName">Пользователь Telegram</h2>
     <p id="username">ANNIVEO AI</p>
   </div>
-
   <div class="wallet">
     <small>Баланс ANNIVEO</small>
     <strong>0 ✦</strong>
@@ -939,7 +844,6 @@ select{
       Баланс станет доступен после подключения платежей.
     </p>
   </div>
-
   <div class="panel">
     <label>Telegram ID</label>
     <div id="telegramId">—</div>
@@ -948,7 +852,6 @@ select{
     </button>
   </div>
 </section>
-
 </div>
 
 <!-- ПОЛЕ ВВОДА -->
@@ -956,14 +859,11 @@ select{
   <form id="chatForm" class="composer">
     <button type="button" class="circle"
       onclick="openView('studio')">＋</button>
-
     <textarea id="messageInput" rows="1"
       maxlength="4000"
       placeholder="Спроси ANNIVEO…"></textarea>
-
     <button type="button" id="mic"
       class="circle" onclick="handleMic()">🎙</button>
-
     <button type="submit" id="send"
       class="circle send">➤</button>
   </form>
@@ -971,10 +871,11 @@ select{
 </div>
 
 <!-- НАВИГАЦИЯ -->
-<nav>
+<nav id="bottomNav">
+  <div id="navGlider"></div>
   <button class="active" data-tab="chat"
     onclick="openView('chat')">
-    <span>☏</span>Чат
+    <span>⌂</span>Чат
   </button>
   <button data-tab="studio"
     onclick="openView('studio')">
@@ -982,13 +883,28 @@ select{
   </button>
   <button data-tab="history"
     onclick="openView('history')">
-    <span>◷</span>История
+    <span>◴</span>История
   </button>
   <button data-tab="profile"
     onclick="openView('profile')">
     <span>♙</span>Профиль
   </button>
 </nav>
+
+<!-- КНОПКА СКРЫТИЯ КЛАВИАТУРЫ -->
+<button id="hideKeyboard" type="button"
+  aria-label="Скрыть клавиатуру">
+  <svg viewBox="0 0 24 24"
+    fill="none" stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round">
+    <rect x="3" y="4" width="18" height="12" rx="2"/>
+    <path d="M7 8h.01M11 8h.01M15 8h.01"/>
+    <path d="M7 12h10"/>
+    <path d="m8 19 4 3 4-3"/>
+  </svg>
+</button>
 
 <script>
 const API_URL =
@@ -1001,6 +917,14 @@ const app = $("app");
 tg?.ready();
 tg?.expand();
 
+try{
+  if(typeof tg?.requestFullscreen === "function"){
+    tg.requestFullscreen();
+  }
+}catch(e){
+  console.warn("Fullscreen:",e);
+}
+
 const initData = tg?.initData || "";
 const user = tg?.initDataUnsafe?.user || null;
 
@@ -1009,7 +933,6 @@ let anonymous = false;
 let busy = false;
 let historyLoaded = false;
 let historyLoading = false;
-
 let normalHistory = [];
 let anonymousHistory = [];
 let showWelcome = true;
@@ -1027,35 +950,40 @@ const cacheKey = user?.id
   ? "anniveo_chat_cache_v3_" + user.id
   : null;
 
+/* ЗАСТАВКА */
+window.addEventListener("load",()=>{
+  setTimeout(()=>{
+    $("splash").classList.add("finished");
+  },1800);
+});
+setTimeout(()=>{
+  $("splash").classList.add("finished");
+},5000);
+
 /* УВЕДОМЛЕНИЯ */
 function toast(message){
   document.querySelector(".toast")?.remove();
-
   const el = document.createElement("div");
   el.className = "toast";
   el.textContent = message;
   document.body.append(el);
-
-  setTimeout(() => el.remove(),3500);
+  setTimeout(()=>el.remove(),3500);
 }
 
 /* ИСТОРИЯ */
 function cleanHistory(items){
   if(!Array.isArray(items)) return [];
-
-  return items.filter(x =>
+  return items.filter(x=>
     x &&
     ["user","assistant"].includes(x.role) &&
     typeof x.content === "string"
-  ).slice(-40).map(x => ({
+  ).slice(-40).map(x=>({
     role:x.role,
     content:x.content
   }));
 }
-
 function saveCache(){
   if(!cacheKey) return;
-
   try{
     localStorage.setItem(
       cacheKey,
@@ -1063,11 +991,10 @@ function saveCache(){
     );
   }catch(e){}
 }
-
 if(cacheKey){
   try{
     normalHistory = cleanHistory(
-      JSON.parse(localStorage.getItem(cacheKey) || "[]")
+      JSON.parse(localStorage.getItem(cacheKey)||"[]")
     );
   }catch(e){}
 }
@@ -1078,16 +1005,13 @@ if(user){
     .filter(Boolean).join(" ");
 
   $("greeting").textContent =
-    "Привет, " + (user.first_name || "друг") + " 👋🏻";
-
+    "Привет, "+(user.first_name||"друг")+" 👋🏻";
   $("profileName").textContent =
-    name || "Пользователь Telegram";
-
+    name||"Пользователь Telegram";
   $("username").textContent =
-    user.username ? "@" + user.username : "Telegram";
-
+    user.username?"@"+user.username:"Telegram";
   $("telegramId").textContent = String(user.id);
-  $("avatar").textContent = name.slice(0,1) || "✦";
+  $("avatar").textContent = name.slice(0,1)||"✦";
 
   if(user.photo_url){
     const img = document.createElement("img");
@@ -1097,37 +1021,47 @@ if(user){
   }
 }
 
-/* ФОТО СЛЕВА, ВИДЕО СПРАВА */
+/* КАРТОЧКИ */
 const tilesHTML = `
 <button class="tile" onclick="openView('image')">
   <img
     src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=650&q=85"
-    alt="Фото"
-    loading="lazy">
+    alt="Фото" loading="lazy">
   <span class="tile-icon">▧</span>
   <span class="tile-text">
     <b>Фото</b>
     <small>Реалистичные и стильные изображения</small>
   </span>
 </button>
-
 <button class="tile" onclick="openView('video')">
   <img
     src="https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=650&q=85"
-    alt="Видео"
-    loading="lazy">
+    alt="Видео" loading="lazy">
   <span class="tile-icon">▣</span>
   <span class="tile-text">
     <b>Видео</b>
     <small>Оживи свои идеи в движении</small>
   </span>
-</button>
-`;
-
+</button>`;
 $("homeTiles").innerHTML = tilesHTML;
 $("studioTiles").innerHTML = tilesHTML;
 
-/* ПРОКРУТКА */
+/* АНИМАЦИЯ МЕНЮ */
+function moveGlider(){
+  const nav = $("bottomNav");
+  const active = nav.querySelector("button.active");
+  if(!active) return;
+  const rect = active.getBoundingClientRect();
+  const navRect = nav.getBoundingClientRect();
+  const glider = $("navGlider");
+  glider.style.width = rect.width+"px";
+  glider.style.transform =
+    "translateX("+(rect.left-navRect.left-7)+"px)";
+}
+window.addEventListener("resize",moveGlider);
+requestAnimationFrame(moveGlider);
+setTimeout(moveGlider,250);
+
 function scrollAppToBottom(){
   requestAnimationFrame(()=>{
     app.scrollTop = app.scrollHeight;
@@ -1136,54 +1070,44 @@ function scrollAppToBottom(){
 
 /* РАЗДЕЛЫ */
 function openView(name){
-  if(recording || transcribing || openingMic){
+  if(recording||transcribing||openingMic){
     toast("Сначала заверши голосовое сообщение");
     return;
   }
-
   $("messageInput").blur();
   currentView = name;
 
   document.querySelectorAll(".view").forEach(el=>{
     el.classList.toggle(
-      "active",
-      el.id === "view-" + name
+      "active",el.id==="view-"+name
     );
   });
-
   document.querySelectorAll("nav button").forEach(el=>{
     const tab = el.dataset.tab;
     const active =
-      tab === name ||
-      (tab === "studio" &&
-        ["image","video"].includes(name));
-
+      tab===name ||
+      (tab==="studio"&&["image","video"].includes(name));
     el.classList.toggle("active",active);
   });
+  $("dock").classList.toggle("hidden",name!=="chat");
 
-  $("dock").classList.toggle(
-    "hidden",
-    name !== "chat"
-  );
-
-  if(name === "history") showHistory();
-  if(name === "chat") renderChat();
+  if(name==="history") showHistory();
+  if(name==="chat") renderChat();
 
   app.scrollTop = 0;
+  requestAnimationFrame(moveGlider);
 }
 
 /* ГЛАВНЫЙ ЭКРАН */
 function updateWelcome(){
   $("welcome").classList.toggle(
-    "hidden",
-    !showWelcome || anonymous
+    "hidden",!showWelcome||anonymous
   );
 }
 
-/* БЕЗОПАСНОЕ ФОРМАТИРОВАНИЕ */
+/* ФОРМАТИРОВАНИЕ */
 function formatAnswer(element,text){
   element.replaceChildren();
-
   const lines = String(text).replace(/\r/g,"").split("\n");
   let paragraph = [];
   let list = null;
@@ -1193,160 +1117,116 @@ function formatAnswer(element,text){
     const re = /(\*\*[^*]+\*\*|`[^`]+`)/g;
     let pos = 0;
     let match;
-
-    while((match = re.exec(str))){
-      parent.append(
-        document.createTextNode(str.slice(pos,match.index))
-      );
-
+    while((match=re.exec(str))){
+      parent.append(document.createTextNode(
+        str.slice(pos,match.index)
+      ));
       const raw = match[0];
       const strong = raw.startsWith("**");
       const node = document.createElement(
-        strong ? "strong" : "code"
+        strong?"strong":"code"
       );
-
       node.textContent = strong
         ? raw.slice(2,-2)
         : raw.slice(1,-1);
-
       parent.append(node);
       pos = re.lastIndex;
     }
-
-    parent.append(
-      document.createTextNode(str.slice(pos))
-    );
+    parent.append(document.createTextNode(str.slice(pos)));
   }
-
   function flush(){
     if(!paragraph.length) return;
-
     const p = document.createElement("p");
     addInline(p,paragraph.join(" "));
     element.append(p);
     paragraph = [];
   }
-
   for(const line of lines){
     if(/^\s*```/.test(line)){
-      flush();
-      list = null;
-
+      flush();list=null;
       if(code){
-        code = null;
+        code=null;
       }else{
-        const pre = document.createElement("pre");
-        code = document.createElement("code");
-        pre.append(code);
-        element.append(pre);
+        const pre=document.createElement("pre");
+        code=document.createElement("code");
+        pre.append(code);element.append(pre);
       }
       continue;
     }
-
     if(code){
-      code.textContent += line + "\n";
+      code.textContent+=line+"\n";
       continue;
     }
-
     if(!line.trim()){
-      flush();
-      list = null;
-      continue;
+      flush();list=null;continue;
     }
-
-    const heading = line.match(
-      /^\s{0,3}(#{1,6})\s+(.+)$/
-    );
-
-    const bullet = line.match(
-      /^\s*([-*+] |\d+[.)] )(.+)$/
-    );
+    const heading=line.match(/^\s{0,3}(#{1,6})\s+(.+)$/);
+    const bullet=line.match(/^\s*([-*+] |\d+[.)] )(.+)$/);
 
     if(heading){
-      flush();
-      list = null;
-
-      const h = document.createElement(
-        "h" + Math.min(heading[1].length,3)
+      flush();list=null;
+      const h=document.createElement(
+        "h"+Math.min(heading[1].length,3)
       );
-
-      addInline(h,heading[2]);
-      element.append(h);
-
+      addInline(h,heading[2]);element.append(h);
     }else if(bullet){
       flush();
-
-      const type = /^\d/.test(bullet[1])
-        ? "ol" : "ul";
-
-      if(!list || list.tagName.toLowerCase() !== type){
-        list = document.createElement(type);
+      const type=/^\d/.test(bullet[1])?"ol":"ul";
+      if(!list||list.tagName.toLowerCase()!==type){
+        list=document.createElement(type);
         element.append(list);
       }
-
-      const li = document.createElement("li");
-      addInline(li,bullet[2]);
-      list.append(li);
-
+      const li=document.createElement("li");
+      addInline(li,bullet[2]);list.append(li);
     }else{
-      list = null;
-      paragraph.push(line.trim());
+      list=null;paragraph.push(line.trim());
     }
   }
-
   flush();
 }
 
 /* СООБЩЕНИЯ */
 function addMessage(text,role,audioURL){
-  const el = document.createElement("div");
-  el.className = "message " + role;
+  const el=document.createElement("div");
+  el.className="message "+role;
 
-  if(role === "assistant"){
-    const label = document.createElement("div");
-    label.className = "assistant-name";
-    label.textContent = "✦ ANNIVEO AI";
+  if(role==="assistant"){
+    const label=document.createElement("div");
+    label.className="assistant-name";
+    label.textContent="✦ ANNIVEO AI";
     el.append(label);
   }
-
   if(audioURL){
-    const audio = document.createElement("audio");
-    audio.controls = true;
-    audio.src = audioURL;
+    const audio=document.createElement("audio");
+    audio.controls=true;audio.src=audioURL;
     el.append(audio);
   }
-
-  const content = document.createElement("div");
-  content.className = "answer";
-
-  if(role === "assistant"){
+  const content=document.createElement("div");
+  content.className="answer";
+  if(role==="assistant"){
     formatAnswer(content,text);
   }else{
-    content.textContent = text;
+    content.textContent=text;
   }
-
   el.append(content);
 
-  if(role === "assistant"){
-    const copy = document.createElement("button");
-    copy.className = "copy";
-    copy.textContent = "Копировать";
-
-    copy.onclick = async ()=>{
+  if(role==="assistant"){
+    const copy=document.createElement("button");
+    copy.className="copy";
+    copy.textContent="Копировать";
+    copy.onclick=async()=>{
       try{
         await navigator.clipboard.writeText(
-          content.dataset.raw || text
+          content.dataset.raw||text
         );
         toast("Ответ скопирован");
       }catch(e){
         toast("Не удалось скопировать");
       }
     };
-
     el.append(copy);
   }
-
-  content.dataset.raw = text;
+  content.dataset.raw=text;
   $("messages").append(el);
   return content;
 }
@@ -1354,13 +1234,10 @@ function addMessage(text,role,audioURL){
 function renderChat(){
   updateWelcome();
   $("messages").replaceChildren();
+  if(showWelcome&&!anonymous) return;
 
-  if(showWelcome && !anonymous) return;
-
-  const items = anonymous
-    ? anonymousHistory
-    : normalHistory;
-
+  const items=anonymous
+    ?anonymousHistory:normalHistory;
   items.forEach(item=>{
     addMessage(item.content,item.role);
   });
@@ -1368,45 +1245,28 @@ function renderChat(){
 
 /* API */
 async function api(payload,timeout=90000){
-  if(!initData || !user){
+  if(!initData||!user){
     throw Error("Открой ANNIVEO AI через Telegram");
   }
-
-  const controller = new AbortController();
-  const timer = setTimeout(
-    ()=>controller.abort(),
-    timeout
-  );
-
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),timeout);
   try{
-    const response = await fetch(API_URL,{
+    const response=await fetch(API_URL,{
       method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
+      headers:{"Content-Type":"application/json"},
       signal:controller.signal,
-      body:JSON.stringify({
-        ...payload,
-        initData
-      })
+      body:JSON.stringify({...payload,initData})
     });
-
-    const data = await response.json();
-
+    const data=await response.json();
     if(!response.ok){
-      throw Error(
-        data.error || "Ошибка сервера ANNIVEO"
-      );
+      throw Error(data.error||"Ошибка сервера ANNIVEO");
     }
-
     return data;
-
   }catch(e){
-    if(e.name === "AbortError"){
+    if(e.name==="AbortError"){
       throw Error("Ответ задержался. Попробуй ещё раз.");
     }
     throw e;
-
   }finally{
     clearTimeout(timer);
   }
@@ -1414,212 +1274,161 @@ async function api(payload,timeout=90000){
 
 /* ЗАГРУЗКА ИСТОРИИ */
 async function loadHistory(){
-  if(historyLoaded || historyLoading || anonymous || busy){
-    return;
-  }
-
-  if(!initData || !user) return;
-
-  historyLoading = true;
-
+  if(historyLoaded||historyLoading||anonymous||busy) return;
+  if(!initData||!user) return;
+  historyLoading=true;
   try{
-    const data = await api({
-      action:"history"
-    },20000);
-
+    const data=await api({action:"history"},20000);
     if(!busy){
-      normalHistory = cleanHistory(data.messages);
+      normalHistory=cleanHistory(data.messages);
       saveCache();
-      historyLoaded = true;
-
-      if(!anonymous && !showWelcome){
-        renderChat();
-      }
+      historyLoaded=true;
+      if(!anonymous&&!showWelcome) renderChat();
     }
-
   }catch(e){
     console.warn("History:",e.message);
-
   }finally{
-    historyLoading = false;
+    historyLoading=false;
   }
 }
 
 /* АНОНИМНЫЙ ЧАТ */
 function toggleAnonymous(){
-  if(busy || recording || transcribing || openingMic){
-    return;
-  }
+  if(busy||recording||transcribing||openingMic) return;
+  anonymous=!anonymous;
+  showWelcome=false;
+  anonymousHistory=[];
 
-  anonymous = !anonymous;
-  showWelcome = false;
-  anonymousHistory = [];
-
-  $("anonToggle").classList.toggle(
-    "on",anonymous
-  );
-
+  $("anonToggle").classList.toggle("on",anonymous);
   $("anonToggle").setAttribute(
-    "aria-checked",
-    String(anonymous)
+    "aria-checked",String(anonymous)
   );
+  $("modeText").textContent=anonymous
+    ?"История не сохраняется"
+    :"История сохраняется";
 
-  $("modeText").textContent = anonymous
-    ? "История не сохраняется"
-    : "История сохраняется";
-
-  $("messageInput").value = "";
+  $("messageInput").value="";
   renderChat();
-  app.scrollTop = 0;
+  app.scrollTop=0;
 
   if(anonymous){
     toast("Анонимный чат включён");
   }else{
     toast("Обычный чат включён");
-    historyLoaded = false;
+    historyLoaded=false;
     loadHistory();
   }
 }
 
 /* КНОПКИ */
 function updateControls(){
-  const locked =
-    busy || recording || transcribing || openingMic;
-
-  $("send").disabled = locked;
-  $("anonToggle").disabled = locked;
-  $("mic").disabled = busy || transcribing || openingMic;
-  $("messageInput").disabled =
-    recording || transcribing || openingMic;
+  const locked=busy||recording||transcribing||openingMic;
+  $("send").disabled=locked;
+  $("anonToggle").disabled=locked;
+  $("mic").disabled=busy||transcribing||openingMic;
+  $("messageInput").disabled=
+    recording||transcribing||openingMic;
 }
 
 /* ОТПРАВКА */
 async function sendMessage(text,audioURL){
-  text = String(text).trim();
-
-  if(!text || busy || recording || openingMic){
-    return;
-  }
-
-  if(!initData || !user){
+  text=String(text).trim();
+  if(!text||busy||recording||openingMic) return;
+  if(!initData||!user){
     toast("Открой ANNIVEO AI через Telegram");
     return;
   }
 
-  const isAnonymous = anonymous;
-  const context = cleanHistory(
-    anonymousHistory
-  ).slice(-12);
+  const isAnonymous=anonymous;
+  const context=cleanHistory(anonymousHistory).slice(-12);
 
-  showWelcome = false;
+  showWelcome=false;
   updateWelcome();
-
-  if($("messages").children.length === 0){
-    renderChat();
-  }
+  if($("messages").children.length===0) renderChat();
 
   addMessage(text,"user",audioURL);
-
-  const pending = addMessage(
-    "ANNIVEO AI думает…",
-    "assistant"
+  const pending=addMessage(
+    "ANNIVEO AI думает…","assistant"
   );
 
-  $("chatStatus").textContent = "Готовлю ответ…";
-
-  busy = true;
-  updateControls();
+  $("chatStatus").textContent="Готовлю ответ…";
+  busy=true;updateControls();
   scrollAppToBottom();
 
   try{
-    const payload = isAnonymous
-      ? {
-          action:"anonymous",
-          message:text,
-          messages:context
-        }
-      : {
-          action:"chat",
-          message:text,
-          requestId:crypto.randomUUID()
-        };
+    const payload=isAnonymous
+      ?{
+        action:"anonymous",
+        message:text,
+        messages:context
+      }
+      :{
+        action:"chat",
+        message:text,
+        requestId:crypto.randomUUID()
+      };
 
-    const data = await api(payload);
+    const data=await api(payload);
 
-    if(typeof data.reply !== "string" ||
-       !data.reply.trim()){
+    if(typeof data.reply!=="string"||!data.reply.trim()){
       throw Error("Нейросеть вернула пустой ответ");
     }
 
     formatAnswer(pending,data.reply);
-    pending.dataset.raw = data.reply;
+    pending.dataset.raw=data.reply;
 
-    const pair = [
+    const pair=[
       {role:"user",content:text},
       {role:"assistant",content:data.reply}
     ];
 
     if(isAnonymous){
-      anonymousHistory = cleanHistory([
-        ...anonymousHistory,
-        ...pair
+      anonymousHistory=cleanHistory([
+        ...anonymousHistory,...pair
       ]);
     }else{
-      normalHistory = cleanHistory([
-        ...normalHistory,
-        ...pair
+      normalHistory=cleanHistory([
+        ...normalHistory,...pair
       ]);
-
-      historyLoaded = true;
+      historyLoaded=true;
       saveCache();
     }
-
   }catch(e){
     formatAnswer(pending,e.message);
-    pending.dataset.raw = e.message;
-
+    pending.dataset.raw=e.message;
   }finally{
-    busy = false;
+    busy=false;
     updateControls();
-    $("chatStatus").textContent = "";
+    $("chatStatus").textContent="";
     scrollAppToBottom();
   }
 }
 
 /* ФОРМА */
-$("chatForm").onsubmit = e=>{
+$("chatForm").onsubmit=e=>{
   e.preventDefault();
-
-  if(busy || recording || transcribing || openingMic){
-    return;
-  }
-
-  const text = $("messageInput").value.trim();
+  if(busy||recording||transcribing||openingMic) return;
+  const text=$("messageInput").value.trim();
   if(!text) return;
-
-  if(!initData || !user){
+  if(!initData||!user){
     toast("Открой приложение через Telegram");
     return;
   }
-
-  $("messageInput").value = "";
-  $("messageInput").style.height = "";
+  $("messageInput").value="";
+  $("messageInput").style.height="";
   $("messageInput").blur();
-
   sendMessage(text);
 };
 
-$("messageInput").oninput = ()=>{
-  const input = $("messageInput");
-  input.style.height = "auto";
-  input.style.height =
-    Math.min(input.scrollHeight,95) + "px";
+$("messageInput").oninput=()=>{
+  const input=$("messageInput");
+  input.style.height="auto";
+  input.style.height=
+    Math.min(input.scrollHeight,95)+"px";
 };
 
-$("messageInput").onkeydown = e=>{
-  if(e.key === "Enter" &&
-     !e.shiftKey &&
-     !e.isComposing){
+$("messageInput").onkeydown=e=>{
+  if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){
     e.preventDefault();
     $("chatForm").requestSubmit();
   }
@@ -1627,926 +1436,326 @@ $("messageInput").onkeydown = e=>{
 
 /* ИДЕЯ */
 function suggestIdea(){
-  $("messageInput").value =
-    "Помоги придумать интересную идею для моего проекта. " +
+  $("messageInput").value=
+    "Помоги придумать интересную идею для моего проекта. "+
     "Сначала задай мне несколько уточняющих вопросов.";
-
   $("messageInput").focus();
 }
 
 /* ГОЛОС */
 async function handleMic(){
   if(recording){
-    if(recorder && recorder.state === "recording"){
+    if(recorder&&recorder.state==="recording"){
       recorder.stop();
     }
     return;
   }
-
-  if(busy || transcribing || openingMic) return;
-
-  if(!initData || !user){
+  if(busy||transcribing||openingMic) return;
+  if(!initData||!user){
     toast("Открой ANNIVEO AI через Telegram");
     return;
   }
-
-  if(!navigator.mediaDevices?.getUserMedia ||
+  if(!navigator.mediaDevices?.getUserMedia||
      !window.MediaRecorder){
     toast("Микрофон недоступен в этом браузере");
     return;
   }
 
-  openingMic = true;
+  openingMic=true;
   updateControls();
 
   try{
-    microphoneStream =
+    microphoneStream=
       await navigator.mediaDevices.getUserMedia({
         audio:true
       });
-
-    const mime = [
+    const mime=[
       "audio/mp4",
       "audio/webm;codecs=opus",
       "audio/webm"
     ].find(x=>MediaRecorder.isTypeSupported(x));
 
-    recorder = new MediaRecorder(
+    recorder=new MediaRecorder(
       microphoneStream,
-      mime ? {mimeType:mime} : {}
+      mime?{mimeType:mime}:{}
     );
-
-    audioChunks = [];
-
-    recorder.ondataavailable = e=>{
-      if(e.data.size){
-        audioChunks.push(e.data);
-      }
+    audioChunks=[];
+    recorder.ondataavailable=e=>{
+      if(e.data.size) audioChunks.push(e.data);
     };
-
-    recorder.onstop = finishVoice;
+    recorder.onstop=finishVoice;
     recorder.start();
-
-    recording = true;
-    $("mic").textContent = "■";
+    recording=true;
+    $("mic").textContent="■";
     $("mic").classList.add("recording");
-    $("chatStatus").textContent =
+    $("chatStatus").textContent=
       "Идёт запись · нажми ■ для отправки";
 
-    recordTimer = setTimeout(()=>{
-      if(recorder?.state === "recording"){
+    recordTimer=setTimeout(()=>{
+      if(recorder?.state==="recording"){
         recorder.stop();
       }
     },120000);
-
   }catch(e){
     microphoneStream?.getTracks().forEach(
       track=>track.stop()
     );
     toast("Разреши доступ к микрофону");
-
   }finally{
-    openingMic = false;
+    openingMic=false;
     updateControls();
   }
 }
 
 async function finishVoice(){
   clearTimeout(recordTimer);
-
-  recording = false;
-  $("mic").textContent = "🎙";
+  recording=false;
+  $("mic").textContent="🎙";
   $("mic").classList.remove("recording");
 
   microphoneStream?.getTracks().forEach(
     track=>track.stop()
   );
-  microphoneStream = null;
+  microphoneStream=null;
 
-  const blob = new Blob(audioChunks,{
-    type:recorder.mimeType || "audio/webm"
+  const blob=new Blob(audioChunks,{
+    type:recorder.mimeType||"audio/webm"
   });
 
-  if(!blob.size || blob.size > 20*1024*1024){
+  if(!blob.size||blob.size>20*1024*1024){
     toast("Запись слишком длинная или пустая");
-    $("chatStatus").textContent = "";
+    $("chatStatus").textContent="";
     updateControls();
     return;
   }
 
-  transcribing = true;
+  transcribing=true;
   updateControls();
-
-  $("chatStatus").textContent =
+  $("chatStatus").textContent=
     "Распознаю голосовое сообщение…";
 
-  const controller = new AbortController();
-  const timer = setTimeout(
-    ()=>controller.abort(),
-    90000
-  );
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),90000);
 
   try{
-    const form = new FormData();
-
+    const form=new FormData();
     form.append("action","transcribe");
     form.append("initData",initData);
     form.append(
-      "file",
-      blob,
+      "file",blob,
       blob.type.includes("mp4")
-        ? "voice.m4a"
-        : "voice.webm"
+        ?"voice.m4a":"voice.webm"
     );
 
-    const response = await fetch(API_URL,{
+    const response=await fetch(API_URL,{
       method:"POST",
       body:form,
       signal:controller.signal
     });
-
-    const data = await response.json();
-
-    if(!response.ok || !data.text){
+    const data=await response.json();
+    if(!response.ok||!data.text){
       throw Error(
-        data.error || "Не удалось распознать голос"
+        data.error||"Не удалось распознать голос"
       );
     }
 
-    const text = String(data.text).trim();
-
-    if(text.length > 4000){
+    const text=String(data.text).trim();
+    if(text.length>4000){
       throw Error("Голосовое слишком длинное");
     }
 
-    const url = URL.createObjectURL(blob);
+    const url=URL.createObjectURL(blob);
     audioURLs.push(url);
-
-    transcribing = false;
+    transcribing=false;
     await sendMessage(text,url);
-
   }catch(e){
     toast(e.message);
-
   }finally{
     clearTimeout(timer);
-    transcribing = false;
-    $("chatStatus").textContent = "";
+    transcribing=false;
+    $("chatStatus").textContent="";
     updateControls();
   }
 }
 
 /* ИСТОРИЯ */
 async function showHistory(){
-  const list = $("historyList");
-
-  list.innerHTML =
+  const list=$("historyList");
+  list.innerHTML=
     '<div class="empty">Загружаю историю…</div>';
 
   try{
-    const data = await api({
-      action:"history"
-    },20000);
-
-    const items = cleanHistory(data.messages);
+    const data=await api({action:"history"},20000);
+    const items=cleanHistory(data.messages);
     list.replaceChildren();
 
     if(!items.length){
-      list.innerHTML =
+      list.innerHTML=
         '<div class="empty">История пока пуста</div>';
       return;
     }
 
     items.reverse().forEach(item=>{
-      const el = document.createElement("div");
-      el.className = "history-item";
-
-      const b = document.createElement("b");
-      b.textContent =
-        item.role === "user" ? "Ты" : "ANNIVEO AI";
-
-      const p = document.createElement("p");
-      p.textContent = item.content;
-
+      const el=document.createElement("div");
+      el.className="history-item";
+      const b=document.createElement("b");
+      b.textContent=item.role==="user"
+        ?"Ты":"ANNIVEO AI";
+      const p=document.createElement("p");
+      p.textContent=item.content;
       el.append(b,p);
       list.append(el);
     });
-
   }catch(e){
     list.replaceChildren();
-
-    const error = document.createElement("div");
-    error.className = "empty";
-    error.textContent = e.message;
+    const error=document.createElement("div");
+    error.className="empty";
+    error.textContent=e.message;
     list.append(error);
   }
 }
 
 /* ФОТО И ВИДЕО */
 async function generateMedia(kind){
-  if(!initData || !user){
+  if(!initData||!user){
     toast("Открой ANNIVEO AI через Telegram");
     return;
   }
 
-  const prompt = $(kind+"Prompt").value.trim();
-
+  const prompt=$(kind+"Prompt").value.trim();
   if(!prompt){
     toast("Сначала опиши свою идею");
     return;
   }
 
-  const button = $(
-    kind === "image" ? "makeImage" : "makeVideo"
+  const button=$(
+    kind==="image"?"makeImage":"makeVideo"
   );
+  const status=$(kind+"Status");
+  const result=$(kind+"Result");
 
-  const status = $(kind+"Status");
-  const result = $(kind+"Result");
-
-  button.disabled = true;
-  status.textContent = "Создаю…";
+  button.disabled=true;
+  status.textContent="Создаю…";
   result.replaceChildren();
 
-  const controller = new AbortController();
-  const timer = setTimeout(
+  const controller=new AbortController();
+  const timer=setTimeout(
     ()=>controller.abort(),
-    kind === "video" ? 240000 : 120000
+    kind==="video"?240000:120000
   );
 
   try{
-    const payload = {
+    const payload={
       action:kind,
       prompt,
       model:$(kind+"Model").value,
       ratio:$(kind+"Ratio").value,
       initData
     };
-
-    if(kind === "video"){
-      payload.duration = Number(
-        $("duration").value
-      );
+    if(kind==="video"){
+      payload.duration=Number($("duration").value);
     }
 
-    const response = await fetch(API_URL,{
+    const response=await fetch(API_URL,{
       method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
+      headers:{"Content-Type":"application/json"},
       body:JSON.stringify(payload),
       signal:controller.signal
     });
 
     if(!response.ok){
-      let error = "Ошибка генерации";
-
+      let error="Ошибка генерации";
       try{
-        const data = await response.json();
-        error = data.error || error;
+        const data=await response.json();
+        error=data.error||error;
       }catch(e){}
-
       throw Error(error);
     }
 
-    const type = response.headers.get("content-type") || "";
+    const type=
+      response.headers.get("content-type")||"";
 
     if(type.includes("application/json")){
-      const data = await response.json();
-
-      if(data.error){
-        throw Error(data.error);
-      }
-
+      const data=await response.json();
+      if(data.error) throw Error(data.error);
       throw Error(
-        "Сервер вернул JSON вместо готового файла. " +
+        "Сервер вернул JSON вместо готового файла. "+
         "Нужно согласовать формат ответа Worker."
       );
     }
-
-    if(kind === "image" && !type.startsWith("image/")){
+    if(kind==="image"&&!type.startsWith("image/")){
       throw Error("Сервер не вернул изображение");
     }
-
-    if(kind === "video" && !type.startsWith("video/")){
+    if(kind==="video"&&!type.startsWith("video/")){
       throw Error("Сервер не вернул видео");
     }
 
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-
-    const media = document.createElement(
-      kind === "image" ? "img" : "video"
+    const blob=await response.blob();
+    const url=URL.createObjectURL(blob);
+    const media=document.createElement(
+      kind==="image"?"img":"video"
     );
+    media.src=url;
 
-    media.src = url;
-
-    if(kind === "video"){
-      media.controls = true;
-      media.playsInline = true;
+    if(kind==="video"){
+      media.controls=true;
+      media.playsInline=true;
     }else{
-      media.alt = "Созданное изображение";
+      media.alt="Созданное изображение";
     }
 
-    const link = document.createElement("a");
-    link.href = url;
-    link.download =
-      kind === "image"
-        ? "anniveo-image"
-        : "anniveo-video.mp4";
-    link.textContent = "Скачать результат";
-
+    const link=document.createElement("a");
+    link.href=url;
+    link.download=kind==="image"
+      ?"anniveo-image":"anniveo-video.mp4";
+    link.textContent="Скачать результат";
     result.append(media,link);
-    status.textContent = "Готово!";
-
+    status.textContent="Готово!";
   }catch(e){
-    status.textContent = e.message;
-
+    status.textContent=e.message;
   }finally{
     clearTimeout(timer);
-    button.disabled = false;
+    button.disabled=false;
   }
 }
 
-/* КЛАВИАТУРА TELEGRAM / IPHONE */
+/* КЛАВИАТУРА IPHONE */
 (function setupKeyboard(){
-  const input = $("messageInput");
-  const viewport = window.visualViewport;
+  const input=$("messageInput");
+  const viewport=window.visualViewport;
+  const button=$("hideKeyboard");
 
   function updateViewport(){
     if(!viewport) return;
 
-    const fullHeight = window.innerHeight;
-    const visibleHeight = viewport.height;
-    const offsetTop = viewport.offsetTop;
-
-    const keyboardHeight = Math.max(
+    const height=Math.max(
       0,
-      fullHeight - visibleHeight - offsetTop
-    );
-
-    const isKeyboardOpen =
-      document.activeElement === input &&
-      keyboardHeight > 120;
-
-    document.body.classList.toggle(
-      "keyboard-open",
-      isKeyboardOpen
-    );
-
-    document.documentElement.style.setProperty(
-      "--keyboard-height",
-      isKeyboardOpen ? keyboardHeight + "px" : "0px"
-    );
-  }
-
-  if(viewport){
-    viewport.addEventListener("resize",updateViewport);
-    viewport.addEventListener("scroll",updateViewport);
-  }
-
-  window.addEventListener("resize",updateViewport);
-
-  input.addEventListener("focus",()=>{
-    requestAnimationFrame(updateViewport);
-    setTimeout(updateViewport,250);
-  });
-
-  input.addEventListener("blur",()=>{
-    document.body.classList.remove("keyboard-open");
-    document.documentElement.style.setProperty(
-      "--keyboard-height","0px"
-    );
-  });
-})();
-
-/* ЗАВЕРШЕНИЕ */
-window.addEventListener("pagehide",()=>{
-  if(recorder?.state === "recording"){
-    recorder.onstop = null;
-    recorder.stop();
-  }
-
-  microphoneStream?.getTracks().forEach(
-    track=>track.stop()
-  );
-
-  audioURLs.forEach(url=>URL.revokeObjectURL(url));
-});
-
-/* СТАРТ */
-showWelcome = true;
-renderChat();
-loadHistory();
-</script>
-
-<style>
-#anniveo-hide-keyboard {
-  position: fixed;
-  right: 18px;
-  bottom: 110px;
-  z-index: 99999;
-
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  border: 1px solid #a985d5;
-  background: rgba(43, 34, 62, .94);
-  color: #d8b6ff;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  box-shadow: 0 0 18px #a66cff55;
-  backdrop-filter: blur(12px);
-
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(15px) scale(.85);
-  transition:
-    opacity .25s ease,
-    transform .3s ease,
-    visibility .25s;
-  pointer-events: none;
-}
-
-#anniveo-hide-keyboard.visible {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0) scale(1);
-  pointer-events: auto;
-}
-
-#anniveo-hide-keyboard svg {
-  width: 24px;
-  height: 24px;
-}
-</style>
-
-<button
-  id="anniveo-hide-keyboard"
-  type="button"
-  aria-label="Скрыть клавиатуру"
->
-  <svg viewBox="0 0 24 24"
-       fill="none"
-       stroke="currentColor"
-       stroke-width="2"
-       stroke-linecap="round"
-       stroke-linejoin="round">
-    <path d="M4 5h16v11H4z"/>
-    <path d="M7 9h.01M11 9h.01M15 9h.01"/>
-    <path d="M8 13h8"/>
-    <path d="m9 19 3 3 3-3"/>
-  </svg>
-</button>
-
-<script>
-(() => {
-  const btn = document.getElementById(
-    "anniveo-hide-keyboard"
-  );
-
-  const viewport = window.visualViewport;
-  let keyboardOpen = false;
-
-  function updateKeyboard() {
-    const focused = document.activeElement;
-    const typing =
-      focused &&
-      (focused.tagName === "TEXTAREA" ||
-       focused.tagName === "INPUT" ||
-       focused.isContentEditable);
-
-    const keyboardHeight = viewport
-      ? Math.max(
-          0,
-          window.innerHeight -
-          viewport.height -
-          viewport.offsetTop
-        )
-      : 0;
-
-    keyboardOpen = !!typing && keyboardHeight > 100;
-
-    btn.classList.toggle("visible", keyboardOpen);
-
-    if (keyboardOpen) {
-      btn.style.bottom =
-        (keyboardHeight + 95) + "px";
-    }
-  }
-
-  btn.addEventListener("pointerdown", e => {
-    e.preventDefault();
-  });
-
-  btn.addEventListener("click", () => {
-    const active = document.activeElement;
-    if (active && typeof active.blur === "function") {
-      active.blur();
-    }
-    btn.classList.remove("visible");
-  });
-
-  viewport?.addEventListener(
-    "resize", updateKeyboard
-  );
-  viewport?.addEventListener(
-    "scroll", updateKeyboard
-  );
-
-  window.addEventListener(
-    "resize", updateKeyboard
-  );
-
-  document.addEventListener(
-    "focusin", updateKeyboard
-  );
-
-  document.addEventListener(
-    "focusout", () => {
-      setTimeout(updateKeyboard, 150);
-    }
-  );
-})();
-</script>
-
-<!-- ANNIVEO AI — ОБНОВЛЕНИЕ ИНТЕРФЕЙСА -->
-<style>
-/* СТЕКЛЯННОЕ НИЖНЕЕ МЕНЮ */
-nav {
-  position: fixed !important;
-  left: 16px !important;
-  right: 16px !important;
-  bottom: calc(12px + env(safe-area-inset-bottom)) !important;
-  width: calc(100% - 32px) !important;
-  max-width: 720px !important;
-  margin: 0 auto !important;
-  padding: 7px !important;
-  display: grid;
-  grid-template-columns: repeat(4,minmax(0,1fr));
-  gap: 2px;
-  border: 1px solid rgba(225,205,255,.22) !important;
-  border-radius: 38px !important;
-  background: rgba(80,77,96,.46) !important;
-  -webkit-backdrop-filter: blur(26px) saturate(145%);
-  backdrop-filter: blur(26px) saturate(145%);
-  box-shadow:
-    0 10px 32px #0005,
-    inset 0 1px 1px #ffffff30;
-  overflow: hidden;
-  z-index: 50;
-}
-
-nav button {
-  position: relative;
-  z-index: 2;
-  min-width: 0;
-  min-height: 62px;
-  padding: 8px 2px;
-  border: 0;
-  border-radius: 30px;
-  background: transparent !important;
-  color: #c6c1d2;
-  font-size: 11px;
-  font-weight: 500;
-  transition:
-    color .3s ease,
-    transform .22s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-
-nav button span {
-  font-size: 23px;
-  line-height: 27px;
-  transition: transform .25s ease;
-}
-
-nav button.active {
-  color: #f5eaff !important;
-}
-
-nav button:active {
-  transform: scale(.91);
-}
-
-nav button.active span {
-  transform: scale(1.08);
-}
-
-#anniveo-nav-glider {
-  position: absolute;
-  z-index: 1;
-  top: 7px;
-  left: 7px;
-  height: calc(100% - 14px);
-  border-radius: 31px;
-  background: rgba(225,216,255,.19);
-  border: 1px solid rgba(255,255,255,.13);
-  box-shadow: inset 0 1px 12px #ffffff12;
-  transition:
-    transform .38s cubic-bezier(.2,.8,.2,1),
-    width .38s cubic-bezier(.2,.8,.2,1);
-  pointer-events: none;
-}
-
-.dock {
-  bottom: calc(105px + env(safe-area-inset-bottom));
-  transition: bottom .16s ease-out;
-}
-
-body.keyboard-open nav {
-  display: none !important;
-}
-
-body.keyboard-open .dock {
-  bottom: calc(var(--keyboard-height) + 10px);
-}
-
-/* БАЛАНС */
-.credit {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 9px 12px;
-  border: 1px solid #71598c;
-  border-radius: 25px;
-  background: rgba(85,63,112,.3);
-  color: #e2caff;
-  white-space: nowrap;
-  transition: transform .2s;
-}
-
-.credit:active {
-  transform: scale(.94);
-}
-
-.anniveo-balance-label {
-  font-size: 11px;
-}
-
-.anniveo-balance-number {
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.anniveo-balance-star {
-  font-size: 25px;
-  line-height: 15px;
-  color: #c9a2ff;
-  text-shadow: 0 0 12px #b887ff99;
-}
-
-/* ПЛАВАЮЩАЯ КНОПКА КЛАВИАТУРЫ */
-#anniveo-hide-keyboard {
-  position: fixed !important;
-  left: auto !important;
-  right: 20px !important;
-  bottom: auto !important;
-  top: 50%;
-
-  width: 46px;
-  height: 46px;
-  z-index: 99999;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  border-radius: 50%;
-  border: 1px solid #c4a1f5aa;
-  background: rgba(65,49,91,.88);
-  color: #e0c8ff;
-
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-
-  box-shadow:
-    0 0 22px #ac7aff55,
-    inset 0 1px 2px #ffffff44;
-
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transform: translateY(16px) scale(.8);
-
-  transition:
-    top .16s ease-out,
-    opacity .25s ease,
-    transform .3s cubic-bezier(.2,.8,.2,1),
-    visibility .25s;
-}
-
-#anniveo-hide-keyboard.visible {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: translateY(0) scale(1);
-}
-
-#anniveo-hide-keyboard:active {
-  transform: scale(.86);
-  background: #a77cdb;
-  color: #20152f;
-}
-
-@media(max-width:360px) {
-  nav {
-    left: 9px !important;
-    right: 9px !important;
-    width: calc(100% - 18px) !important;
-  }
-
-  nav button {
-    font-size: 10px;
-  }
-
-  .anniveo-balance-label {
-    font-size: 10px;
-  }
-}
-
-@media(prefers-reduced-motion:reduce) {
-  #anniveo-nav-glider,
-  #anniveo-hide-keyboard {
-    transition-duration: .01ms;
-  }
-}
-</style>
-
-<script>
-(function(){
-  "use strict";
-
-  /* БАЛАНС */
-  const credit = document.querySelector(".credit");
-
-  if(credit){
-    credit.innerHTML = `
-      <span class="anniveo-balance-label">Баланс</span>
-      <span class="anniveo-balance-number">0</span>
-      <span class="anniveo-balance-star">✦</span>
-    `;
-  }
-
-  /* НОВЫЕ ИКОНКИ МЕНЮ */
-  const nav = document.querySelector("nav");
-
-  if(nav){
-    const icons = {
-      chat: "⌂",
-      studio: "▣",
-      history: "◴",
-      profile: "♙"
-    };
-
-    const labels = {
-      chat: "Чат",
-      studio: "Студия",
-      history: "История",
-      profile: "Профиль"
-    };
-
-    nav.querySelectorAll("button").forEach(button=>{
-      const tab = button.dataset.tab;
-
-      if(!icons[tab]) return;
-
-      const icon = button.querySelector("span");
-
-      if(icon){
-        icon.textContent = icons[tab];
-      }
-
-      const textNode = Array.from(button.childNodes)
-        .find(node=>node.nodeType === 3);
-
-      if(textNode){
-        textNode.textContent = labels[tab];
-      }
-    });
-
-    /* ПОДВИЖНАЯ КАПСУЛА */
-    const glider = document.createElement("div");
-    glider.id = "anniveo-nav-glider";
-    nav.prepend(glider);
-
-    function moveGlider(){
-      const active = nav.querySelector("button.active");
-      if(!active) return;
-
-      const navRect = nav.getBoundingClientRect();
-      const rect = active.getBoundingClientRect();
-
-      const x = rect.left - navRect.left;
-
-      glider.style.width = rect.width + "px";
-      glider.style.transform =
-        "translateX(" + (x - 7) + "px)";
-    }
-
-    nav.querySelectorAll("button").forEach(button=>{
-      button.addEventListener("click",()=>{
-        requestAnimationFrame(moveGlider);
-      });
-    });
-
-    const observer = new MutationObserver(moveGlider);
-
-    nav.querySelectorAll("button").forEach(button=>{
-      observer.observe(button,{
-        attributes:true,
-        attributeFilter:["class"]
-      });
-    });
-
-    window.addEventListener("resize",moveGlider);
-    requestAnimationFrame(moveGlider);
-    setTimeout(moveGlider,250);
-  }
-
-  /* КНОПКА СКРЫТИЯ КЛАВИАТУРЫ */
-  let button = document.getElementById(
-    "anniveo-hide-keyboard"
-  );
-
-  if(button){
-    /* Убираем старые обработчики кнопки */
-    const replacement = button.cloneNode(true);
-    button.replaceWith(replacement);
-    button = replacement;
-  }else{
-    button = document.createElement("button");
-    button.id = "anniveo-hide-keyboard";
-    document.body.append(button);
-  }
-
-  button.type = "button";
-  button.setAttribute(
-    "aria-label",
-    "Скрыть клавиатуру"
-  );
-
-  button.innerHTML = `
-    <svg width="24" height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.8"
-      stroke-linecap="round"
-      stroke-linejoin="round">
-      <rect x="3" y="4" width="18" height="12" rx="2"/>
-      <path d="M7 8h.01M11 8h.01M15 8h.01"/>
-      <path d="M7 12h10"/>
-      <path d="m8 19 4 3 4-3"/>
-    </svg>
-  `;
-
-  const viewport = window.visualViewport;
-  const dock = document.getElementById("dock");
-
-  function updateKeyboard(){
-    if(!viewport || !dock) return;
-
-    const height = Math.max(
-      0,
-      window.innerHeight -
-      viewport.height -
+      window.innerHeight-
+      viewport.height-
       viewport.offsetTop
     );
-
-    const focused = document.activeElement;
-
-    const typing = !!focused && (
-      focused.tagName === "TEXTAREA" ||
-      focused.tagName === "INPUT" ||
+    const focused=document.activeElement;
+    const typing=!!focused&&(
+      focused.tagName==="TEXTAREA"||
+      focused.tagName==="INPUT"||
       focused.isContentEditable
     );
-
-    const opened = typing && height > 120;
+    const opened=typing&&height>120;
 
     document.body.classList.toggle(
-      "keyboard-open",
-      opened
+      "keyboard-open",opened
     );
-
     document.documentElement.style.setProperty(
       "--keyboard-height",
-      opened ? height + "px" : "0px"
+      opened?height+"px":"0px"
     );
-
     button.classList.toggle("visible",opened);
 
     if(opened){
       requestAnimationFrame(()=>{
-        const rect = dock.getBoundingClientRect();
-        const top = Math.max(
-          viewport.offsetTop + 8,
-          rect.top - 55
-        );
-
-        button.style.top = top + "px";
+        const rect=$("dock").getBoundingClientRect();
+        button.style.top=
+          Math.max(viewport.offsetTop+8,rect.top-55)+"px";
       });
     }
   }
@@ -2554,100 +1763,45 @@ body.keyboard-open .dock {
   button.addEventListener("pointerdown",e=>{
     e.preventDefault();
   });
-
   button.addEventListener("click",()=>{
-    const focused = document.activeElement;
-
-    if(focused && typeof focused.blur === "function"){
-      focused.blur();
-    }
-
+    document.activeElement?.blur();
     button.classList.remove("visible");
-
     document.body.classList.remove("keyboard-open");
-
     document.documentElement.style.setProperty(
       "--keyboard-height","0px"
     );
-
-    if(window.Telegram?.WebApp?.HapticFeedback){
-      window.Telegram.WebApp.HapticFeedback
-        .impactOccurred("light");
-    }
+    tg?.HapticFeedback?.impactOccurred("light");
   });
 
-  if(viewport){
-    viewport.addEventListener("resize",updateKeyboard);
-    viewport.addEventListener("scroll",updateKeyboard);
-  }
-
-  window.addEventListener("resize",updateKeyboard);
+  viewport?.addEventListener("resize",updateViewport);
+  viewport?.addEventListener("scroll",updateViewport);
+  window.addEventListener("resize",updateViewport);
 
   document.addEventListener("focusin",()=>{
-    requestAnimationFrame(updateKeyboard);
-    setTimeout(updateKeyboard,300);
+    requestAnimationFrame(updateViewport);
+    setTimeout(updateViewport,300);
   });
-
   document.addEventListener("focusout",()=>{
-    setTimeout(updateKeyboard,100);
+    setTimeout(updateViewport,150);
   });
-
-  updateKeyboard();
 })();
 
-/* ANNIVEO AI — разделение нижних панелей */
+/* ЗАВЕРШЕНИЕ */
+window.addEventListener("pagehide",()=>{
+  if(recorder?.state==="recording"){
+    recorder.onstop=null;
+    recorder.stop();
+  }
+  microphoneStream?.getTracks().forEach(
+    track=>track.stop()
+  );
+  audioURLs.forEach(url=>URL.revokeObjectURL(url));
+});
 
-:root {
-  --bottom-gap: 15px;
-}
-
-/* Поле ввода сообщения */
-.composer,
-.input-bar,
-.chat-input-container {
-  margin-bottom: var(--bottom-gap) !important;
-  flex-shrink: 0;
-}
-
-/* Нижняя навигация */
-.bottom-nav,
-.nav-bar,
-.tab-bar {
-  margin-top: 0 !important;
-  border-radius: 38px;
-  background: rgba(55, 53, 72, 0.83);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
-}
-
-/* Плавное нажатие */
-.bottom-nav button,
-.nav-bar button,
-.tab-bar button {
-  transition: transform .2s ease, background .2s ease;
-}
-
-.bottom-nav button:active,
-.nav-bar button:active,
-.tab-bar button:active {
-  transform: scale(.94);
-}
-
-/* Поднимаем раздел «Создать» ближе к шару */
-.create-section,
-.studio-section,
-.create-area {
-  margin-top: -35px !important;
-}
-
-/* Уменьшаем расстояние после шара */
-.orb-container,
-.hero-orb,
-.ai-orb {
-  margin-bottom: 10px !important;
-}
-
+/* СТАРТ */
+showWelcome=true;
+renderChat();
+loadHistory();
 </script>
-
 </body>
 </html>
