@@ -1,3 +1,4 @@
+Понял, извини. Ниже весь index.html целиком, уже с исправленным отображением Markdown. Скопируй его полностью и замени им содержимое файла index.html.
 
 <!doctype html>
 <html lang="ru">
@@ -76,16 +77,13 @@ header strong{letter-spacing:2px;font-size:19px}
 }
 .welcome h1{font-size:32px;margin:0 0 12px}
 .welcome p{color:#a7adc2;line-height:1.5}
-
 /* Единая лента переписки */
 .message-row{
  display:flex;flex-direction:column;
- min-width:0;width:100%;
- gap:7px
+ min-width:0;width:100%;gap:7px
 }
 .message-row.user-row{align-items:flex-end}
 .message-row.assistant-row{align-items:stretch}
-
 .msg{
  line-height:1.65;
  white-space:pre-wrap;
@@ -95,6 +93,7 @@ header strong{letter-spacing:2px;font-size:19px}
  -webkit-user-select:text
 }
 .msg strong{font-weight:700}
+.msg em{font-style:italic}
 .msg.user{
  background:#292d40;
  border:1px solid #393d52;
@@ -108,55 +107,68 @@ header strong{letter-spacing:2px;font-size:19px}
  border:0;
  padding:0 2px;
  max-width:100%;
- align-self:stretch
+ align-self:stretch;
+ white-space:normal
+}
+.msg.assistant p{margin:0 0 12px}
+.msg.assistant p:last-child{margin-bottom:0}
+.msg.assistant h1,.msg.assistant h2,
+.msg.assistant h3,.msg.assistant h4,
+.msg.assistant h5,.msg.assistant h6{
+ line-height:1.3;margin:18px 0 8px
+}
+.msg.assistant h1{font-size:1.45em}
+.msg.assistant h2{font-size:1.3em}
+.msg.assistant h3{font-size:1.18em}
+.msg.assistant h4,.msg.assistant h5,
+.msg.assistant h6{font-size:1.08em}
+.msg.assistant ul,.msg.assistant ol{
+ margin:0 0 12px;padding-left:25px
+}
+.msg.assistant li{margin:5px 0}
+.msg.assistant blockquote{
+ margin:8px 0 12px;padding:4px 0 4px 13px;
+ border-left:3px solid #8b5cf6;color:#b9bfd3
+}
+.msg.assistant code{
+ padding:2px 5px;border-radius:5px;
+ background:#202438;font-size:.9em
+}
+.msg.assistant pre{
+ overflow:auto;padding:12px;border-radius:10px;
+ background:#171b2a
+}
+.msg.assistant pre code{padding:0;background:none}
+.msg.assistant hr{
+ border:0;border-top:1px solid #33384d;
+ margin:14px 0
 }
 .assistant-label{
- color:#bcaaff;
- font-size:12px;
- font-weight:650;
- letter-spacing:.3px;
- margin-bottom:3px
+ color:#bcaaff;font-size:12px;font-weight:650;
+ letter-spacing:.3px;margin-bottom:3px
 }
 .actions{
- display:flex;
- align-items:center;
- gap:8px;
- min-height:25px
+ display:flex;align-items:center;gap:8px;min-height:25px
 }
 .user-row .actions{justify-content:flex-end}
 .copy-btn{
- display:inline-flex;
- align-items:center;
- gap:6px;
- border:0;
- background:transparent;
- color:#919ab2;
+ display:inline-flex;align-items:center;gap:6px;
+ border:0;background:transparent;color:#919ab2;
  font:12px -apple-system,BlinkMacSystemFont,
  'Segoe UI',sans-serif;
- padding:5px 4px;
- cursor:pointer;
+ padding:5px 4px;cursor:pointer;
  -webkit-tap-highlight-color:transparent
 }
 .copy-btn:active{color:#e0d8ff}
 .copy-btn svg{
  width:15px;height:15px;
- fill:none;stroke:currentColor;
- stroke-width:1.7;
- stroke-linecap:round;
- stroke-linejoin:round
-}
-
-/* Мягкое появление нового текста */
-.streaming-text{
- transition:opacity .12s ease
+ fill:none;stroke:currentColor;stroke-width:1.7;
+ stroke-linecap:round;stroke-linejoin:round
 }
 .streaming-cursor{
- display:inline-block;
- width:2px;height:1em;
- margin-left:3px;
- background:#bcaaff;
- vertical-align:-2px;
- border-radius:2px;
+ display:inline-block;width:2px;height:1em;
+ margin-left:3px;background:#bcaaff;
+ vertical-align:-2px;border-radius:2px;
  animation:cursorPulse 1s ease-in-out infinite
 }
 @keyframes cursorPulse{
@@ -166,7 +178,6 @@ header strong{letter-spacing:2px;font-size:19px}
 @media(prefers-reduced-motion:reduce){
  .streaming-cursor{animation:none}
 }
-
 .notice{
  align-self:center;font-size:12px;color:#bcaaff;
  background:#252044;border:1px solid #51448c;
@@ -201,49 +212,29 @@ footer{
 <strong>✦ ANNIVEO AI</strong>
 <span class="tag">MINI APP</span>
 </header>
-
 <div class="mode">
  <div class="mode-title">
   <span class="shield">🛡️</span>
   <div>
    <div class="mode-name">Анонимный чат</div>
-   <div class="mode-status" id="modeStatus">
-    История сохраняется
-   </div>
+   <div class="mode-status" id="modeStatus">История сохраняется</div>
   </div>
  </div>
- <button
-  type="button"
-  id="modeSwitch"
-  class="switch"
-  role="switch"
-  aria-checked="false"
-  aria-label="Анонимный чат">
- </button>
+ <button type="button" id="modeSwitch" class="switch"
+  role="switch" aria-checked="false"
+  aria-label="Анонимный чат"></button>
 </div>
-
 <section class="chat" id="chat"></section>
-
 <form id="form">
- <textarea
-  id="message"
-  rows="1"
-  maxlength="4000"
-  placeholder="Напиши сообщение…"
-  aria-label="Сообщение"></textarea>
- <button id="send" type="submit"
-  aria-label="Отправить">➤</button>
+ <textarea id="message" rows="1" maxlength="4000"
+  placeholder="Напиши сообщение…" aria-label="Сообщение"></textarea>
+ <button id="send" type="submit" aria-label="Отправить">➤</button>
 </form>
-
-<footer>
- ANNIVEO AI · Твой интеллектуальный помощник
-</footer>
+<footer>ANNIVEO AI · Твой интеллектуальный помощник</footer>
 </main>
-
 <script>
 const API_URL =
  "https://anniveo-ai-api.yaylaevismail.workers.dev/";
-
 const tg = window.Telegram?.WebApp;
 const chat = document.getElementById("chat");
 const form = document.getElementById("form");
@@ -251,19 +242,15 @@ const input = document.getElementById("message");
 const send = document.getElementById("send");
 const modeSwitch = document.getElementById("modeSwitch");
 const modeStatus = document.getElementById("modeStatus");
-
 if (tg) {
  tg.ready();
  tg.expand();
 }
-
 const initData = tg?.initData || "";
 const userId = tg?.initDataUnsafe?.user?.id;
-
 const CACHE_KEY = userId
  ? "anniveo_chat_cache_v3_" + userId
  : null;
-
 let history = [];
 let temporaryHistory = [];
 let anonymous = false;
@@ -271,13 +258,9 @@ let busy = false;
 let loaded = false;
 let historyVersion = 0;
 let syncing = false;
-
-const sleep = ms =>
- new Promise(resolve => setTimeout(resolve, ms));
-
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 function validMessages(messages) {
  if (!Array.isArray(messages)) return [];
-
  return messages.filter(item =>
   item &&
   ["user","assistant"].includes(item.role) &&
@@ -287,86 +270,183 @@ function validMessages(messages) {
   content:item.content
  }));
 }
-
 function saveCache(messages) {
  if (!CACHE_KEY) return;
-
  try {
-  localStorage.setItem(
-   CACHE_KEY,
-   JSON.stringify(validMessages(messages))
-  );
+  localStorage.setItem(CACHE_KEY, JSON.stringify(validMessages(messages)));
  } catch(e) {}
 }
-
 function readCache() {
  if (!CACHE_KEY) return [];
-
  try {
-  return validMessages(
-   JSON.parse(localStorage.getItem(CACHE_KEY) || "[]")
-  );
+  return validMessages(JSON.parse(localStorage.getItem(CACHE_KEY) || "[]"));
  } catch(e) {
   return [];
  }
 }
-
 function showWelcome() {
  const welcome = document.createElement("div");
  welcome.className = "welcome";
  welcome.id = "welcome";
-
  welcome.innerHTML = `
   <div class="orb">✦</div>
   <h1>Привет! Я ANNIVEO AI</h1>
   <p>Твой интеллектуальный помощник.
   Задай вопрос, чтобы начать диалог.</p>
  `;
-
  chat.appendChild(welcome);
 }
-
+/* Безопасно оформляет Markdown: текст ответа не вставляется как HTML. */
 function formatAnswer(element, text) {
  element.replaceChildren();
-
- const parts = String(text).split(
-  /(\*\*[\s\S]+?\*\*)/g
- );
-
- parts.forEach(part => {
-  if (
-   part.startsWith("**") &&
-   part.endsWith("**") &&
-   part.length > 4
-  ) {
-   const strong = document.createElement("strong");
-   strong.textContent = part.slice(2, -2);
-   element.appendChild(strong);
-  } else {
-   element.appendChild(
-    document.createTextNode(part)
-   );
+ function inline(parent, value) {
+  const pattern =
+   /(\*\*[^*]+?\*\*|__[^_]+?__|`[^`]+`|\*[^*\n]+?\*|_[^_\n]+?_)/g;
+  let last = 0;
+  let match;
+  while ((match = pattern.exec(value)) !== null) {
+   if (match.index > last) {
+    parent.appendChild(
+     document.createTextNode(value.slice(last, match.index))
+    );
+   }
+   const token = match[0];
+   let node;
+   if (token.startsWith("**") || token.startsWith("__")) {
+    node = document.createElement("strong");
+    node.textContent = token.slice(2, -2);
+   } else if (token.startsWith("`")) {
+    node = document.createElement("code");
+    node.textContent = token.slice(1, -1);
+   } else {
+    node = document.createElement("em");
+    node.textContent = token.slice(1, -1);
+   }
+   parent.appendChild(node);
+   last = pattern.lastIndex;
   }
- });
-}
-
-function scrollChat(force = false) {
- const distance =
-  chat.scrollHeight -
-  chat.scrollTop -
-  chat.clientHeight;
-
- if (force || distance < 180) {
-  chat.scrollTop = chat.scrollHeight;
+  if (last < value.length) {
+   parent.appendChild(document.createTextNode(value.slice(last)));
+  }
  }
+ const lines = String(text).replace(/\r/g, "").split("\n");
+ let paragraph = [];
+ let list = null;
+ let listType = "";
+ let quote = [];
+ let code = [];
+ let inCode = false;
+ function flushParagraph() {
+  if (!paragraph.length) return;
+  const p = document.createElement("p");
+  inline(p, paragraph.join(" "));
+  element.appendChild(p);
+  paragraph = [];
+ }
+ function flushList() {
+  list = null;
+  listType = "";
+ }
+ function flushQuote() {
+  if (!quote.length) return;
+  const block = document.createElement("blockquote");
+  const p = document.createElement("p");
+  inline(p, quote.join(" "));
+  block.appendChild(p);
+  element.appendChild(block);
+  quote = [];
+ }
+ function flushCode() {
+  const pre = document.createElement("pre");
+  const codeElement = document.createElement("code");
+  codeElement.textContent = code.join("\n");
+  pre.appendChild(codeElement);
+  element.appendChild(pre);
+  code = [];
+ }
+ for (const line of lines) {
+  if (/^\s*```/.test(line)) {
+   flushParagraph();
+   flushList();
+   flushQuote();
+   if (inCode) {
+    flushCode();
+    inCode = false;
+   } else {
+    inCode = true;
+   }
+   continue;
+  }
+  if (inCode) {
+   code.push(line);
+   continue;
+  }
+  if (!line.trim()) {
+   flushParagraph();
+   flushList();
+   flushQuote();
+   continue;
+  }
+  const heading = line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
+  if (heading) {
+   flushParagraph();
+   flushList();
+   flushQuote();
+   const h = document.createElement("h" + heading[1].length);
+   inline(h, heading[2]);
+   element.appendChild(h);
+   continue;
+  }
+  if (/^\s*(---+|\*\*\*+|___+)\s*$/.test(line)) {
+   flushParagraph();
+   flushList();
+   flushQuote();
+   element.appendChild(document.createElement("hr"));
+   continue;
+  }
+  const bullet = line.match(/^\s*[-*+]\s+(.+)$/);
+  const numbered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+  const item = bullet || numbered;
+  if (item) {
+   flushParagraph();
+   flushQuote();
+   const type = bullet ? "ul" : "ol";
+   if (!list || listType !== type) {
+    flushList();
+    list = document.createElement(type);
+    listType = type;
+    element.appendChild(list);
+   }
+   const li = document.createElement("li");
+   inline(li, item[1]);
+   list.appendChild(li);
+   continue;
+  }
+  const quoted = line.match(/^\s*>\s?(.*)$/);
+  if (quoted) {
+   flushParagraph();
+   flushList();
+   quote.push(quoted[1]);
+   continue;
+  }
+  flushList();
+  flushQuote();
+  paragraph.push(line.trim());
+ }
+ if (inCode) flushCode();
+ flushParagraph();
+ flushList();
+ flushQuote();
 }
-
+function scrollChat(force = false) {
+ const distance = chat.scrollHeight - chat.scrollTop - chat.clientHeight;
+ if (force || distance < 180) chat.scrollTop = chat.scrollHeight;
+}
 const COPY_ICON = `
 <svg viewBox="0 0 24 24" aria-hidden="true">
 <rect x="8" y="8" width="12" height="12" rx="2"/>
 <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>
 </svg>`;
-
 async function copyText(text) {
  if (navigator.clipboard?.writeText) {
   try {
@@ -374,8 +454,6 @@ async function copyText(text) {
    return true;
   } catch {}
  }
-
- // Запасной способ для некоторых версий Telegram WebView.
  const area = document.createElement("textarea");
  area.value = text;
  area.style.position = "fixed";
@@ -384,577 +462,341 @@ async function copyText(text) {
  document.body.appendChild(area);
  area.focus();
  area.select();
-
  let copied = false;
-
  try {
   copied = document.execCommand("copy");
  } catch {}
-
  area.remove();
  return copied;
 }
-
 function add(text, role) {
  document.getElementById("welcome")?.remove();
-
  const row = document.createElement("div");
- row.className =
-  "message-row " + role + "-row";
-
+ row.className = "message-row " + role + "-row";
  if (role === "assistant") {
   const label = document.createElement("div");
   label.className = "assistant-label";
   label.textContent = "✦ ANNIVEO AI";
   row.appendChild(label);
  }
-
  const el = document.createElement("div");
  el.className = "msg " + role;
-
- if (role === "assistant") {
-  formatAnswer(el, text);
- } else {
-  el.textContent = text;
- }
-
+ if (role === "assistant") formatAnswer(el, text);
+ else el.textContent = text;
  row.appendChild(el);
-
  const actions = document.createElement("div");
  actions.className = "actions";
-
  const copy = document.createElement("button");
  copy.type = "button";
  copy.className = "copy-btn";
  copy.innerHTML = COPY_ICON;
-
  const copyLabel = document.createElement("span");
  copyLabel.textContent = "Копировать";
  copy.appendChild(copyLabel);
-
  let rawText = String(text);
-
  copy.addEventListener("click", async () => {
   const ok = await copyText(rawText);
-
-  copyLabel.textContent =
-   ok ? "Скопировано" : "Не удалось скопировать";
-
-  setTimeout(() => {
-   copyLabel.textContent = "Копировать";
-  }, 1800);
+  copyLabel.textContent = ok ? "Скопировано" : "Не удалось скопировать";
+  setTimeout(() => { copyLabel.textContent = "Копировать"; }, 1800);
  });
-
  actions.appendChild(copy);
  row.appendChild(actions);
-
  chat.appendChild(row);
  scrollChat(true);
-
- // Совместимый с прежним кодом интерфейс:
- // возвращаем элемент сообщения, но добавляем
- // возможность менять текст для копирования.
- el.setRawText = value => {
-  rawText = String(value);
- };
-
+ el.setRawText = value => { rawText = String(value); };
  return el;
 }
-
 function renderMessages(messages) {
  chat.replaceChildren();
-
  if (!messages.length) {
   showWelcome();
   return;
  }
-
- messages.forEach(item =>
-  add(item.content, item.role)
- );
+ messages.forEach(item => add(item.content, item.role));
 }
-
 function showNotice(text) {
  const el = document.createElement("div");
  el.className = "notice";
  el.textContent = text;
  chat.prepend(el);
 }
-
 function updateMode() {
  modeSwitch.classList.toggle("active", anonymous);
- modeSwitch.setAttribute(
-  "aria-checked", String(anonymous)
- );
-
+ modeSwitch.setAttribute("aria-checked", String(anonymous));
  modeStatus.textContent = anonymous
   ? "История не сохраняется"
   : "История сохраняется";
 }
-
 function setBusy(value) {
  busy = value;
  send.disabled = value || !loaded;
  modeSwitch.disabled = value;
 }
-
 function createRequestId() {
- if (crypto.randomUUID) {
-  return crypto.randomUUID();
- }
-
+ if (crypto.randomUUID) return crypto.randomUUID();
  const bytes = new Uint8Array(16);
  crypto.getRandomValues(bytes);
-
  return Array.from(bytes)
   .map(n => n.toString(16).padStart(2,"0"))
   .join("");
 }
-
 async function api(payload, timeoutMs = 42000) {
  const controller = new AbortController();
- const timer = setTimeout(
-  () => controller.abort(),
-  timeoutMs
- );
-
+ const timer = setTimeout(() => controller.abort(), timeoutMs);
  try {
   const response = await fetch(API_URL, {
    method:"POST",
    signal:controller.signal,
-   headers:{
-    "Content-Type":"application/json"
-   },
-   body:JSON.stringify({
-    ...payload,
-    initData
-   })
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({...payload, initData})
   });
-
   let data;
-
   try {
    data = await response.json();
   } catch {
-   const error = new Error(
-    "Сервер вернул некорректный ответ"
-   );
+   const error = new Error("Сервер вернул некорректный ответ");
    error.retryable = response.status >= 500;
    throw error;
   }
-
   if (response.status === 202 && data.processing) {
-   return { processing:true };
+   return {processing:true};
   }
-
   if (!response.ok) {
-   const error = new Error(
-    data.error || "Ошибка сервера"
-   );
+   const error = new Error(data.error || "Ошибка сервера");
    error.status = response.status;
    throw error;
   }
-
   return data;
-
  } catch(error) {
   if (error.name === "AbortError") {
-   const e = new Error(
-    "Превышено время ожидания ответа"
-   );
+   const e = new Error("Превышено время ожидания ответа");
    e.retryable = true;
    throw e;
   }
-
   if (error instanceof TypeError) {
-   const e = new Error(
-    "Соединение временно недоступно"
-   );
+   const e = new Error("Соединение временно недоступно");
    e.retryable = true;
    throw e;
   }
-
   throw error;
-
  } finally {
   clearTimeout(timer);
  }
 }
-
 function canRetry(error) {
  return error.retryable ||
   error.status === 408 ||
   error.status === 429 ||
   error.status >= 500;
 }
-
-// Плавное отображение уже поступивших частей ответа.
-// Не задерживает запрос к нейросети.
 function createSmoothWriter(element) {
  let target = "";
  let shown = "";
  let frame = null;
  let lastTime = 0;
  let finished = false;
-
  const cursor = document.createElement("span");
  cursor.className = "streaming-cursor";
-
  const draw = () => {
   formatAnswer(element, shown);
-
-  if (!finished) {
-   element.appendChild(cursor);
-  }
-
+  if (!finished) element.appendChild(cursor);
   element.setRawText(shown);
   scrollChat();
  };
-
  const step = timestamp => {
   frame = null;
-
-  const delta = lastTime
-   ? Math.min(timestamp - lastTime, 100)
-   : 16;
-
+  const delta = lastTime ? Math.min(timestamp - lastTime, 100) : 16;
   lastTime = timestamp;
-
   if (shown.length < target.length) {
    const remaining = target.length - shown.length;
-
-   // Около 45–90 символов в секунду.
-   // При большом отставании слегка ускоряемся,
-   // чтобы анимация не тянулась слишком долго.
-   const amount = Math.max(
-    1,
-    Math.min(
-     remaining,
-     Math.ceil(
-      (delta / 1000) *
-      (remaining > 350 ? 180 :
-       remaining > 120 ? 110 : 70)
-     )
-    )
-   );
-
-   shown = target.slice(
-    0,
-    shown.length + amount
-   );
-
+   const amount = Math.max(1, Math.min(
+    remaining,
+    Math.ceil((delta / 1000) *
+     (remaining > 350 ? 180 : remaining > 120 ? 110 : 70))
+   ));
+   shown = target.slice(0, shown.length + amount);
    draw();
   }
-
   if (shown.length < target.length) {
    frame = requestAnimationFrame(step);
   }
  };
-
  const schedule = () => {
   if (frame === null && shown.length < target.length) {
    frame = requestAnimationFrame(step);
   }
  };
-
  return {
   update(text) {
    target = String(text);
    finished = false;
    schedule();
   },
-
-  // По завершении генерации плавно
-  // допечатываем остаток текста.
   async finish(text) {
    target = String(text);
-
    while (shown.length < target.length) {
     schedule();
     await sleep(30);
    }
-
    finished = true;
    draw();
   },
-
   stop(text) {
    if (frame !== null) {
     cancelAnimationFrame(frame);
     frame = null;
    }
-
    finished = true;
    shown = String(text);
    target = shown;
    draw();
   },
-
-  getText() {
-   return target;
-  }
+  getText() { return target; }
  };
 }
-
 async function streamAPI(payload, onToken) {
  const controller = new AbortController();
-
  let timer;
  let reader;
  let receivedText = false;
  let completed = false;
  let answer = "";
  let buffer = "";
-
  const decoder = new TextDecoder();
-
  const resetTimer = () => {
   clearTimeout(timer);
-  timer = setTimeout(
-   () => controller.abort(),
-   45000
-  );
+  timer = setTimeout(() => controller.abort(), 45000);
  };
-
  const processEvent = rawEvent => {
-  const raw = rawEvent
-   .split("\n")
+  const raw = rawEvent.split("\n")
    .filter(line => line.startsWith("data:"))
    .map(line => line.slice(5).trimStart())
    .join("\n");
-
   if (!raw.trim()) return;
-
   let data;
-
-  try {
-   data = JSON.parse(raw);
-  } catch {
-   return;
+  try { data = JSON.parse(raw); }
+  catch { return; }
+  if (data.type === "token" && typeof data.content === "string") {
+   answer += data.content;
+   receivedText = true;
+   onToken(answer);
   }
-
-  if (data.type === "token") {
-   if (typeof data.content === "string") {
-    answer += data.content;
-    receivedText = true;
-    onToken(answer);
-   }
-  }
-
   if (data.type === "done") {
    completed = true;
-
    if (typeof data.reply === "string") {
     answer = data.reply;
     onToken(answer);
    }
   }
-
   if (data.type === "error") {
-   const error = new Error(
-    data.error || "Ошибка генерации"
-   );
+   const error = new Error(data.error || "Ошибка генерации");
    error.partial = receivedText;
    throw error;
   }
  };
-
  try {
   resetTimer();
-
   const response = await fetch(API_URL, {
    method:"POST",
    signal:controller.signal,
-   headers:{
-    "Content-Type":"application/json"
-   },
-   body:JSON.stringify({
-    ...payload,
-    stream:true,
-    initData
-   })
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({...payload, stream:true, initData})
   });
-
-  if (response.status === 202) {
-   return { processing:true };
-  }
-
+  if (response.status === 202) return {processing:true};
   if (!response.ok) {
    let data = {};
-
-   try {
-    data = await response.json();
-   } catch {}
-
-   const error = new Error(
-    data.error || "Ошибка сервера"
-   );
+   try { data = await response.json(); } catch {}
+   const error = new Error(data.error || "Ошибка сервера");
    error.status = response.status;
    throw error;
   }
-
-  const contentType =
-   response.headers.get("content-type") || "";
-
+  const contentType = response.headers.get("content-type") || "";
   if (!contentType.includes("text/event-stream")) {
    const data = await response.json();
-
    if (typeof data.reply !== "string") {
-    throw new Error(
-     "Сервер вернул некорректный ответ"
-    );
+    throw new Error("Сервер вернул некорректный ответ");
    }
-
    answer = data.reply;
    completed = true;
    onToken(answer);
-
    return {reply:answer};
   }
-
   if (!response.body) {
-   throw new Error(
-    "Потоковая передача недоступна"
-   );
+   throw new Error("Потоковая передача недоступна");
   }
-
   reader = response.body.getReader();
-
   while (true) {
    resetTimer();
-
    const {done,value} = await reader.read();
-
    if (done) break;
-
-   buffer += decoder.decode(
-    value,
-    {stream:true}
-   ).replace(/\r\n/g,"\n");
-
+   buffer += decoder.decode(value, {stream:true})
+    .replace(/\r\n/g,"\n");
    let boundary;
-
-   while (
-    (boundary = buffer.indexOf("\n\n")) !== -1
-   ) {
+   while ((boundary = buffer.indexOf("\n\n")) !== -1) {
     const eventText = buffer.slice(0,boundary);
     buffer = buffer.slice(boundary + 2);
     processEvent(eventText);
    }
-
    if (completed) break;
   }
-
   if (!completed) {
-   throw new Error(
-    "Соединение прервалось до завершения ответа"
-   );
+   throw new Error("Соединение прервалось до завершения ответа");
   }
-
-  if (!answer.trim()) {
-   throw new Error("ИИ вернул пустой ответ");
-  }
-
+  if (!answer.trim()) throw new Error("ИИ вернул пустой ответ");
   return {reply:answer};
-
  } catch(error) {
   if (error.name === "AbortError") {
-   const e = new Error(
-    "Превышено время ожидания ответа"
-   );
+   const e = new Error("Превышено время ожидания ответа");
    e.retryable = true;
    e.partial = receivedText;
    throw e;
   }
-
   if (error instanceof TypeError) {
-   const e = new Error(
-    "Соединение временно недоступно"
-   );
+   const e = new Error("Соединение временно недоступно");
    e.retryable = true;
    e.partial = receivedText;
    throw e;
   }
-
-  if (receivedText) {
-   error.partial = true;
-  }
-
+  if (receivedText) error.partial = true;
   throw error;
-
  } finally {
   clearTimeout(timer);
-
   if (reader) {
-   try {
-    await reader.cancel();
-   } catch {}
+   try { await reader.cancel(); } catch {}
   }
-
   controller.abort();
  }
 }
-
-async function sendWithRecovery(
- payload,
- pending,
- onToken
-) {
- const isAnonymous =
-  payload.action === "anonymous";
-
+async function sendWithRecovery(payload, pending, onToken) {
+ const isAnonymous = payload.action === "anonymous";
  const maxAttempts = isAnonymous ? 3 : 5;
-
- for (
-  let attempt = 0;
-  attempt < maxAttempts;
-  attempt++
- ) {
+ for (let attempt = 0; attempt < maxAttempts; attempt++) {
   if (attempt > 0) {
    pending.textContent =
-    "Восстанавливаю соединение…\n" +
-    "Попытка " + (attempt + 1) +
-    " из " + maxAttempts;
-
+    "Восстанавливаю соединение…\nПопытка " +
+    (attempt + 1) + " из " + maxAttempts;
    pending.setRawText(pending.textContent);
    scrollChat();
-
-   await sleep(Math.min(
-    1200 * attempt,
-    3500
-   ));
+   await sleep(Math.min(1200 * attempt, 3500));
   }
-
   let receivedText = false;
-
   try {
-   const data = await streamAPI(
-    payload,
-    text => {
-     receivedText = true;
-     onToken(text);
-    }
-   );
-
+   const data = await streamAPI(payload, text => {
+    receivedText = true;
+    onToken(text);
+   });
    if (data.processing) {
     if (attempt === maxAttempts - 1) {
      throw new Error(
-      "Запрос ещё обрабатывается. " +
-      "Подожди немного и открой чат снова."
+      "Запрос ещё обрабатывается. Подожди немного и открой чат снова."
      );
     }
     continue;
    }
-
-   if (
-    typeof data.reply !== "string" ||
-    !data.reply.trim()
-   ) {
+   if (typeof data.reply !== "string" || !data.reply.trim()) {
     throw new Error("ИИ вернул пустой ответ");
    }
-
    return data;
-
   } catch(error) {
    if (
     receivedText ||
@@ -966,175 +808,103 @@ async function sendWithRecovery(
    }
   }
  }
-
- throw new Error(
-  "Не удалось получить ответ сервера"
- );
+ throw new Error("Не удалось получить ответ сервера");
 }
-
 async function fetchHistory() {
- const data = await api(
-  {action:"history"},
-  15000
- );
-
+ const data = await api({action:"history"}, 15000);
  return validMessages(data.messages);
 }
-
 async function synchronizeHistory() {
  if (syncing || !initData || !userId) return;
-
  syncing = true;
  const version = historyVersion;
-
  try {
   const serverHistory = await fetchHistory();
-
   if (version !== historyVersion) return;
-
   history = serverHistory;
   saveCache(history);
-
-  if (!anonymous && !busy) {
-   renderMessages(history);
-  }
-
+  if (!anonymous && !busy) renderMessages(history);
  } catch(error) {
   if (!anonymous && !busy) {
-   showNotice(
-    "Облачная синхронизация временно недоступна"
-   );
+   showNotice("Облачная синхронизация временно недоступна");
   }
  } finally {
   syncing = false;
  }
 }
-
 async function loadHistory() {
  if (!initData || !userId) {
   renderMessages([]);
-  add(
-   "Открой ANNIVEO AI через Telegram.",
-   "assistant"
-  );
+  add("Открой ANNIVEO AI через Telegram.", "assistant");
   return;
  }
-
  history = readCache();
  renderMessages(history);
-
  loaded = true;
  send.disabled = false;
-
  await synchronizeHistory();
 }
-
 modeSwitch.addEventListener("click", () => {
  if (busy || !loaded) return;
-
  anonymous = !anonymous;
  input.value = "";
-
  if (anonymous) {
   temporaryHistory = [];
   renderMessages([]);
   showNotice(
-   "🔒 Анонимный чат включён. " +
-   "История не сохраняется в ANNIVEO AI."
+   "🔒 Анонимный чат включён. История не сохраняется в ANNIVEO AI."
   );
  } else {
   temporaryHistory = [];
   renderMessages(history);
   synchronizeHistory();
  }
-
  updateMode();
 });
-
 form.addEventListener("submit", async event => {
  event.preventDefault();
-
  if (busy || !loaded) return;
-
  const text = input.value.trim();
  if (!text) return;
-
  const currentMode = anonymous;
-
  const context = currentMode
   ? validMessages(temporaryHistory).slice(-12)
   : [];
-
  const payload = currentMode
-  ? {
-     action:"anonymous",
-     message:text,
-     messages:context
-    }
-  : {
-     action:"chat",
-     message:text,
-     requestId:createRequestId()
-    };
-
+  ? {action:"anonymous", message:text, messages:context}
+  : {action:"chat", message:text, requestId:createRequestId()};
  setBusy(true);
-
  add(text,"user");
  input.value = "";
-
- const pending = add(
-  "ANNIVEO AI думает…",
-  "assistant"
- );
-
+ const pending = add("ANNIVEO AI думает…","assistant");
  const writer = createSmoothWriter(pending);
  let partialAnswer = "";
-
  try {
-  const data = await sendWithRecovery(
-   payload,
-   pending,
-   text => {
-    partialAnswer = text;
-    writer.update(text);
-   }
-  );
-
+  const data = await sendWithRecovery(payload, pending, text => {
+   partialAnswer = text;
+   writer.update(text);
+  });
   await writer.finish(data.reply);
   scrollChat();
-
   const pair = [
    {role:"user",content:text},
    {role:"assistant",content:data.reply}
   ];
-
   if (currentMode) {
-   temporaryHistory = validMessages([
-    ...temporaryHistory,
-    ...pair
-   ]);
-
+   temporaryHistory = validMessages([...temporaryHistory,...pair]);
   } else {
-   history = validMessages([
-    ...history,
-    ...pair
-   ]);
-
+   history = validMessages([...history,...pair]);
    historyVersion++;
    saveCache(history);
   }
-
  } catch(error) {
   if (partialAnswer.trim()) {
    writer.stop(partialAnswer);
-
    const note = document.createElement("div");
    note.className = "notice";
    note.textContent =
-    "Ответ прервался. " +
-    "Попробуй отправить вопрос ещё раз.";
+    "Ответ прервался. Попробуй отправить вопрос ещё раз.";
    chat.appendChild(note);
-
   } else {
    writer.stop(
     "Не удалось получить ответ.\n" +
@@ -1142,45 +912,33 @@ form.addEventListener("submit", async event => {
     "\nПроверь соединение и попробуй позже."
    );
   }
-
   if (!currentMode) {
    await sleep(1000);
-
    try {
     const serverHistory = await fetchHistory();
     history = serverHistory;
     historyVersion++;
     saveCache(history);
-
-    if (!partialAnswer.trim()) {
-     renderMessages(history);
-    }
+    if (!partialAnswer.trim()) renderMessages(history);
    } catch {}
   }
-
  } finally {
   setBusy(false);
   input.focus();
  }
 });
-
 input.addEventListener("keydown", event => {
- if (
-  event.key === "Enter" &&
-  !event.shiftKey
- ) {
+ if (event.key === "Enter" && !event.shiftKey) {
   event.preventDefault();
   form.requestSubmit();
  }
 });
-
 if (initData && userId) {
  history = readCache();
  renderMessages(history);
 } else {
  showWelcome();
 }
-
 updateMode();
 loadHistory();
 </script>
