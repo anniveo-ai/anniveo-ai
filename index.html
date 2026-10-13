@@ -1,843 +1,917 @@
 
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#101219">
+<meta name="theme-color" content="#101119">
 <title>ANNIVEO AI</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
 <style>
 :root{
- color-scheme:dark;
- --bg:#101219;
- --panel:#191c25;
- --line:#343441;
- --muted:#a19caf;
- --accent:#c3a5ff;
+  color-scheme:dark;
+  --bg:#101119;
+  --panel:#1c1d28;
+  --line:#343341;
+  --purple:#c6a6ff;
+  --muted:#aaa5bb;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
 body{
- margin:0;
- background:radial-gradient(ellipse at 50% 20%,#29203950,transparent 55%),var(--bg);
- color:#f4f3fc;
- font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  margin:0;
+  background:radial-gradient(ellipse at 50% 12%,#30213d55,transparent 60%),var(--bg);
+  color:#f6f3ff;
+  font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
-button,input,textarea,select{font:inherit;color:inherit}
+button,textarea,select{font:inherit;color:inherit}
 button{cursor:pointer}
-button:disabled{opacity:.5;cursor:default}
-svg{
- width:23px;height:23px;fill:none;
- stroke:currentColor;stroke-width:1.7;
- stroke-linecap:round;stroke-linejoin:round;
- flex:none;
-}
+button:disabled{opacity:.5}
+.hidden{display:none!important}
 .app{
- max-width:760px;margin:auto;
- padding:14px 16px calc(165px + env(safe-area-inset-bottom));
+  max-width:760px;
+  margin:auto;
+  padding:15px 16px 175px;
 }
 header{
- display:flex;align-items:center;gap:12px;
- padding-bottom:18px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding-bottom:18px;
 }
-.brand{
- display:flex;align-items:center;gap:9px;
- font-size:19px;font-weight:800;
- letter-spacing:1px;white-space:nowrap;
+.logo{
+  font-size:19px;
+  font-weight:800;
+  letter-spacing:1px;
+  white-space:nowrap;
 }
-.brand b,.star{color:var(--accent)}
-.star{font-size:32px;line-height:1}
-.balance{
- margin-left:auto;display:flex;align-items:center;gap:7px;
- padding:8px 12px;border:1px solid #454254;
- background:#1c1d28;border-radius:30px;
- color:var(--accent);font-weight:650;
+.logo span{color:var(--purple)}
+.credit{
+  margin-left:auto;
+  background:#252231;
+  color:#d4b7ff;
+  border:1px solid #4b405b;
+  padding:9px 13px;
+  border-radius:25px;
 }
-.balance svg{width:15px;height:15px}
-.settings{
- display:grid;place-items:center;
- border:0;background:none;padding:5px;
- color:#dedbea;
+.gear{
+  border:0;
+  background:none;
+  font-size:22px;
 }
 .view{display:none}
 .view.active{display:block}
-.hidden{display:none!important}
 
-/* Главный экран */
-.greeting{text-align:center;padding:18px 0 0}
-.greeting h1{
- font-size:30px;letter-spacing:-.8px;
- line-height:1.2;margin:4px 0 6px;
+/* ГЛАВНЫЙ ЭКРАН */
+.welcome{text-align:center}
+.welcome h1{
+  font-size:31px;
+  margin:18px 0 5px;
 }
-.greeting h2{
- font-weight:400;color:#aaa6bd;
- font-size:23px;margin:0;
+.welcome h2{
+  font-size:23px;
+  font-weight:400;
+  color:#b3abc5;
+  margin:0;
+}
+.welcome p{
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.7;
+  margin:5px auto 24px;
+  max-width:470px;
 }
 
-/* 3D-шар */
-.cosmos{
- position:relative;
- height:195px;
- display:grid;
- place-items:center;
- margin:12px 0;
- perspective:650px;
- transform-style:preserve-3d;
- isolation:isolate;
+/* ВРАЩАЮЩИЙСЯ ШАР */
+.universe{
+  position:relative;
+  width:100%;
+  height:220px;
+  margin:5px auto;
+  display:grid;
+  place-items:center;
+  perspective:750px;
+  transform-style:preserve-3d;
+  overflow:visible;
 }
-.orb{
- width:118px;height:118px;
- border-radius:50%;
- position:relative;
- z-index:2;
- overflow:hidden;
- background:
- radial-gradient(ellipse at 67% 13%,#efbfff 0%,#ab82f3 17%,transparent 31%),
- radial-gradient(ellipse at 26% 82%,#bf89ff 0%,#775ce6 22%,transparent 48%),
- linear-gradient(145deg,#675497,#191935 55%,#9d87fa);
- box-shadow:
- inset 2px 2px 6px #e6d1ffb0,
- inset -2px -3px 8px #aa9bff,
- 0 0 45px #ae7bfc55;
- animation:orbTurn 16s linear infinite;
+.planet{
+  position:relative;
+  width:126px;
+  height:126px;
+  border-radius:50%;
+  z-index:3;
+  background:
+    radial-gradient(circle at 68% 18%,#f3d0ff 0%,#ba93ff 12%,transparent 32%),
+    radial-gradient(circle at 20% 78%,#a27dff,transparent 48%),
+    linear-gradient(145deg,#b68cf2,#4b397a 55%,#a58ff5);
+  box-shadow:
+    inset -9px -12px 20px #21183f88,
+    inset 7px 6px 13px #fff4,
+    0 0 50px #ad7cff66;
+  animation:planetSpin 14s linear infinite;
 }
-.orb:before{
- content:"";position:absolute;
- inset:23% -16% 24%;
- border:2px solid #c4a3fc88;
- border-radius:45%;
- transform:rotate(24deg);
- box-shadow:0 -12px 0 #aa81e329,0 13px 0 #9673da33;
+.planet::before{
+  content:"";
+  position:absolute;
+  inset:20% -12%;
+  border-radius:50%;
+  border:2px solid #f3dcff55;
+  transform:rotate(-26deg);
 }
-.orb:after{
- content:"";position:absolute;
- left:15%;bottom:10%;
- width:74%;height:31%;
- border-radius:50%;
- transform:rotate(28deg);
- background:linear-gradient(180deg,#ccb3ff77,transparent);
+.planet::after{
+  content:"";
+  position:absolute;
+  left:13%;
+  top:45%;
+  width:80%;
+  height:30%;
+  border-radius:50%;
+  background:linear-gradient(#e9d0ff66,transparent);
+  transform:rotate(25deg);
 }
-.ring{
- position:absolute;
- left:50%;top:50%;
- width:82%;height:92px;
- margin-left:-41%;
- margin-top:-46px;
- border:1.5px solid #a983e17d;
- border-radius:50%;
- box-shadow:0 0 8px #a679ff30;
- pointer-events:none;
- transform-style:preserve-3d;
+.axis-ring{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:250px;
+  height:115px;
+  margin-left:-125px;
+  margin-top:-57.5px;
+  border:2px solid #b28cff9c;
+  border-radius:50%;
+  box-shadow:0 0 12px #ae7cff38;
+  transform-style:preserve-3d;
+  pointer-events:none;
 }
-.ring-one{
- z-index:3;
- animation:ringAxisOne 8s linear infinite;
+.axis-ring.one{
+  z-index:4;
+  animation:axisOne 7s linear infinite;
 }
-.ring-two{
- width:68%;height:78px;
- margin-left:-34%;margin-top:-39px;
- border-color:#ad8ae955;
- z-index:1;
- animation:ringAxisTwo 11s linear infinite;
+.axis-ring.two{
+  width:218px;
+  height:95px;
+  margin-left:-109px;
+  margin-top:-47.5px;
+  border-color:#c2a4ff77;
+  z-index:2;
+  animation:axisTwo 10s linear infinite;
 }
-.ring-three{
- width:90%;height:100px;
- margin-left:-45%;margin-top:-50px;
- border-color:#8e72c530;
- z-index:1;
- animation:ringAxisThree 14s linear infinite;
+.axis-ring.three{
+  width:278px;
+  height:125px;
+  margin-left:-139px;
+  margin-top:-62.5px;
+  border-color:#8b6fc04d;
+  z-index:1;
+  animation:axisThree 13s linear infinite;
 }
-@keyframes orbTurn{
- from{transform:rotate(0deg)}
- to{transform:rotate(360deg)}
+@keyframes planetSpin{
+  from{transform:rotate(0deg)}
+  to{transform:rotate(360deg)}
 }
-@keyframes ringAxisOne{
- from{transform:rotateZ(-25deg) rotateY(0deg)}
- to{transform:rotateZ(-25deg) rotateY(360deg)}
+@keyframes axisOne{
+  from{transform:rotateZ(-25deg) rotateY(0deg)}
+  to{transform:rotateZ(-25deg) rotateY(360deg)}
 }
-@keyframes ringAxisTwo{
- from{transform:rotateZ(65deg) rotateX(0deg)}
- to{transform:rotateZ(65deg) rotateX(360deg)}
+@keyframes axisTwo{
+  from{transform:rotateZ(65deg) rotateX(0deg)}
+  to{transform:rotateZ(65deg) rotateX(360deg)}
 }
-@keyframes ringAxisThree{
- from{transform:rotateZ(15deg) rotateY(0deg)}
- to{transform:rotateZ(15deg) rotateY(-360deg)}
+@keyframes axisThree{
+  from{transform:rotateZ(20deg) rotateY(0deg)}
+  to{transform:rotateZ(20deg) rotateY(-360deg)}
 }
-.dot{
- position:absolute;width:4px;height:4px;
- background:#c9a8ff;border-radius:50%;
- box-shadow:0 0 9px #b68aff;
- animation:twinkle 3s ease-in-out infinite alternate;
+.spark{
+  position:absolute;
+  width:4px;height:4px;
+  background:#d7b6ff;
+  border-radius:50%;
+  box-shadow:0 0 10px #c39aff;
+  animation:blink 2.5s ease-in-out infinite alternate;
 }
-.dot.a{left:15%;top:34%}
-.dot.b{right:12%;top:56%;animation-delay:1s}
-.dot.c{right:25%;top:12%;animation-delay:2s}
-@keyframes twinkle{
- from{opacity:.35;transform:scale(.7)}
- to{opacity:1;transform:scale(1.3)}
+.spark.a{left:14%;top:30%}
+.spark.b{right:17%;top:60%;animation-delay:1s}
+.spark.c{right:28%;top:13%;animation-delay:1.8s}
+@keyframes blink{
+  from{opacity:.2;transform:scale(.6)}
+  to{opacity:1;transform:scale(1.4)}
 }
-.intro{
- max-width:560px;margin:0 auto 20px;
- color:#aaa7bc;font-size:13px;
- line-height:1.7;text-align:center;
-}
-.suggestions{
- display:grid;grid-template-columns:1fr 1fr;gap:9px;
-}
-.suggestion{
- display:flex;align-items:flex-start;gap:10px;
- padding:15px 11px;text-align:left;
- background:linear-gradient(135deg,#1a1c25,#171a22);
- border:1px solid #353541;border-radius:15px;
- min-height:112px;
-}
-.suggestion>svg{
- color:var(--accent);margin-top:2px;width:22px;
-}
-.suggestion strong{
- font-size:12px;font-weight:500;
- line-height:1.4;display:block;
-}
-.suggestion small{
- font-size:10px;line-height:1.4;
- color:var(--muted);display:block;margin-top:8px;
-}
-.section-title{
- display:flex;align-items:center;
- justify-content:space-between;margin:23px 0 12px;
-}
-.section-title h2{font-size:21px;margin:0}
-.section-title button{
- display:flex;align-items:center;gap:5px;
- border:0;background:none;color:var(--muted);
- font-size:10px;padding:0;
-}
-.section-title svg{width:16px}
-.cards{
- display:grid;grid-template-columns:1fr 1fr;gap:9px;
-}
-.creation{
- height:166px;position:relative;overflow:hidden;
- border:1px solid #ffffff20;border-radius:15px;
- text-align:left;padding:12px;background:#252033;
-}
-.creation img{
- position:absolute;inset:0;
- width:100%;height:100%;object-fit:cover;
-}
-.creation:after{
- content:"";position:absolute;inset:0;
- background:linear-gradient(180deg,#11121906 25%,#10121bf2);
-}
-.card-icon{
- position:absolute;z-index:1;left:11px;top:11px;
- display:grid;place-items:center;
- width:31px;height:31px;
- background:#181923b8;border-radius:10px;
-}
-.card-icon svg{width:18px}
-.caption{
- position:absolute;z-index:1;
- left:12px;right:36px;bottom:12px;
-}
-.caption b{font-size:16px}
-.caption small{
- display:block;color:#b7b3c7;
- font-size:10px;line-height:1.35;margin-top:4px;
-}
-.arrow{
- position:absolute;right:10px;bottom:12px;z-index:1;
- width:28px;height:28px;
- border:1px solid #ffffff25;border-radius:50%;
- display:grid;place-items:center;background:#ffffff10;
-}
-.arrow svg{width:15px}
 
-/* Анонимный режим */
+/* КАРТОЧКИ ИДЕЙ */
+.ideas{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:16px;
+}
+.idea{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  text-align:left;
+  background:#1d1e29;
+  border:1px solid #353441;
+  border-radius:15px;
+  padding:15px 10px;
+  min-height:115px;
+}
+.idea .symbol{
+  color:var(--purple);
+  font-size:22px;
+}
+.idea strong{
+  font-size:12px;
+  font-weight:550;
+  line-height:1.45;
+}
+.idea small{
+  display:block;
+  margin-top:8px;
+  color:var(--muted);
+  font-size:10px;
+  line-height:1.4;
+}
+.heading{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin:25px 0 12px;
+}
+.heading h2{font-size:21px;margin:0}
+.heading button{
+  background:none;
+  border:0;
+  color:var(--muted);
+  font-size:11px;
+}
+.tiles{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.tile{
+  position:relative;
+  height:170px;
+  border-radius:16px;
+  border:1px solid #ffffff22;
+  overflow:hidden;
+  text-align:left;
+  background:#2a2436;
+  padding:0;
+}
+.tile img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  position:absolute;
+  inset:0;
+}
+.tile::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg,#0000 30%,#101019ed);
+}
+.tile .tile-icon{
+  position:absolute;
+  top:12px;left:12px;
+  z-index:1;
+  padding:7px;
+  border-radius:9px;
+  background:#15151cb9;
+}
+.tile .tile-text{
+  position:absolute;
+  z-index:1;
+  left:12px;
+  bottom:13px;
+  right:10px;
+}
+.tile b{font-size:16px}
+.tile small{
+  display:block;
+  color:#c1bdce;
+  font-size:10px;
+  margin-top:5px;
+  line-height:1.4;
+}
+
+/* АНОНИМНЫЙ ЧАТ */
 .mode{
- display:flex;align-items:center;gap:10px;
- border:1px solid #32333f;border-radius:15px;
- background:#191b24;padding:12px;margin:12px 0;
+  display:flex;
+  align-items:center;
+  gap:11px;
+  padding:14px;
+  margin:14px 0;
+  border:1px solid #373542;
+  background:#1d1e28;
+  border-radius:16px;
 }
-.mode>svg{color:#bfa5ee;width:21px}
-.mode b{font-size:12px;display:block}
+.mode .shield{font-size:21px;color:var(--purple)}
+.mode b{display:block;font-size:12px}
 .mode small{
- font-size:10px;color:var(--muted);
- display:block;margin-top:3px;
+  display:block;
+  font-size:10px;
+  color:var(--muted);
+  margin-top:4px;
 }
-.toggle{
- margin-left:auto;width:43px;height:26px;
- border:0;border-radius:20px;padding:3px;
- background:#42414e;
+.switch{
+  margin-left:auto;
+  border:0;
+  background:#474451;
+  border-radius:30px;
+  width:45px;height:27px;
+  padding:3px;
+  flex:none;
 }
-.toggle:after{
- content:"";display:block;background:#fff;
- width:20px;height:20px;border-radius:50%;
- transition:transform .2s;
+.switch::after{
+  content:"";
+  display:block;
+  width:21px;height:21px;
+  border-radius:50%;
+  background:white;
+  transition:transform .2s;
 }
-.toggle.on{background:#9975ca}
-.toggle.on:after{transform:translateX(17px)}
-#view-chat.anon-active #welcome{display:none!important}
-#view-chat.anon-active .messages{min-height:35vh}
+.switch.on{background:#9675c5}
+.switch.on::after{transform:translateX(18px)}
 
-/* Сообщения */
+/* ЧАТ */
 .messages{
- display:flex;flex-direction:column;
- gap:19px;padding:10px 1px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  padding:8px 0 20px;
 }
 .message{
- max-width:100%;min-width:0;
- line-height:1.65;font-size:14px;
- overflow-wrap:anywhere;
+  line-height:1.65;
+  font-size:14px;
+  overflow-wrap:anywhere;
 }
 .message.user{
- align-self:flex-end;
- background:#292936;border:1px solid #3b3949;
- border-radius:18px 18px 5px 18px;
- padding:10px 13px;max-width:88%;
- white-space:pre-wrap;
+  align-self:flex-end;
+  max-width:87%;
+  background:#2b2938;
+  border:1px solid #454052;
+  padding:11px 14px;
+  border-radius:17px 17px 5px 17px;
+  white-space:pre-wrap;
 }
-.message.assistant{align-self:stretch}
-.assistant-label{
- font-size:10px;color:#c5a6f0;margin-bottom:5px;
+.message.assistant{
+  align-self:stretch;
+  width:100%;
 }
-.message p{margin:0 0 10px}
-.message h1,.message h2,.message h3{
- font-size:1.1em;margin:14px 0 7px;line-height:1.4;
+.assistant-name{
+  color:var(--purple);
+  font-size:11px;
+  margin-bottom:6px;
 }
-.message ul,.message ol{padding-left:21px;margin:5px 0 12px}
-.message li{margin:4px 0}
-.message pre{
- overflow:auto;background:#1d1f29;
- padding:12px;border-radius:10px;
- white-space:pre;font-size:12px;
+.answer p{margin:0 0 10px}
+.answer h1,.answer h2,.answer h3{
+  font-size:17px;
+  margin:14px 0 8px;
 }
-.message code{
- background:#262735;border-radius:4px;
- padding:1px 4px;font-size:.9em;
+.answer ul,.answer ol{
+  padding-left:22px;
 }
-.message pre code{background:none;padding:0}
-.message blockquote{
- margin:10px 0;padding-left:12px;
- border-left:2px solid #b195da;color:#aaa6bb;
+.answer pre{
+  padding:12px;
+  border-radius:10px;
+  overflow:auto;
+  background:#20212b;
+  font-size:12px;
 }
-.message audio{
- display:block;width:min(250px,65vw);
- height:35px;margin-bottom:7px;
+.answer code{
+  background:#292a35;
+  border-radius:4px;
+  padding:2px 4px;
+}
+.answer pre code{
+  background:none;
+  padding:0;
 }
 .copy{
- padding:4px 0;background:none;
- border:0;color:#878398;font-size:10px;
+  background:none;
+  border:0;
+  color:#a9a2ba;
+  font-size:11px;
+  padding:5px 0;
 }
-.empty{
- padding:35px 12px;text-align:center;
- color:var(--muted);font-size:13px;line-height:1.6;
+.message audio{
+  max-width:240px;
+  display:block;
+  margin-bottom:8px;
 }
 
-/* Поле ввода */
+/* ПОЛЕ ВВОДА */
 .dock{
- position:fixed;
- bottom:calc(72px + env(safe-area-inset-bottom));
- left:50%;transform:translateX(-50%);
- width:min(728px,calc(100% - 30px));
- z-index:10;
+  position:fixed;
+  z-index:20;
+  left:50%;
+  transform:translateX(-50%);
+  bottom:calc(75px + env(safe-area-inset-bottom));
+  width:min(730px,calc(100% - 30px));
 }
-.compose{
- display:flex;align-items:center;gap:8px;
- padding:7px 8px;border:1px solid #9381bb;
- border-radius:30px;background:#20222eec;
- backdrop-filter:blur(20px);
- box-shadow:0 0 17px #ad85f514;
+.composer{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:7px;
+  background:#242431f2;
+  backdrop-filter:blur(18px);
+  border:1px solid #8e79b2;
+  border-radius:30px;
 }
-.compose textarea{
- min-width:0;flex:1;resize:none;
- background:none;border:0;outline:none;
- padding:8px 0;min-height:36px;
- max-height:90px;font-size:14px;line-height:1.4;
+.composer textarea{
+  background:none;
+  border:0;
+  outline:none;
+  resize:none;
+  flex:1;
+  min-width:0;
+  min-height:36px;
+  max-height:95px;
+  padding:8px 0;
+  font-size:14px;
 }
-.compose textarea::placeholder{color:#9290a6}
-.round{
- width:34px;height:34px;flex:none;
- border:1px solid #ffffff12;border-radius:50%;
- background:#343543;display:grid;place-items:center;
+.circle{
+  border:0;
+  border-radius:50%;
+  width:37px;
+  height:37px;
+  background:#393947;
+  flex:none;
+  font-size:20px;
 }
-.round svg{width:19px}
-.mic{background:#2a2c38}
-.mic.recording{background:#673547;color:#ffd3df}
 .send{
- height:39px;width:39px;color:#171024;
- background:linear-gradient(135deg,#d3b4ff,#ab7de6);
- box-shadow:inset 0 1px 3px #f4dfff;
+  background:linear-gradient(130deg,#d7bbff,#a67cdb);
+  color:#241833;
 }
-.send svg{width:22px}
-.chatstatus{
- padding:5px 15px 0;font-size:10px;
- color:#c9b3e8;min-height:5px;
+.recording{background:#8e3f58}
+.status{
+  font-size:11px;
+  color:#cdb7e9;
+  padding:6px 14px;
 }
-.chatstatus:empty{display:none}
+.status:empty{display:none}
 
-/* Нижнее меню */
+/* НИЖНЕЕ МЕНЮ */
 nav{
- position:fixed;bottom:0;left:0;right:0;z-index:11;
- background:#191b24ed;
- border-top:1px solid #30323e;
- border-radius:22px 22px 0 0;
- backdrop-filter:blur(22px);
- padding:9px max(10px,calc((100vw - 740px)/2))
- calc(8px + env(safe-area-inset-bottom));
- display:grid;grid-template-columns:repeat(4,1fr);
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  z-index:30;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  padding:10px max(10px,calc((100vw - 730px)/2))
+    calc(9px + env(safe-area-inset-bottom));
+  background:#1a1b25f2;
+  border-top:1px solid #353341;
+  border-radius:22px 22px 0 0;
+  backdrop-filter:blur(18px);
 }
 nav button{
- display:flex;flex-direction:column;
- align-items:center;gap:4px;
- border:0;background:none;
- font-size:10px;color:#9591a8;
+  background:none;
+  border:0;
+  color:#9993a9;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:5px;
+  font-size:10px;
 }
-nav svg{height:23px;width:23px}
-nav button.active{color:#c8a5ff}
+nav button span{font-size:22px}
+nav button.active{color:#caaaff}
 
-/* Студия и профиль */
-.pagehead{padding:9px 0 15px}
-.pagehead h1{font-size:27px;margin:0 0 6px}
-.pagehead p{
- font-size:12px;line-height:1.5;
- color:var(--muted);margin:0;
+/* СТУДИЯ / ИСТОРИЯ / ПРОФИЛЬ */
+.page-title{
+  font-size:27px;
+  margin:15px 0 5px;
+}
+.subtitle{
+  color:var(--muted);
+  font-size:12px;
+  margin:0 0 20px;
+  line-height:1.6;
 }
 .panel{
- border:1px solid var(--line);
- border-radius:18px;background:#191b24;
- padding:15px;margin-bottom:12px;
+  background:#1d1e29;
+  border:1px solid #373542;
+  border-radius:17px;
+  padding:16px;
+  margin:13px 0;
 }
-.panel label{
- display:block;color:#b8b3c7;
- font-size:11px;margin:0 0 7px;
+label{
+  display:block;
+  color:#c5b9d5;
+  font-size:12px;
+  margin:0 0 8px;
 }
 .prompt{
- width:100%;min-height:120px;padding:12px;
- border:1px solid #353644;border-radius:12px;
- background:#11131a;resize:vertical;
- outline:none;line-height:1.5;font-size:14px;
+  width:100%;
+  min-height:120px;
+  resize:vertical;
+  background:#12141c;
+  border:1px solid #3b3948;
+  border-radius:12px;
+  padding:12px;
+  outline:none;
 }
-.prompt:focus{border-color:#a38abd}
 .fields{
- display:grid;grid-template-columns:1fr 1fr;
- gap:10px;margin-top:13px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:13px;
 }
 select{
- width:100%;background:#12141b;
- border:1px solid #353643;border-radius:10px;
- padding:10px 8px;font-size:12px;
+  width:100%;
+  background:#14151e;
+  border:1px solid #403d4c;
+  border-radius:10px;
+  padding:10px;
+  font-size:12px;
 }
 .primary{
- width:100%;padding:13px;
- border:1px solid #bfa4e533;border-radius:12px;
- background:linear-gradient(120deg,#8c70b9,#685c96);
- font-size:13px;font-weight:650;margin-top:15px;
-}
-.status{
- color:#c6addf;font-size:11px;
- line-height:1.5;margin-top:10px;
+  display:block;
+  width:100%;
+  border:0;
+  border-radius:12px;
+  background:linear-gradient(120deg,#9676c5,#655589);
+  padding:14px;
+  margin-top:16px;
+  font-weight:600;
 }
 .result img,.result video{
- display:block;width:100%;max-height:60vh;
- object-fit:contain;border-radius:13px;
- margin-top:12px;background:#0a0c11;
+  width:100%;
+  max-height:60vh;
+  object-fit:contain;
+  border-radius:12px;
+  margin-top:12px;
 }
 .result a{
- display:inline-block;color:#dec8ff;
- font-size:12px;margin-top:10px;
+  color:#d7b9ff;
+  display:inline-block;
+  margin-top:12px;
+}
+.avatar{
+  width:75px;
+  height:75px;
+  margin:5px auto 12px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:#74569d;
+  font-size:30px;
+  overflow:hidden;
+}
+.avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
 }
 .profile{text-align:center}
-.avatar{
- width:74px;height:74px;margin:0 auto 12px;
- display:grid;place-items:center;overflow:hidden;
- border-radius:50%;
- background:linear-gradient(135deg,#ab85dc,#56476f);
- font-size:27px;font-weight:700;
-}
-.avatar img{width:100%;height:100%;object-fit:cover}
-.profile h2{font-size:20px;margin:0 0 5px}
-.profile p{color:var(--muted);font-size:12px;margin:0}
+.profile h2{margin:0 0 6px}
+.profile p{color:var(--muted);font-size:12px}
 .wallet{
- margin-top:16px;padding:17px;
- border:1px solid #564662;border-radius:18px;
- background:linear-gradient(130deg,#292333,#1b1d28);
+  background:linear-gradient(120deg,#30263e,#1d1e29);
+  border:1px solid #55466a;
+  border-radius:17px;
+  padding:20px;
 }
-.wallet small{color:#c9bfd4}
-.wallet strong{display:block;font-size:28px;margin:8px 0}
-.wallet strong span{
- font-size:12px;font-weight:400;color:#aaa4b9;
+.wallet small{color:#c5b5d6}
+.wallet strong{
+  display:block;
+  font-size:29px;
+  margin:10px 0;
 }
 .wallet button{
- background:#806899;border:0;
- padding:10px 15px;border-radius:10px;font-size:12px;
+  background:#80649d;
+  border:0;
+  border-radius:10px;
+  padding:11px 15px;
 }
 .note{
- font-size:10px;color:#9992aa;
- line-height:1.5;margin-top:9px;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.5;
 }
 .history-item{
- width:100%;text-align:left;
- border:1px solid #30323f;border-radius:13px;
- background:#181b24;padding:12px;margin-bottom:8px;
+  background:#1d1e29;
+  border:1px solid #343442;
+  border-radius:13px;
+  padding:13px;
+  margin-bottom:9px;
 }
-.history-item b{
- display:block;font-size:11px;color:#c5addf;
-}
+.history-item b{color:var(--purple);font-size:11px}
 .history-item p{
- font-size:12px;color:#aaa5bb;margin:5px 0 0;
- overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  font-size:12px;
+  color:#c0b9cc;
+  margin:7px 0 0;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.empty{
+  text-align:center;
+  padding:35px 15px;
+  color:var(--muted);
+  font-size:13px;
 }
 .toast{
- position:fixed;z-index:40;
- left:50%;bottom:160px;
- transform:translateX(-50%);
- width:max-content;max-width:90%;
- background:#30303f;border:1px solid #61526f;
- padding:12px 15px;border-radius:13px;
- font-size:12px;line-height:1.5;
+  position:fixed;
+  bottom:155px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:50;
+  max-width:90%;
+  background:#343040;
+  border:1px solid #6b587e;
+  padding:12px 15px;
+  border-radius:12px;
+  font-size:12px;
 }
 @media(min-width:600px){
- .app{padding:20px 24px 170px}
- .brand{font-size:25px}
- .greeting h1{font-size:40px}
- .greeting h2{font-size:29px}
- .cosmos{height:240px}
- .orb{width:145px;height:145px}
- .intro{font-size:16px}
- .suggestion{padding:20px}
- .suggestion strong{font-size:15px}
- .suggestion small{font-size:12px}
- .creation{height:235px}
- .caption b{font-size:21px}
- .caption small{font-size:13px}
- .compose{padding:10px}
- .compose textarea{font-size:17px}
+  .universe{height:270px}
+  .planet{width:155px;height:155px}
+  .tile{height:230px}
 }
 @media(max-width:360px){
- .brand{font-size:16px}
- .balance{padding:7px 9px}
- .greeting h1{font-size:26px}
- .suggestion{gap:7px;padding:12px 9px}
- .suggestion strong{font-size:11px}
- .intro{font-size:12px}
+  .welcome h1{font-size:27px}
+  .idea{padding:12px 8px}
+  .idea strong{font-size:11px}
+  .logo{font-size:16px}
 }
 @media(prefers-reduced-motion:reduce){
- *,*::before,*::after{
-  animation:none!important;
-  scroll-behavior:auto!important;
-  transition:none!important;
- }
+  .planet,.axis-ring,.spark{animation:none}
 }
 </style>
 </head>
+
 <body>
-
-<svg style="display:none" aria-hidden="true">
-<defs>
-<symbol id="i-chat" viewBox="0 0 24 24">
-<path d="M20 11a8 8 0 0 1-8 8H7l-4 3v-8a8 8 0 1 1 17-3Z"/>
-<path d="M8 11h.01M12 11h.01M16 11h.01"/>
-</symbol>
-<symbol id="i-image" viewBox="0 0 24 24">
-<rect x="3" y="3" width="18" height="18" rx="4"/>
-<circle cx="8" cy="8" r="1.3"/>
-<path d="m3 17 6-6 4 4 3-3 5 5"/>
-</symbol>
-<symbol id="i-video" viewBox="0 0 24 24">
-<rect x="3" y="5" width="13" height="14" rx="3"/>
-<path d="m16 10 5-3v10l-5-3"/>
-</symbol>
-<symbol id="i-play" viewBox="0 0 24 24">
-<path d="M6 4c0-1 1-2 2-1l12 7c2 1 2 3 0 4L8 21c-1 1-2 0-2-1Z"/>
-</symbol>
-<symbol id="i-user" viewBox="0 0 24 24">
-<circle cx="12" cy="7" r="4"/>
-<path d="M4 22v-2a8 8 0 0 1 16 0v2Z"/>
-</symbol>
-<symbol id="i-clock" viewBox="0 0 24 24">
-<circle cx="12" cy="12" r="9"/>
-<path d="M12 6v6l4 2"/>
-</symbol>
-<symbol id="i-arrow" viewBox="0 0 24 24">
-<path d="m9 5 7 7-7 7"/>
-</symbol>
-<symbol id="i-plus" viewBox="0 0 24 24">
-<path d="M12 4v16M4 12h16"/>
-</symbol>
-<symbol id="i-mic" viewBox="0 0 24 24">
-<rect x="9" y="2" width="6" height="13" rx="3"/>
-<path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M9 22h6"/>
-</symbol>
-<symbol id="i-send" viewBox="0 0 24 24">
-<path d="m3 10 18-7-7 18-3-8-8-3Zm8 3L21 3"/>
-</symbol>
-<symbol id="i-gear" viewBox="0 0 24 24">
-<path d="m9 3 1-2h4l1 2 3 1 2 1 2 4-1 2v3l1 2-2 4-2 1-3 1-1 2h-4l-1-2-3-1-2-1-2-4 1-2v-3L2 9l2-4 2-1Z" transform="translate(0 0) scale(.9) translate(1 1)"/>
-<circle cx="12" cy="12" r="3"/>
-</symbol>
-<symbol id="i-shield" viewBox="0 0 24 24">
-<path d="m12 2 8 4v6c0 5-8 10-8 10S4 17 4 12V6Z"/>
-<path d="m9 12 2 2 4-4"/>
-</symbol>
-</defs>
-</svg>
-
 <div class="app">
+
 <header>
-<div class="brand">
-<span class="star">✦</span>
-<span>ANNIVEO <b>AI</b></span>
-</div>
-<button class="balance" data-view="profile">
-0 ✦ <svg><use href="#i-arrow"/></svg>
-</button>
-<button class="settings" data-view="profile" aria-label="Настройки">
-<svg><use href="#i-gear"/></svg>
-</button>
+  <div class="logo">✦ ANNIVEO <span>AI</span></div>
+  <button class="credit" onclick="openView('profile')">0 ✦</button>
+  <button class="gear" onclick="openView('profile')">⚙</button>
 </header>
 
+<!-- ЧАТ -->
 <section id="view-chat" class="view active">
 
-<div id="welcome">
-<div class="greeting">
-<h1 id="greeting">Привет 👋🏻</h1>
-<h2>С чего начнём?</h2>
-</div>
+<div id="welcome" class="welcome">
+  <h1 id="greeting">Привет 👋🏻</h1>
+  <h2>С чего начнём?</h2>
 
-<div class="cosmos" aria-hidden="true">
-<div class="ring ring-one"></div>
-<div class="ring ring-two"></div>
-<div class="ring ring-three"></div>
-<div class="orb"></div>
-<i class="dot a"></i>
-<i class="dot b"></i>
-<i class="dot c"></i>
-</div>
+  <div class="universe" aria-hidden="true">
+    <div class="axis-ring one"></div>
+    <div class="axis-ring two"></div>
+    <div class="axis-ring three"></div>
+    <div class="planet"></div>
+    <i class="spark a"></i>
+    <i class="spark b"></i>
+    <i class="spark c"></i>
+  </div>
 
-<p class="intro">
-Я твой AI-ассистент. Могу отвечать на вопросы,
-создавать изображения и видео, помогать с идеями
-и решать повседневные задачи.
-</p>
+  <p>
+    Я твой AI-ассистент. Могу отвечать на вопросы,
+    создавать изображения и видео, помогать с идеями
+    и решать повседневные задачи.
+  </p>
 
-<div class="suggestions">
-<button class="suggestion" data-view="image">
-<span class="star" style="font-size:26px">✦</span>
-<div>
-<strong>Создай изображение<br>в моём стиле</strong>
-<small>Опиши, что ты хочешь увидеть</small>
-</div>
-</button>
+  <div class="ideas">
+    <button class="idea" onclick="openView('image')">
+      <span class="symbol">✦</span>
+      <div>
+        <strong>Создай изображение<br>в моём стиле</strong>
+        <small>Опиши, что хочешь увидеть</small>
+      </div>
+    </button>
 
-<button class="suggestion" id="idea">
-<svg><use href="#i-chat"/></svg>
-<div>
-<strong>Придумай идею<br>для моего проекта</strong>
-<small>Креативные идеи и план</small>
-</div>
-</button>
-</div>
+    <button class="idea" onclick="suggestIdea()">
+      <span class="symbol">◇</span>
+      <div>
+        <strong>Придумай идею<br>для моего проекта</strong>
+        <small>Креативные идеи и план</small>
+      </div>
+    </button>
+  </div>
 
-<div class="section-title">
-<h2>Создать</h2>
-<button data-view="studio">
-Больше возможностей
-<svg><use href="#i-arrow"/></svg>
-</button>
-</div>
+  <div class="heading">
+    <h2>Создать</h2>
+    <button onclick="openView('studio')">
+      Больше возможностей ›
+    </button>
+  </div>
 
-<div class="cards" id="homeCards"></div>
+  <div class="tiles" id="homeTiles"></div>
 </div>
 
 <div class="mode">
-<svg><use href="#i-shield"/></svg>
-<div>
-<b>Анонимный чат</b>
-<small id="modeStatus">История сохраняется</small>
-</div>
-<button id="anonToggle" class="toggle" type="button"
- role="switch" aria-checked="false"
- aria-label="Анонимный чат"></button>
+  <span class="shield">♢</span>
+  <div>
+    <b>Анонимный чат</b>
+    <small id="modeText">История сохраняется</small>
+  </div>
+  <button id="anonToggle" class="switch"
+    role="switch" aria-checked="false"
+    aria-label="Включить анонимный чат"
+    onclick="toggleAnonymous()"></button>
 </div>
 
-<div id="messages" class="messages" aria-live="polite"></div>
+<div id="messages" class="messages"></div>
+
 </section>
 
+<!-- СТУДИЯ -->
 <section id="view-studio" class="view">
-<div class="pagehead">
-<h1>Студия</h1>
-<p>Воплощай свои идеи в изображениях и видео.</p>
-</div>
-<div class="cards" id="studioCards"></div>
-<div class="panel" style="margin-top:15px">
-<b>Идея начинается со слов</b>
-<p class="note">
-Опиши сюжет, настроение, освещение и детали.
-Чем точнее описание — тем ближе результат к твоей идее.
-</p>
-<button class="primary" data-view="chat">
-Обсудить идею с ANNIVEO
-</button>
-</div>
+  <h1 class="page-title">Студия</h1>
+  <p class="subtitle">Создавай изображения и видео с ANNIVEO AI.</p>
+  <div class="tiles" id="studioTiles"></div>
+  <div class="panel">
+    <b>Воплоти свою идею</b>
+    <p class="note">
+      Опиши сюжет, стиль, свет и детали,
+      чтобы получить лучший результат.
+    </p>
+    <button class="primary" onclick="openView('chat')">
+      Обсудить идею
+    </button>
+  </div>
 </section>
 
+<!-- ФОТО -->
 <section id="view-image" class="view">
-<div class="pagehead">
-<h1>Создать фото</h1>
-<p>Опиши изображение, которое хочешь увидеть.</p>
-</div>
-<div class="panel">
-<label for="imagePrompt">Твоя идея</label>
-<textarea id="imagePrompt" class="prompt" maxlength="1200"
- placeholder="Портрет на закате, мягкий свет, кинематографичный стиль…"></textarea>
+  <h1 class="page-title">Создать фото</h1>
+  <p class="subtitle">Опиши изображение своей мечты.</p>
 
-<div class="fields">
-<div>
-<label for="imageModel">Модель</label>
-<select id="imageModel">
-<option value="flux">Flux</option>
-<option value="gptimage">GPT Image</option>
-<option value="seedream5">Seedream</option>
-<option value="nanobanana-2">Nano Banana</option>
-</select>
-</div>
-<div>
-<label for="imageRatio">Формат</label>
-<select id="imageRatio">
-<option value="1:1">Квадрат</option>
-<option value="9:16">Вертикальный</option>
-<option value="16:9">Горизонтальный</option>
-</select>
-</div>
-</div>
-<button id="makeImage" class="primary">✦ Создать изображение</button>
-<div id="imageStatus" class="status" role="status"></div>
-<div id="imageResult" class="result"></div>
-</div>
+  <div class="panel">
+    <label for="imagePrompt">Описание изображения</label>
+    <textarea id="imagePrompt" class="prompt"
+      maxlength="1200"
+      placeholder="Портрет в кинематографичном стиле, мягкий свет..."></textarea>
+
+    <div class="fields">
+      <div>
+        <label for="imageModel">Модель</label>
+        <select id="imageModel">
+          <option value="flux">Flux</option>
+          <option value="gptimage">GPT Image</option>
+          <option value="seedream5">Seedream</option>
+        </select>
+      </div>
+      <div>
+        <label for="imageRatio">Формат</label>
+        <select id="imageRatio">
+          <option value="1:1">1:1</option>
+          <option value="9:16">9:16</option>
+          <option value="16:9">16:9</option>
+        </select>
+      </div>
+    </div>
+
+    <button id="makeImage" class="primary"
+      onclick="generateMedia('image')">
+      ✦ Создать изображение
+    </button>
+
+    <div id="imageStatus" class="status"></div>
+    <div id="imageResult" class="result"></div>
+  </div>
 </section>
 
+<!-- ВИДЕО -->
 <section id="view-video" class="view">
-<div class="pagehead">
-<h1>Создать видео</h1>
-<p>Опиши сцену, движение и настроение.</p>
-</div>
-<div class="panel">
-<label for="videoPrompt">Твоя идея</label>
-<textarea id="videoPrompt" class="prompt" maxlength="1200"
- placeholder="Ночной город после дождя, отражения неона, плавный проезд камеры…"></textarea>
+  <h1 class="page-title">Создать видео</h1>
+  <p class="subtitle">Преврати идею в движение.</p>
 
-<div class="fields">
-<div>
-<label for="videoModel">Модель</label>
-<select id="videoModel">
-<option value="veo">Veo</option>
-<option value="seedance-2.0">Seedance 2.0</option>
-<option value="seedance-pro">Seedance Pro</option>
-<option value="wan-fast">Wan Fast</option>
-<option value="ltx-2">LTX</option>
-</select>
-</div>
-<div>
-<label for="videoRatio">Формат</label>
-<select id="videoRatio">
-<option value="16:9">Горизонтальный</option>
-<option value="9:16">Вертикальный</option>
-<option value="1:1">Квадрат</option>
-</select>
-</div>
-</div>
+  <div class="panel">
+    <label for="videoPrompt">Описание видео</label>
+    <textarea id="videoPrompt" class="prompt"
+      maxlength="1200"
+      placeholder="Ночной город, неон, плавное движение камеры..."></textarea>
 
-<div style="margin-top:12px">
-<label for="duration">Длительность</label>
-<select id="duration">
-<option value="4">4 секунды</option>
-<option value="6">6 секунд</option>
-<option value="8">8 секунд</option>
-</select>
-</div>
+    <div class="fields">
+      <div>
+        <label for="videoModel">Модель</label>
+        <select id="videoModel">
+          <option value="veo">Veo</option>
+          <option value="seedance-2.0">Seedance</option>
+          <option value="wan-fast">Wan Fast</option>
+        </select>
+      </div>
+      <div>
+        <label for="videoRatio">Формат</label>
+        <select id="videoRatio">
+          <option value="16:9">16:9</option>
+          <option value="9:16">9:16</option>
+          <option value="1:1">1:1</option>
+        </select>
+      </div>
+    </div>
 
-<button id="makeVideo" class="primary">Создать видео</button>
-<div id="videoStatus" class="status" role="status"></div>
-<div id="videoResult" class="result"></div>
-</div>
+    <div style="margin-top:14px">
+      <label for="duration">Длительность</label>
+      <select id="duration">
+        <option value="4">4 секунды</option>
+        <option value="6">6 секунд</option>
+        <option value="8">8 секунд</option>
+      </select>
+    </div>
+
+    <button id="makeVideo" class="primary"
+      onclick="generateMedia('video')">
+      Создать видео
+    </button>
+
+    <div id="videoStatus" class="status"></div>
+    <div id="videoResult" class="result"></div>
+  </div>
 </section>
 
+<!-- ИСТОРИЯ -->
 <section id="view-history" class="view">
-<div class="pagehead">
-<h1>История</h1>
-<p>Твоя сохранённая переписка с ANNIVEO.</p>
-</div>
-<div id="historyList"></div>
+  <h1 class="page-title">История</h1>
+  <p class="subtitle">Твоя сохранённая переписка.</p>
+  <div id="historyList"></div>
 </section>
 
+<!-- ПРОФИЛЬ -->
 <section id="view-profile" class="view">
-<div class="pagehead">
-<h1>Профиль</h1>
-<p>Твоё пространство в ANNIVEO AI.</p>
-</div>
-<div class="panel profile">
-<div class="avatar" id="avatar">✦</div>
-<h2 id="profileName">Пользователь Telegram</h2>
-<p id="username">Открой приложение через Telegram</p>
-</div>
-<div class="wallet">
-<small>Баланс ANNIVEO</small>
-<strong>0 ✦ <span>кредитов</span></strong>
-<button id="topUp">＋ Пополнить</button>
-<p class="note">Пополнение и учёт кредитов пока не подключены.</p>
-</div>
-<div class="panel" style="margin-top:15px">
-<label>Telegram ID</label>
-<div id="telegramId">—</div>
-<button class="primary" data-view="history">Открыть историю</button>
-</div>
+  <h1 class="page-title">Профиль</h1>
+  <p class="subtitle">Твоё пространство ANNIVEO.</p>
+
+  <div class="panel profile">
+    <div class="avatar" id="avatar">✦</div>
+    <h2 id="profileName">Пользователь Telegram</h2>
+    <p id="username">ANNIVEO AI</p>
+  </div>
+
+  <div class="wallet">
+    <small>Баланс ANNIVEO</small>
+    <strong>0 ✦</strong>
+    <button onclick="toast('Пополнение пока не подключено')">
+      ＋ Пополнить
+    </button>
+    <p class="note">
+      Баланс станет доступен после подключения платежей.
+    </p>
+  </div>
+
+  <div class="panel">
+    <label>Telegram ID</label>
+    <div id="telegramId">—</div>
+    <button class="primary" onclick="openView('history')">
+      Моя история
+    </button>
+  </div>
 </section>
+
 </div>
 
-<div class="dock" id="dock">
-<form id="form" class="compose">
-<button class="round" data-view="studio" type="button"
- aria-label="Открыть студию">
-<svg><use href="#i-plus"/></svg>
-</button>
+<!-- ПОЛЕ СООБЩЕНИЯ -->
+<div id="dock" class="dock">
+  <form id="chatForm" class="composer">
+    <button type="button" class="circle"
+      onclick="openView('studio')">＋</button>
 
-<textarea id="input" rows="1" maxlength="4000"
- aria-label="Сообщение"
- placeholder="Спроси ANNIVEO…"></textarea>
+    <textarea id="messageInput" rows="1"
+      maxlength="4000"
+      placeholder="Спроси ANNIVEO…"></textarea>
 
-<button class="round mic" id="mic" type="button"
- aria-label="Записать голосовое">
-<svg><use href="#i-mic"/></svg>
-</button>
+    <button type="button" id="mic"
+      class="circle" onclick="handleMic()">🎙</button>
 
-<button class="round send" id="send" type="submit"
- aria-label="Отправить">
-<svg><use href="#i-send"/></svg>
-</button>
-</form>
-<div class="chatstatus" id="chatStatus" role="status"></div>
+    <button type="submit" id="send"
+      class="circle send">➤</button>
+  </form>
+  <div id="chatStatus" class="status"></div>
 </div>
 
-<nav aria-label="Главное меню">
-<button class="active" data-view="chat">
-<svg><use href="#i-chat"/></svg>Чат
-</button>
-<button data-view="studio">
-<svg><use href="#i-play"/></svg>Студия
-</button>
-<button data-view="history">
-<svg><use href="#i-clock"/></svg>История
-</button>
-<button data-view="profile">
-<svg><use href="#i-user"/></svg>Профиль
-</button>
+<!-- НАВИГАЦИЯ -->
+<nav>
+  <button class="active" data-tab="chat"
+    onclick="openView('chat')">
+    <span>☏</span>Чат
+  </button>
+  <button data-tab="studio"
+    onclick="openView('studio')">
+    <span>▣</span>Студия
+  </button>
+  <button data-tab="history"
+    onclick="openView('history')">
+    <span>◷</span>История
+  </button>
+  <button data-tab="profile"
+    onclick="openView('profile')">
+    <span>♙</span>Профиль
+  </button>
 </nav>
 
 <script>
+/* НАСТРОЙКИ */
 const API_URL =
- "https://anniveo-ai-api.yaylaevismail.workers.dev/";
+  "https://anniveo-ai-api.yaylaevismail.workers.dev/";
 
 const $ = id => document.getElementById(id);
 const tg = window.Telegram?.WebApp;
@@ -846,904 +920,1028 @@ tg?.ready();
 tg?.expand();
 
 const initData = tg?.initData || "";
-const user = tg?.initDataUnsafe?.user;
+const user = tg?.initDataUnsafe?.user || null;
 
 let currentView = "chat";
 let anonymous = false;
 let busy = false;
-let loading = false;
-let loaded = false;
-let version = 0;
+let historyLoaded = false;
+let historyLoading = false;
 
 let normalHistory = [];
 let anonymousHistory = [];
 
+/*
+  ГЛАВНОЕ ИСПРАВЛЕНИЕ:
+  При каждом новом открытии приложения
+  сначала показываем главный экран с шаром.
+
+  После отправки сообщения или включения
+  анонимного режима главный экран скрывается.
+
+  Кнопка "Чат" НЕ возвращает шар.
+*/
+let showWelcome = true;
+
 let recorder = null;
-let stream = null;
+let microphoneStream = null;
 let recording = false;
 let transcribing = false;
 let openingMic = false;
-let chunks = [];
-let recordStart = 0;
+let audioChunks = [];
+let audioURLs = [];
 let recordTimer = null;
-let recordStopTimer = null;
-
-const audioURLs = new Set();
 
 const cacheKey = user?.id
- ? "anniveo_chat_cache_v3_" + user.id
- : null;
+  ? "anniveo_chat_cache_v3_" + user.id
+  : null;
 
-function toast(text) {
- document.querySelector(".toast")?.remove();
- const el = document.createElement("div");
- el.className = "toast";
- el.textContent = text;
- document.body.append(el);
- setTimeout(() => el.remove(), 4000);
+/* УВЕДОМЛЕНИЯ */
+function toast(message){
+  document.querySelector(".toast")?.remove();
+
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.textContent = message;
+  document.body.append(el);
+
+  setTimeout(() => el.remove(),3500);
 }
 
-function clean(items) {
- return Array.isArray(items)
-  ? items.filter(x =>
+/* ПРОВЕРКА ИСТОРИИ */
+function cleanHistory(items){
+  if(!Array.isArray(items)) return [];
+
+  return items.filter(x =>
     x &&
     ["user","assistant"].includes(x.role) &&
     typeof x.content === "string"
-   ).slice(-40).map(x => ({
+  ).slice(-40).map(x => ({
     role:x.role,
     content:x.content
-   }))
-  : [];
+  }));
 }
 
-function cache() {
- if (!cacheKey) return;
- try {
-  localStorage.setItem(
-   cacheKey,
-   JSON.stringify(clean(normalHistory))
-  );
- } catch {}
+function saveCache(){
+  if(!cacheKey) return;
+
+  try{
+    localStorage.setItem(
+      cacheKey,
+      JSON.stringify(cleanHistory(normalHistory))
+    );
+  }catch(e){}
 }
 
-if (cacheKey) {
- try {
-  normalHistory = clean(
-   JSON.parse(localStorage.getItem(cacheKey) || "[]")
-  );
- } catch {}
+if(cacheKey){
+  try{
+    normalHistory = cleanHistory(
+      JSON.parse(localStorage.getItem(cacheKey) || "[]")
+    );
+  }catch(e){}
 }
 
-function view(name) {
- if (recording || transcribing || openingMic) {
-  toast("Сначала заверши голосовое сообщение");
-  return;
- }
+/* TELEGRAM ПРОФИЛЬ */
+if(user){
+  const name = [user.first_name,user.last_name]
+    .filter(Boolean).join(" ");
 
- currentView = name;
+  $("greeting").textContent =
+    "Привет, " + (user.first_name || "друг") + " 👋🏻";
 
- document.querySelectorAll(".view").forEach(el =>
-  el.classList.toggle("active",el.id === "view-" + name)
- );
+  $("profileName").textContent =
+    name || "Пользователь Telegram";
 
- document.querySelectorAll("nav button").forEach(el =>
-  el.classList.toggle("active",
-   el.dataset.view === name ||
-   (["image","video"].includes(name) &&
-    el.dataset.view === "studio")
-  )
- );
+  $("username").textContent =
+    user.username ? "@" + user.username : "Telegram";
 
- $("dock").classList.toggle("hidden",name !== "chat");
- window.scrollTo(0,0);
+  $("telegramId").textContent = String(user.id);
+  $("avatar").textContent = name.slice(0,1) || "✦";
 
- if (name === "history") showHistory();
-
- if (name === "chat" && !anonymous && !busy) {
-  loadHistory();
- }
+  if(user.photo_url){
+    const img = document.createElement("img");
+    img.src = user.photo_url;
+    img.alt = "Аватар";
+    $("avatar").replaceChildren(img);
+  }
 }
 
-document.querySelectorAll("[data-view]").forEach(el => {
- el.onclick = () => view(el.dataset.view);
-});
-
-if (user) {
- const name = [user.first_name,user.last_name]
-  .filter(Boolean).join(" ");
-
- $("greeting").textContent =
-  "Привет, " + (user.first_name || "друг") + " 👋🏻";
-
- $("profileName").textContent =
-  name || "Пользователь Telegram";
-
- $("username").textContent = user.username
-  ? "@" + user.username
-  : "Telegram-профиль";
-
- $("telegramId").textContent = String(user.id);
- $("avatar").textContent = (name || "✦").slice(0,1);
-
- if (user.photo_url) {
-  const img = document.createElement("img");
-  img.src = user.photo_url;
-  img.alt = "Фото профиля";
-  $("avatar").replaceChildren(img);
- }
-}
-
-/* Видео слева, фото справа */
-const cardHTML = `
-<button class="creation" data-create="video">
-<img
- src="https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=700&q=85"
- alt="Ночной город" loading="lazy">
-<span class="card-icon">
-<svg><use href="#i-video"/></svg>
-</span>
-<span class="caption">
-<b>Видео</b>
-<small>Оживи свои идеи в движении</small>
-</span>
-<span class="arrow">
-<svg><use href="#i-arrow"/></svg>
-</span>
+/* КАРТОЧКИ: ВИДЕО СЛЕВА, ФОТО СПРАВА */
+const tilesHTML = `
+<button class="tile" onclick="openView('video')">
+  <img
+    src="https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=650&q=85"
+    alt="Видео"
+    loading="lazy">
+  <span class="tile-icon">▣</span>
+  <span class="tile-text">
+    <b>Видео</b>
+    <small>Оживи свои идеи в движении</small>
+  </span>
 </button>
 
-<button class="creation" data-create="image">
-<img
- src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=700&q=85"
- alt="Портрет" loading="lazy">
-<span class="card-icon">
-<svg><use href="#i-image"/></svg>
-</span>
-<span class="caption">
-<b>Фото</b>
-<small>Реалистичные и стильные изображения</small>
-</span>
-<span class="arrow">
-<svg><use href="#i-arrow"/></svg>
-</span>
+<button class="tile" onclick="openView('image')">
+  <img
+    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=650&q=85"
+    alt="Фото"
+    loading="lazy">
+  <span class="tile-icon">▧</span>
+  <span class="tile-text">
+    <b>Фото</b>
+    <small>Реалистичные и стильные изображения</small>
+  </span>
 </button>
 `;
 
-$("homeCards").innerHTML = cardHTML;
-$("studioCards").innerHTML = cardHTML;
+$("homeTiles").innerHTML = tilesHTML;
+$("studioTiles").innerHTML = tilesHTML;
 
-document.querySelectorAll("[data-create]").forEach(el => {
- el.onclick = () => view(el.dataset.create);
-});
-
-/* Безопасное форматирование Markdown */
-function inline(el,text) {
- const re = /(\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`\n]+`)/g;
- let pos = 0;
- let match;
-
- while ((match = re.exec(text))) {
-  el.append(
-   document.createTextNode(text.slice(pos,match.index))
-  );
-
-  const raw = match[0];
-  const tag = raw.startsWith("**")
-   ? "strong"
-   : raw.startsWith("`") ? "code" : "em";
-
-  const n = document.createElement(tag);
-  n.textContent = raw.slice(
-   tag === "strong" ? 2 : 1,
-   tag === "strong" ? -2 : -1
-  );
-
-  el.append(n);
-  pos = re.lastIndex;
- }
-
- el.append(document.createTextNode(text.slice(pos)));
-}
-
-function markdown(el,text) {
- el.replaceChildren();
-
- let paragraph = [];
- let list = null;
- let code = null;
-
- const flush = () => {
-  if (!paragraph.length) return;
-  const p = document.createElement("p");
-  inline(p,paragraph.join(" "));
-  el.append(p);
-  paragraph = [];
- };
-
- for (const line of String(text).replace(/\r/g,"").split("\n")) {
-  if (/^\s*```/.test(line)) {
-   flush();
-   list = null;
-
-   if (code) {
-    code = null;
-   } else {
-    const pre = document.createElement("pre");
-    code = document.createElement("code");
-    pre.append(code);
-    el.append(pre);
-   }
-   continue;
+/* ПЕРЕКЛЮЧЕНИЕ РАЗДЕЛОВ */
+function openView(name){
+  if(recording || transcribing || openingMic){
+    toast("Сначала заверши голосовое сообщение");
+    return;
   }
 
-  if (code) {
-   code.textContent += line + "\n";
-   continue;
-  }
+  currentView = name;
 
-  if (!line.trim()) {
-   flush();
-   list = null;
-   continue;
-  }
-
-  const h = line.match(/^\s{0,3}(#{1,6})\s+(.+)$/);
-  const li = line.match(/^\s*([-*+] |\d+[.)] )(.+)$/);
-
-  if (h) {
-   flush();
-   list = null;
-   const n = document.createElement(
-    "h" + Math.min(3,h[1].length)
-   );
-   inline(n,h[2]);
-   el.append(n);
-  } else if (li) {
-   flush();
-   const tag = /^\d/.test(li[1]) ? "ol" : "ul";
-
-   if (!list || list.tagName.toLowerCase() !== tag) {
-    list = document.createElement(tag);
-    el.append(list);
-   }
-
-   const n = document.createElement("li");
-   inline(n,li[2]);
-   list.append(n);
-  } else if (/^>\s?/.test(line)) {
-   flush();
-   list = null;
-   const n = document.createElement("blockquote");
-   inline(n,line.replace(/^>\s?/,""));
-   el.append(n);
-  } else {
-   list = null;
-   paragraph.push(line.trim());
-  }
- }
-
- flush();
-}
-
-function addMessage(text,role,audio) {
- const el = document.createElement("div");
- el.className = "message " + role;
-
- const content = document.createElement("div");
-
- if (role === "assistant") {
-  const label = document.createElement("div");
-  label.className = "assistant-label";
-  label.textContent = "✦ ANNIVEO AI";
-  el.append(label);
-  markdown(content,text);
- } else {
-  content.textContent = text;
-
-  if (audio) {
-   const player = document.createElement("audio");
-   player.controls = true;
-   player.src = audio;
-   el.append(player);
-  }
- }
-
- el.append(content);
-
- if (role === "assistant") {
-  const copy = document.createElement("button");
-  copy.className = "copy";
-  copy.textContent = "Копировать";
-
-  copy.onclick = async () => {
-   try {
-    await navigator.clipboard.writeText(
-     content.dataset.raw || text
+  document.querySelectorAll(".view").forEach(el=>{
+    el.classList.toggle(
+      "active",
+      el.id === "view-" + name
     );
-    toast("Ответ скопирован");
-   } catch {
-    toast("Выдели текст ответа для копирования");
-   }
-  };
-
-  el.append(copy);
- }
-
- content.dataset.raw = text;
- $("messages").append(el);
- return content;
-}
-
-function render() {
- for (const url of audioURLs) URL.revokeObjectURL(url);
- audioURLs.clear();
- $("messages").replaceChildren();
-
- const items = anonymous
-  ? anonymousHistory
-  : normalHistory;
-
- /* Шар виден только в обычном режиме без сообщений */
- $("welcome").classList.toggle(
-  "hidden",
-  anonymous || items.length > 0
- );
-
- $("view-chat").classList.toggle(
-  "anon-active",
-  anonymous
- );
-
- items.forEach(x => addMessage(x.content,x.role));
-}
-
-function lock() {
- const locked =
-  busy || recording || transcribing || openingMic;
-
- $("send").disabled = locked;
- $("anonToggle").disabled = locked;
- $("mic").disabled =
-  busy || transcribing || openingMic;
- $("input").disabled =
-  recording || transcribing || openingMic;
-}
-
-async function post(payload,timeout=90000) {
- if (!initData || !user) {
-  throw Error("Открой ANNIVEO AI через Telegram");
- }
-
- const c = new AbortController();
- const timer = setTimeout(() => c.abort(),timeout);
-
- try {
-  const response = await fetch(API_URL,{
-   method:"POST",
-   signal:c.signal,
-   headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({...payload,initData})
   });
 
-  const data = await response.json();
+  document.querySelectorAll("nav button").forEach(el=>{
+    const tab = el.dataset.tab;
+    const active =
+      tab === name ||
+      (tab === "studio" &&
+        ["image","video"].includes(name));
 
-  if (!response.ok) {
-   throw Error(data.error || "Ошибка сервера");
-  }
-
-  if (response.status === 202) {
-   throw Error(
-    "Запрос ещё обрабатывается. Открой историю немного позже."
-   );
-  }
-
-  return data;
- } catch(e) {
-  if (e.name === "AbortError") {
-   throw Error("Ответ задержался. Попробуй немного позже.");
-  }
-  throw e;
- } finally {
-  clearTimeout(timer);
- }
-}
-
-async function loadHistory() {
- if (loaded || loading || busy || anonymous || !user) return;
-
- loading = true;
- const v = version;
-
- try {
-  const data = await post({action:"history"},20000);
-
-  if (v !== version || busy) return;
-
-  normalHistory = clean(data.messages);
-  cache();
-  loaded = true;
-
-  if (!anonymous && currentView === "chat") {
-   render();
-  }
- } catch(e) {
-  toast(e.message);
- } finally {
-  loading = false;
- }
-}
-
-/* Анонимный режим */
-$("anonToggle").onclick = () => {
- if (busy || recording || transcribing || openingMic) return;
-
- anonymous = !anonymous;
- version++;
-
- anonymousHistory = [];
-
- $("anonToggle").classList.toggle("on",anonymous);
- $("anonToggle").setAttribute(
-  "aria-checked",String(anonymous)
- );
-
- $("modeStatus").textContent = anonymous
-  ? "История не сохраняется"
-  : "История сохраняется";
-
- $("input").value = "";
- render();
- window.scrollTo(0,0);
-
- if (!anonymous) {
-  loaded = false;
-  loadHistory();
- } else {
-  toast("Анонимный чат включён");
- }
-};
-
-async function sendChat(text,audio="") {
- text = String(text).trim();
-
- if (!text || busy || recording ||
-     openingMic || text.length > 4000) return;
-
- if (!initData || !user) {
-  toast("Открой ANNIVEO AI через Telegram");
-  return;
- }
-
- busy = true;
- version++;
- lock();
-
- const mode = anonymous;
- const context = clean(anonymousHistory).slice(-12);
-
- $("welcome").classList.add("hidden");
- addMessage(text,"user",audio);
-
- const pending = addMessage(
-  "ANNIVEO AI думает…","assistant"
- );
-
- $("chatStatus").textContent = "Готовлю ответ…";
- window.scrollTo(0,document.body.scrollHeight);
-
- try {
-  const payload = mode
-   ? {
-      action:"anonymous",
-      message:text,
-      messages:context
-     }
-   : {
-      action:"chat",
-      message:text,
-      requestId:crypto.randomUUID()
-     };
-
-  const data = await post(payload);
-
-  if (typeof data.reply !== "string" ||
-      !data.reply.trim()) {
-   throw Error("Получен пустой ответ");
-  }
-
-  markdown(pending,data.reply);
-  pending.dataset.raw = data.reply;
-
-  const pair = [
-   {role:"user",content:text},
-   {role:"assistant",content:data.reply}
-  ];
-
-  if (mode) {
-   anonymousHistory = clean([
-    ...anonymousHistory,...pair
-   ]);
-  } else {
-   normalHistory = clean([
-    ...normalHistory,...pair
-   ]);
-   loaded = true;
-   cache();
-  }
- } catch(e) {
-  pending.textContent = e.message;
-  pending.dataset.raw = e.message;
-  if (!mode) loaded = false;
- } finally {
-  busy = false;
-  lock();
-  $("chatStatus").textContent = "";
- }
-}
-
-$("form").onsubmit = e => {
- e.preventDefault();
-
- if (busy || recording || transcribing || openingMic) return;
-
- const text = $("input").value.trim();
-
- if (text && initData && user) {
-  $("input").value = "";
-  $("input").style.height = "";
-  sendChat(text);
- } else if (text) {
-  toast("Открой ANNIVEO AI через Telegram");
- }
-};
-
-$("input").oninput = () => {
- $("input").style.height = "auto";
- $("input").style.height =
-  Math.min(90,$("input").scrollHeight) + "px";
-};
-
-$("input").onkeydown = e => {
- if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
-  e.preventDefault();
-  $("form").requestSubmit();
- }
-};
-
-$("idea").onclick = () => {
- $("input").value =
-  "Помоги придумать идею для моего проекта. " +
-  "Сначала задай мне уточняющие вопросы.";
- $("input").focus();
-};
-
-/* Голосовые сообщения */
-function micIcon(stop=false) {
- $("mic").innerHTML = stop
-  ? "■"
-  : '<svg><use href="#i-mic"/></svg>';
-
- $("mic").setAttribute(
-  "aria-label",
-  stop ? "Завершить запись и отправить"
-       : "Записать голосовое"
- );
-
- $("mic").classList.toggle("recording",stop);
-}
-
-function stopTracks() {
- stream?.getTracks().forEach(t => t.stop());
- stream = null;
-}
-
-$("mic").onclick = async () => {
- if (recording) {
-  if (recorder?.state === "recording") recorder.stop();
-  return;
- }
-
- if (busy || transcribing || openingMic) return;
-
- if (!initData || !user) {
-  toast("Открой приложение через Telegram");
-  return;
- }
-
- if (!navigator.mediaDevices?.getUserMedia ||
-     !window.MediaRecorder) {
-  toast("Запись недоступна. Обнови Telegram и разреши микрофон.");
-  return;
- }
-
- openingMic = true;
- lock();
-
- try {
-  stream = await navigator.mediaDevices.getUserMedia({
-   audio:true
+    el.classList.toggle("active",active);
   });
 
-  const mime = [
-   "audio/mp4",
-   "audio/webm;codecs=opus",
-   "audio/webm"
-  ].find(x => MediaRecorder.isTypeSupported(x));
-
-  recorder = new MediaRecorder(
-   stream,mime ? {mimeType:mime} : {}
+  $("dock").classList.toggle(
+    "hidden",
+    name !== "chat"
   );
 
-  chunks = [];
-
-  recorder.ondataavailable = e => {
-   if (e.data.size) chunks.push(e.data);
-  };
-
-  recorder.onstop = finishVoice;
-
-  recorder.onerror = () => {
-   toast("Не удалось записать голосовое");
-   if (recorder.state !== "inactive") recorder.stop();
-  };
-
-  recorder.start();
-  recording = true;
-  recordStart = Date.now();
-  micIcon(true);
-
-  recordTimer = setInterval(() => {
-   $("chatStatus").textContent =
-    "Запись " +
-    Math.floor((Date.now()-recordStart)/1000) +
-    " сек. · нажми ■ для отправки";
-  },500);
-
-  recordStopTimer = setTimeout(() => {
-   if (recorder.state === "recording") recorder.stop();
-  },120000);
-
- } catch {
-  stopTracks();
-  toast("Разреши доступ к микрофону в Telegram.");
- } finally {
-  openingMic = false;
-  lock();
- }
-};
-
-async function finishVoice() {
- clearInterval(recordTimer);
- clearTimeout(recordStopTimer);
-
- recording = false;
- stopTracks();
- micIcon();
-
- const blob = new Blob(chunks,{
-  type:recorder.mimeType || "audio/webm"
- });
-
- if (!blob.size || blob.size > 20*1024*1024) {
-  $("chatStatus").textContent = "";
-  lock();
-  toast("Не удалось обработать запись. Запиши покороче.");
-  return;
- }
-
- transcribing = true;
- lock();
- $("chatStatus").textContent = "Распознаю голосовое…";
-
- const c = new AbortController();
- const timer = setTimeout(() => c.abort(),90000);
- let url;
-
- try {
-  const f = new FormData();
-
-  f.append("action","transcribe");
-  f.append("initData",initData);
-  f.append(
-   "file",blob,
-   blob.type.includes("mp4") ? "voice.m4a" : "voice.webm"
-  );
-
-  const response = await fetch(API_URL,{
-   method:"POST",body:f,signal:c.signal
-  });
-
-  const data = await response.json();
-
-  if (!response.ok ||
-      typeof data.text !== "string" ||
-      !data.text.trim()) {
-   throw Error(data.error || "Голос не распознан");
+  if(name === "history"){
+    showHistory();
   }
 
-  if (data.text.length > 4000) {
-   throw Error("Голосовое слишком длинное. Запиши короче.");
+  if(name === "chat"){
+    renderChat();
   }
 
-  url = URL.createObjectURL(blob);
-  audioURLs.add(url);
-
-  transcribing = false;
-  await sendChat(data.text,url);
-
- } catch(e) {
-  if (url) {
-   URL.revokeObjectURL(url);
-   audioURLs.delete(url);
-  }
-
-  toast(
-   e.name === "AbortError"
-    ? "Распознавание задержалось. Попробуй снова."
-    : e.message
-  );
- } finally {
-  clearTimeout(timer);
-  transcribing = false;
-  $("chatStatus").textContent = "";
-  lock();
- }
+  window.scrollTo(0,0);
 }
 
-/* История */
-async function showHistory() {
- const list = $("historyList");
- list.innerHTML = '<div class="empty">Загружаю…</div>';
+/* ПОКАЗ ГЛАВНОГО ЭКРАНА */
+function updateWelcome(){
+  const visible = showWelcome && !anonymous;
 
- try {
-  const data = await post({action:"history"},20000);
-  list.replaceChildren();
+  $("welcome").classList.toggle(
+    "hidden",
+    !visible
+  );
+}
 
-  const items = clean(data.messages);
+/* БЕЗОПАСНОЕ ОТОБРАЖЕНИЕ ОТВЕТОВ */
+function formatAnswer(element,text){
+  element.replaceChildren();
 
-  if (!items.length) {
-   list.innerHTML =
-    '<div class="empty">История пока пуста. Начни диалог с ANNIVEO.</div>';
-   return;
+  const lines = String(text).replace(/\r/g,"").split("\n");
+  let paragraph = [];
+  let list = null;
+  let code = null;
+
+  function addInline(parent,str){
+    const re = /(\*\*[^*]+\*\*|`[^`]+`)/g;
+    let pos = 0;
+    let match;
+
+    while((match = re.exec(str))){
+      parent.append(
+        document.createTextNode(
+          str.slice(pos,match.index)
+        )
+      );
+
+      const raw = match[0];
+      const strong = raw.startsWith("**");
+      const node = document.createElement(
+        strong ? "strong" : "code"
+      );
+
+      node.textContent = strong
+        ? raw.slice(2,-2)
+        : raw.slice(1,-1);
+
+      parent.append(node);
+      pos = re.lastIndex;
+    }
+
+    parent.append(
+      document.createTextNode(str.slice(pos))
+    );
   }
 
-  items.reverse().forEach(x => {
-   const item = document.createElement("div");
-   item.className = "history-item";
+  function flush(){
+    if(!paragraph.length) return;
 
-   const b = document.createElement("b");
-   const p = document.createElement("p");
+    const p = document.createElement("p");
+    addInline(p,paragraph.join(" "));
+    element.append(p);
+    paragraph = [];
+  }
 
-   b.textContent = x.role === "user" ? "Ты" : "ANNIVEO AI";
-   p.textContent = x.content;
+  for(const line of lines){
+    if(/^\s*```/.test(line)){
+      flush();
+      list = null;
 
-   item.append(b,p);
-   list.append(item);
-  });
- } catch(e) {
-  list.replaceChildren();
+      if(code){
+        code = null;
+      }else{
+        const pre = document.createElement("pre");
+        code = document.createElement("code");
+        pre.append(code);
+        element.append(pre);
+      }
+      continue;
+    }
+
+    if(code){
+      code.textContent += line + "\n";
+      continue;
+    }
+
+    if(!line.trim()){
+      flush();
+      list = null;
+      continue;
+    }
+
+    const heading = line.match(
+      /^\s{0,3}(#{1,6})\s+(.+)$/
+    );
+
+    const bullet = line.match(
+      /^\s*([-*+] |\d+[.)] )(.+)$/
+    );
+
+    if(heading){
+      flush();
+      list = null;
+
+      const h = document.createElement(
+        "h" + Math.min(heading[1].length,3)
+      );
+
+      addInline(h,heading[2]);
+      element.append(h);
+
+    }else if(bullet){
+      flush();
+
+      const type = /^\d/.test(bullet[1])
+        ? "ol" : "ul";
+
+      if(!list || list.tagName.toLowerCase() !== type){
+        list = document.createElement(type);
+        element.append(list);
+      }
+
+      const li = document.createElement("li");
+      addInline(li,bullet[2]);
+      list.append(li);
+
+    }else{
+      list = null;
+      paragraph.push(line.trim());
+    }
+  }
+
+  flush();
+}
+
+/* СООБЩЕНИЯ */
+function addMessage(text,role,audioURL){
   const el = document.createElement("div");
-  el.className = "empty";
-  el.textContent = e.message;
-  list.append(el);
- }
+  el.className = "message " + role;
+
+  if(role === "assistant"){
+    const label = document.createElement("div");
+    label.className = "assistant-name";
+    label.textContent = "✦ ANNIVEO AI";
+    el.append(label);
+  }
+
+  if(audioURL){
+    const audio = document.createElement("audio");
+    audio.controls = true;
+    audio.src = audioURL;
+    el.append(audio);
+  }
+
+  const content = document.createElement("div");
+  content.className = "answer";
+
+  if(role === "assistant"){
+    formatAnswer(content,text);
+  }else{
+    content.textContent = text;
+  }
+
+  el.append(content);
+
+  if(role === "assistant"){
+    const copy = document.createElement("button");
+    copy.className = "copy";
+    copy.textContent = "Копировать";
+
+    copy.onclick = async ()=>{
+      try{
+        await navigator.clipboard.writeText(
+          content.dataset.raw || text
+        );
+        toast("Ответ скопирован");
+      }catch(e){
+        toast("Не удалось скопировать");
+      }
+    };
+
+    el.append(copy);
+  }
+
+  content.dataset.raw = text;
+  $("messages").append(el);
+
+  return content;
 }
 
-/* Генерация фото и видео */
-async function generate(kind) {
- if (!initData || !user) {
-  toast("Открой приложение через Telegram");
-  return;
- }
+function renderChat(){
+  updateWelcome();
+  $("messages").replaceChildren();
 
- const prompt = $(kind+"Prompt").value.trim();
+  /*
+    При первом входе с шаром историю
+    не показываем под главным экраном.
 
- if (!prompt) {
-  toast("Сначала опиши свою идею");
-  return;
- }
+    Но сами сообщения остаются сохранены.
+  */
+  if(showWelcome && !anonymous) return;
 
- const button = $(
-  kind === "image" ? "makeImage" : "makeVideo"
- );
- const status = $(kind+"Status");
- const result = $(kind+"Result");
+  const items = anonymous
+    ? anonymousHistory
+    : normalHistory;
 
- button.disabled = true;
- status.textContent =
-  "Создаю… Это может занять некоторое время.";
-
- if (result.dataset.url) {
-  URL.revokeObjectURL(result.dataset.url);
- }
- result.replaceChildren();
-
- const c = new AbortController();
- const timer = setTimeout(
-  () => c.abort(),
-  kind === "video" ? 240000 : 120000
- );
-
- try {
-  const payload = {
-   action:kind,
-   prompt,
-   model:$(kind+"Model").value,
-   ratio:$(kind+"Ratio").value,
-   initData
-  };
-
-  if (kind === "video") {
-   payload.duration = Number($("duration").value);
-  }
-
-  const response = await fetch(API_URL,{
-   method:"POST",
-   signal:c.signal,
-   headers:{"Content-Type":"application/json"},
-   body:JSON.stringify(payload)
+  items.forEach(item=>{
+    addMessage(item.content,item.role);
   });
+}
 
-  if (!response.ok) {
-   const data = await response.json();
-   throw Error(data.error || "Не удалось создать результат");
+/* API */
+async function api(payload,timeout=90000){
+  if(!initData || !user){
+    throw Error("Открой ANNIVEO AI через Telegram");
   }
 
-  const blob = await response.blob();
-  const url = URL.createObjectURL(blob);
-  result.dataset.url = url;
-
-  const media = document.createElement(
-   kind === "image" ? "img" : "video"
+  const controller = new AbortController();
+  const timer = setTimeout(
+    ()=>controller.abort(),
+    timeout
   );
 
-  media.src = url;
+  try{
+    const response = await fetch(API_URL,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      signal:controller.signal,
+      body:JSON.stringify({
+        ...payload,
+        initData
+      })
+    });
 
-  if (kind === "video") {
-   media.controls = true;
-   media.playsInline = true;
-  } else {
-   media.alt = "Созданное изображение";
+    const data = await response.json();
+
+    if(!response.ok){
+      throw Error(
+        data.error || "Ошибка сервера ANNIVEO"
+      );
+    }
+
+    return data;
+
+  }catch(e){
+    if(e.name === "AbortError"){
+      throw Error("Ответ задержался. Попробуй ещё раз.");
+    }
+    throw e;
+
+  }finally{
+    clearTimeout(timer);
   }
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = kind === "video"
-   ? "anniveo-video.mp4"
-   : "anniveo-image";
-  a.textContent = "Скачать результат";
-
-  result.append(media,a);
-  status.textContent = "Готово";
-
- } catch(e) {
-  status.textContent = e.name === "AbortError"
-   ? "Генерация задержалась. Попробуй позже."
-   : e.message;
- } finally {
-  clearTimeout(timer);
-  button.disabled = false;
- }
 }
 
-$("makeImage").onclick = () => generate("image");
-$("makeVideo").onclick = () => generate("video");
+/* ЗАГРУЗКА ИСТОРИИ */
+async function loadHistory(){
+  if(historyLoaded || historyLoading || anonymous || busy){
+    return;
+  }
 
-$("topUp").onclick = () => {
- toast("Пополнение будет доступно после подключения платежей.");
+  if(!initData || !user) return;
+
+  historyLoading = true;
+
+  try{
+    const data = await api({
+      action:"history"
+    },20000);
+
+    if(!busy){
+      normalHistory = cleanHistory(data.messages);
+      saveCache();
+      historyLoaded = true;
+
+      /*
+        ВАЖНО:
+        Загруженная история НЕ скрывает шар.
+      */
+      if(!anonymous && !showWelcome){
+        renderChat();
+      }
+    }
+
+  }catch(e){
+    console.warn("History:",e.message);
+
+  }finally{
+    historyLoading = false;
+  }
+}
+
+/* АНОНИМНЫЙ ЧАТ */
+function toggleAnonymous(){
+  if(busy || recording || transcribing || openingMic){
+    return;
+  }
+
+  anonymous = !anonymous;
+
+  /* Сразу убираем шар */
+  showWelcome = false;
+
+  /* Новая анонимная сессия начинается с нуля */
+  anonymousHistory = [];
+
+  $("anonToggle").classList.toggle(
+    "on",anonymous
+  );
+
+  $("anonToggle").setAttribute(
+    "aria-checked",
+    String(anonymous)
+  );
+
+  $("modeText").textContent = anonymous
+    ? "История не сохраняется"
+    : "История сохраняется";
+
+  $("messageInput").value = "";
+
+  renderChat();
+  window.scrollTo(0,0);
+
+  if(anonymous){
+    toast("Анонимный чат включён");
+  }else{
+    toast("Обычный чат включён");
+    historyLoaded = false;
+    loadHistory();
+  }
+}
+
+/* БЛОКИРОВКА ВВОДА */
+function updateControls(){
+  const locked =
+    busy || recording || transcribing || openingMic;
+
+  $("send").disabled = locked;
+  $("anonToggle").disabled = locked;
+  $("mic").disabled = busy || transcribing || openingMic;
+  $("messageInput").disabled =
+    recording || transcribing || openingMic;
+}
+
+/* ОТПРАВКА СООБЩЕНИЯ */
+async function sendMessage(text,audioURL){
+  text = String(text).trim();
+
+  if(!text || busy || recording || openingMic){
+    return;
+  }
+
+  if(!initData || !user){
+    toast("Открой ANNIVEO AI через Telegram");
+    return;
+  }
+
+  const isAnonymous = anonymous;
+
+  const context = cleanHistory(
+    anonymousHistory
+  ).slice(-12);
+
+  /* При первой отправке скрываем шар */
+  showWelcome = false;
+  updateWelcome();
+
+  if($("messages").children.length === 0){
+    renderChat();
+  }
+
+  addMessage(text,"user",audioURL);
+
+  const pending = addMessage(
+    "ANNIVEO AI думает…",
+    "assistant"
+  );
+
+  $("chatStatus").textContent = "Готовлю ответ…";
+
+  busy = true;
+  updateControls();
+
+  window.scrollTo(0,document.body.scrollHeight);
+
+  try{
+    const payload = isAnonymous
+      ? {
+          action:"anonymous",
+          message:text,
+          messages:context
+        }
+      : {
+          action:"chat",
+          message:text,
+          requestId:crypto.randomUUID()
+        };
+
+    const data = await api(payload);
+
+    if(typeof data.reply !== "string" ||
+       !data.reply.trim()){
+      throw Error("Нейросеть вернула пустой ответ");
+    }
+
+    formatAnswer(pending,data.reply);
+    pending.dataset.raw = data.reply;
+
+    const pair = [
+      {role:"user",content:text},
+      {role:"assistant",content:data.reply}
+    ];
+
+    if(isAnonymous){
+      anonymousHistory = cleanHistory([
+        ...anonymousHistory,
+        ...pair
+      ]);
+    }else{
+      normalHistory = cleanHistory([
+        ...normalHistory,
+        ...pair
+      ]);
+
+      historyLoaded = true;
+      saveCache();
+    }
+
+  }catch(e){
+    pending.textContent = e.message;
+    pending.dataset.raw = e.message;
+
+  }finally{
+    busy = false;
+    updateControls();
+    $("chatStatus").textContent = "";
+  }
+}
+
+/* ФОРМА */
+$("chatForm").onsubmit = e=>{
+  e.preventDefault();
+
+  if(busy || recording || transcribing || openingMic){
+    return;
+  }
+
+  const text = $("messageInput").value.trim();
+  if(!text) return;
+
+  if(!initData || !user){
+    toast("Открой приложение через Telegram");
+    return;
+  }
+
+  $("messageInput").value = "";
+  $("messageInput").style.height = "";
+
+  sendMessage(text);
 };
 
-window.addEventListener("pagehide",() => {
- if (recording && recorder?.state === "recording") {
-  recorder.onstop = null;
-  recorder.stop();
- }
- clearInterval(recordTimer);
- clearTimeout(recordStopTimer);
- stopTracks();
+$("messageInput").oninput = ()=>{
+  const input = $("messageInput");
+
+  input.style.height = "auto";
+  input.style.height =
+    Math.min(input.scrollHeight,95) + "px";
+};
+
+$("messageInput").onkeydown = e=>{
+  if(e.key === "Enter" &&
+     !e.shiftKey &&
+     !e.isComposing){
+    e.preventDefault();
+    $("chatForm").requestSubmit();
+  }
+};
+
+/* ИДЕЯ ДЛЯ ПРОЕКТА */
+function suggestIdea(){
+  $("messageInput").value =
+    "Помоги придумать интересную идею для моего проекта. " +
+    "Сначала задай мне несколько уточняющих вопросов.";
+
+  $("messageInput").focus();
+}
+
+/* ГОЛОСОВЫЕ СООБЩЕНИЯ */
+async function handleMic(){
+  if(recording){
+    if(recorder && recorder.state === "recording"){
+      recorder.stop();
+    }
+    return;
+  }
+
+  if(busy || transcribing || openingMic) return;
+
+  if(!initData || !user){
+    toast("Открой ANNIVEO AI через Telegram");
+    return;
+  }
+
+  if(!navigator.mediaDevices?.getUserMedia ||
+     !window.MediaRecorder){
+    toast("Микрофон недоступен в этом браузере");
+    return;
+  }
+
+  openingMic = true;
+  updateControls();
+
+  try{
+    microphoneStream =
+      await navigator.mediaDevices.getUserMedia({
+        audio:true
+      });
+
+    const mime = [
+      "audio/mp4",
+      "audio/webm;codecs=opus",
+      "audio/webm"
+    ].find(x=>MediaRecorder.isTypeSupported(x));
+
+    recorder = new MediaRecorder(
+      microphoneStream,
+      mime ? {mimeType:mime} : {}
+    );
+
+    audioChunks = [];
+
+    recorder.ondataavailable = e=>{
+      if(e.data.size){
+        audioChunks.push(e.data);
+      }
+    };
+
+    recorder.onstop = finishVoice;
+
+    recorder.start();
+
+    recording = true;
+    $("mic").textContent = "■";
+    $("mic").classList.add("recording");
+    $("chatStatus").textContent =
+      "Идёт запись · нажми ■ для отправки";
+
+    recordTimer = setTimeout(()=>{
+      if(recorder?.state === "recording"){
+        recorder.stop();
+      }
+    },120000);
+
+  }catch(e){
+    microphoneStream?.getTracks().forEach(
+      track=>track.stop()
+    );
+    toast("Разреши доступ к микрофону");
+
+  }finally{
+    openingMic = false;
+    updateControls();
+  }
+}
+
+async function finishVoice(){
+  clearTimeout(recordTimer);
+
+  recording = false;
+  $("mic").textContent = "🎙";
+  $("mic").classList.remove("recording");
+
+  microphoneStream?.getTracks().forEach(
+    track=>track.stop()
+  );
+  microphoneStream = null;
+
+  const blob = new Blob(audioChunks,{
+    type:recorder.mimeType || "audio/webm"
+  });
+
+  if(!blob.size || blob.size > 20*1024*1024){
+    toast("Запись слишком длинная или пустая");
+    $("chatStatus").textContent = "";
+    updateControls();
+    return;
+  }
+
+  transcribing = true;
+  updateControls();
+
+  $("chatStatus").textContent =
+    "Распознаю голосовое сообщение…";
+
+  const controller = new AbortController();
+  const timer = setTimeout(
+    ()=>controller.abort(),
+    90000
+  );
+
+  try{
+    const form = new FormData();
+
+    form.append("action","transcribe");
+    form.append("initData",initData);
+    form.append(
+      "file",
+      blob,
+      blob.type.includes("mp4")
+        ? "voice.m4a"
+        : "voice.webm"
+    );
+
+    const response = await fetch(API_URL,{
+      method:"POST",
+      body:form,
+      signal:controller.signal
+    });
+
+    const data = await response.json();
+
+    if(!response.ok || !data.text){
+      throw Error(
+        data.error || "Не удалось распознать голос"
+      );
+    }
+
+    const text = String(data.text).trim();
+
+    if(text.length > 4000){
+      throw Error("Голосовое слишком длинное");
+    }
+
+    const url = URL.createObjectURL(blob);
+    audioURLs.push(url);
+
+    transcribing = false;
+    await sendMessage(text,url);
+
+  }catch(e){
+    toast(e.message);
+
+  }finally{
+    clearTimeout(timer);
+    transcribing = false;
+    $("chatStatus").textContent = "";
+    updateControls();
+  }
+}
+
+/* ИСТОРИЯ */
+async function showHistory(){
+  const list = $("historyList");
+
+  list.innerHTML =
+    '<div class="empty">Загружаю историю…</div>';
+
+  try{
+    const data = await api({
+      action:"history"
+    },20000);
+
+    const items = cleanHistory(data.messages);
+    list.replaceChildren();
+
+    if(!items.length){
+      list.innerHTML =
+        '<div class="empty">История пока пуста</div>';
+      return;
+    }
+
+    items.reverse().forEach(item=>{
+      const el = document.createElement("div");
+      el.className = "history-item";
+
+      const b = document.createElement("b");
+      b.textContent =
+        item.role === "user" ? "Ты" : "ANNIVEO AI";
+
+      const p = document.createElement("p");
+      p.textContent = item.content;
+
+      el.append(b,p);
+      list.append(el);
+    });
+
+  }catch(e){
+    list.replaceChildren();
+
+    const error = document.createElement("div");
+    error.className = "empty";
+    error.textContent = e.message;
+    list.append(error);
+  }
+}
+
+/* ГЕНЕРАЦИЯ ФОТО И ВИДЕО */
+async function generateMedia(kind){
+  if(!initData || !user){
+    toast("Открой ANNIVEO AI через Telegram");
+    return;
+  }
+
+  const prompt = $(kind+"Prompt").value.trim();
+
+  if(!prompt){
+    toast("Сначала опиши свою идею");
+    return;
+  }
+
+  const button = $(
+    kind === "image" ? "makeImage" : "makeVideo"
+  );
+
+  const status = $(kind+"Status");
+  const result = $(kind+"Result");
+
+  button.disabled = true;
+  status.textContent = "Создаю…";
+  result.replaceChildren();
+
+  const controller = new AbortController();
+  const timer = setTimeout(
+    ()=>controller.abort(),
+    kind === "video" ? 240000 : 120000
+  );
+
+  try{
+    const payload = {
+      action:kind,
+      prompt,
+      model:$(kind+"Model").value,
+      ratio:$(kind+"Ratio").value,
+      initData
+    };
+
+    if(kind === "video"){
+      payload.duration = Number(
+        $("duration").value
+      );
+    }
+
+    const response = await fetch(API_URL,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify(payload),
+      signal:controller.signal
+    });
+
+    if(!response.ok){
+      let error = "Ошибка генерации";
+
+      try{
+        const data = await response.json();
+        error = data.error || error;
+      }catch(e){}
+
+      throw Error(error);
+    }
+
+    const type = response.headers.get("content-type") || "";
+
+    if(type.includes("application/json")){
+      const data = await response.json();
+
+      if(data.error){
+        throw Error(data.error);
+      }
+
+      throw Error(
+        "Сервер вернул JSON вместо готового файла. " +
+        "Нужно согласовать формат ответа Worker."
+      );
+    }
+
+    if(kind === "image" && !type.startsWith("image/")){
+      throw Error("Сервер не вернул изображение");
+    }
+
+    if(kind === "video" && !type.startsWith("video/")){
+      throw Error("Сервер не вернул видео");
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+
+    const media = document.createElement(
+      kind === "image" ? "img" : "video"
+    );
+
+    media.src = url;
+
+    if(kind === "video"){
+      media.controls = true;
+      media.playsInline = true;
+    }else{
+      media.alt = "Созданное изображение";
+    }
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download =
+      kind === "image"
+        ? "anniveo-image"
+        : "anniveo-video.mp4";
+    link.textContent = "Скачать результат";
+
+    result.append(media,link);
+    status.textContent = "Готово!";
+
+  }catch(e){
+    status.textContent = e.message;
+
+  }finally{
+    clearTimeout(timer);
+    button.disabled = false;
+  }
+}
+
+/* ЗАВЕРШЕНИЕ */
+window.addEventListener("pagehide",()=>{
+  if(recorder?.state === "recording"){
+    recorder.onstop = null;
+    recorder.stop();
+  }
+
+  microphoneStream?.getTracks().forEach(
+    track=>track.stop()
+  );
+
+  audioURLs.forEach(url=>URL.revokeObjectURL(url));
 });
 
-render();
+/*
+  СТАРТ ПРИЛОЖЕНИЯ.
+
+  showWelcome = true
+  всегда при новой загрузке страницы.
+
+  Загрузка истории не меняет это значение.
+*/
+showWelcome = true;
+renderChat();
 loadHistory();
+
 </script>
 </body>
 </html>
