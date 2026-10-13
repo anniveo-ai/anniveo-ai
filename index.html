@@ -1911,7 +1911,7 @@ async function sendMessage(text,audioURL,spokenVoice=false){
         requestId:crypto.randomUUID()
       };
 
-    const data=await api(payload,90000,spokenVoice?null:token=>{
+    const data=await api(payload,90000,token=>{
       pending.textContent+=token;
       pending.style.whiteSpace="pre-wrap";
     });
