@@ -120,25 +120,21 @@ header{
   font-weight:600;
 }
 
-/* ДИНАМИЧЕСКИЙ ФОН ИЗ ЦВЕТОВ ПО КРАЯМ ТЕКУЩЕГО КАДРА */
-#ambientBackground{
-  position:fixed;inset:-40px;
-  width:calc(100% + 80px);height:calc(100% + 80px);
-  z-index:0;pointer-events:none;
-  filter:blur(35px);
-}
-/* ЕДИНЫЙ ВИДЕОФОН С ЛИСЁНКОМ И ШАРОМ */
+/* ВИДЕО С ПРОЗРАЧНЫМ ФОНОМ ЧЕРЕЗ CANVAS */
 .universe{
   position:relative;width:100%;height:260px;
   margin:10px auto 15px;display:grid;place-items:center;
   overflow:hidden;pointer-events:none;
 }
-.universe-video{
+.universe-video,.universe-canvas{
   display:block;width:100%;height:auto;aspect-ratio:16/9;
   object-fit:contain;pointer-events:none;
-  -webkit-mask-image:radial-gradient(ellipse at center,#000 48%,transparent 92%);
-  mask-image:radial-gradient(ellipse at center,#000 48%,transparent 92%);
 }
+.universe-video{
+  position:absolute;left:0;top:50%;
+  transform:translateY(-50%);opacity:.001;
+}
+.universe-canvas{position:relative;background:transparent}
 
 /* СОЗДАТЬ */
 .heading{
@@ -737,7 +733,6 @@ select{
 </head>
 
 <body>
-<canvas id="ambientBackground" aria-hidden="true"></canvas>
 
 <!-- ЗАСТАВКА -->
 <div id="splash">
@@ -767,10 +762,10 @@ select{
   <div class="universe" id="universe" aria-hidden="true">
     <video id="heroVideo" class="universe-video"
       autoplay muted loop playsinline webkit-playsinline
-      preload="auto" poster="/fox-orb-poster.jpg"
-      disablepictureinpicture tabindex="-1">
-      <source src="/fox-orb-pingpong.mp4" type="video/mp4">
+      preload="auto" disablepictureinpicture tabindex="-1">
+      <source src="/fox-orb-black-loop.mp4" type="video/mp4">
     </video>
+    <canvas id="heroTransparent" class="universe-canvas" width="640" height="360"></canvas>
   </div>
 
   <p>
@@ -1898,13 +1893,14 @@ async function generateMedia(kind){
   });
 })();
 
-/* ВИДЕО И ФОН МЕНЯЮТСЯ ВМЕСТЕ */
+/* УДАЛЕНИЕ ЧЁРНОГО ФОНА ИЗ КАЖДОГО КАДРА */
 (function setupHeroVideo(){
   const video=$("heroVideo");
-  const canvas=$("ambientBackground");
+  const canvas=$("heroTransparent");
   if(!video||!canvas) return;
-  const ctx=canvas.getContext("2d");
-  const resolution=.3;
+  const ctx=canvas.getContext("2d",{willReadFrequently:true});
+  if(!ctx) return;
+  const black=8,feather=20;
   let frame=0,lastPaint=-Infinity;
   video.muted=true;video.defaultMuted=true;
 
@@ -1913,36 +1909,28 @@ async function generateMedia(kind){
       !$("welcome").classList.contains("hidden");
   }
   function paint(){
-    if(!ctx||video.readyState<2||!video.videoWidth) return;
-    const width=Math.ceil((window.innerWidth+80)*resolution);
-    const height=Math.ceil((window.innerHeight+80)*resolution);
-    if(canvas.width!==width||canvas.height!==height){
-      canvas.width=width;canvas.height=height;
+    if(video.readyState<2||!video.videoWidth) return;
+    ctx.drawImage(video,0,0,canvas.width,canvas.height);
+    const pixels=ctx.getImageData(0,0,canvas.width,canvas.height);
+    const data=pixels.data;
+    for(let i=0;i<data.length;i+=4){
+      const brightness=Math.max(data[i],data[i+1],data[i+2]);
+      let alpha=Math.max(0,Math.min(1,(brightness-black)/feather));
+      alpha=alpha*alpha*(3-2*alpha);
+      data[i+3]=Math.round(alpha*255);
+      // Remove the black matte from partly transparent glow pixels.
+      if(alpha>0&&alpha<1){
+        data[i]=Math.min(255,Math.round(data[i]/alpha));
+        data[i+1]=Math.min(255,Math.round(data[i+1]/alpha));
+        data[i+2]=Math.min(255,Math.round(data[i+2]/alpha));
+      }
     }
-    const rect=video.getBoundingClientRect();
-    const x=(rect.left+40)*resolution;
-    const y=(rect.top+40)*resolution;
-    const w=rect.width*resolution,h=rect.height*resolution;
-    const vw=video.videoWidth,vh=video.videoHeight;
-    const edge=2;
-    function draw(sx,sy,sw,sh,dx,dy,dw,dh){
-      if(dw>0&&dh>0) ctx.drawImage(video,sx,sy,sw,sh,dx,dy,dw,dh);
-    }
-    // Extend the exact border pixels outwards at their matching screen positions.
-    draw(0,0,edge,edge,0,0,x,y);
-    draw(vw-edge,0,edge,edge,x+w,0,width-x-w,y);
-    draw(0,vh-edge,edge,edge,0,y+h,x,height-y-h);
-    draw(vw-edge,vh-edge,edge,edge,x+w,y+h,width-x-w,height-y-h);
-    draw(0,0,vw,edge,x,0,w,y);
-    draw(0,vh-edge,vw,edge,x,y+h,w,height-y-h);
-    draw(0,0,edge,vh,0,y,x,h);
-    draw(vw-edge,0,edge,vh,x+w,y,width-x-w,h);
-    draw(0,0,vw,vh,x,y,w,h);
+    ctx.putImageData(pixels,0,0);
   }
   function tick(now){
     frame=0;
     if(!visible()||video.paused) return;
-    if(now-lastPaint>=100){
+    if(now-lastPaint>=1000/24-1){
       paint();lastPaint=now;
     }
     frame=requestAnimationFrame(tick);
