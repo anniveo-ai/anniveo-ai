@@ -1,6 +1,9 @@
 
 const json = (data, status, headers) =>
-  new Response(JSON.stringify(data), { status, headers });
+  new Response(JSON.stringify(data), {
+    status,
+    headers
+  });
 
 async function verifyTelegram(initData, token) {
   if (!initData || !token) return null;
@@ -32,7 +35,9 @@ async function verifyTelegram(initData, token) {
   );
 
   const secretBytes = await crypto.subtle.sign(
-    "HMAC", secret, encoder.encode(token)
+    "HMAC",
+    secret,
+    encoder.encode(token)
   );
 
   const key = await crypto.subtle.importKey(
@@ -45,7 +50,9 @@ async function verifyTelegram(initData, token) {
 
   const signature = new Uint8Array(
     await crypto.subtle.sign(
-      "HMAC", key, encoder.encode(dataCheck)
+      "HMAC",
+      key,
+      encoder.encode(dataCheck)
     )
   );
 
@@ -53,7 +60,9 @@ async function verifyTelegram(initData, token) {
     .map(b => b.toString(16).padStart(2, "0"))
     .join("");
 
-  if (!/^[a-f0-9]{64}$/i.test(hash)) return null;
+  if (!/^[a-f0-9]{64}$/i.test(hash)) {
+    return null;
+  }
 
   let mismatch = 0;
   const actual = hash.toLowerCase();
@@ -66,7 +75,9 @@ async function verifyTelegram(initData, token) {
   if (mismatch !== 0) return null;
 
   try {
-    const user = JSON.parse(params.get("user") || "null");
+    const user = JSON.parse(
+      params.get("user") || "null"
+    );
 
     return user &&
       Number.isSafeInteger(user.id) &&
@@ -78,70 +89,97 @@ async function verifyTelegram(initData, token) {
   }
 }
 
-const wait = ms =>
+const sleep = ms =>
   new Promise(resolve => setTimeout(resolve, ms));
 
-async function askAI(messages, apiKey) {
-  const url =
-    "https://gen.pollinations.ai/v1/chat/completions";
+function cleanHistory(items, limit = 12) {
+  if (!Array.isArray(items)) return [];
 
+  return items.slice(-limit).filter(item =>
+    item &&
+    ["user", "assistant"].includes(item.role) &&
+    typeof item.content === "string" &&
+    item.content.length <= 4000
+  ).map(item => ({
+    role: item.role,
+    content: item.content
+  }));
+}
+
+async function askAI(messages, apiKey) {
   let lastError;
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const controller = new AbortController();
-    const timeout = setTimeout(
+
+    const timer = setTimeout(
       () => controller.abort(),
       18000
     );
 
     try {
-      const response = await fetch(url, {
-        method: "POST",
-        signal: controller.signal,
-        headers: {
-          Authorization: "Bearer " + apiKey,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "openai/gpt-5.4-nano",
-          messages,
-          stream: false
-        })
-      });
+      const response = await fetch(
+        "https://gen.pollinations.ai/v1/chat/completions",
+        {
+          method: "POST",
+          signal: controller.signal,
+          headers: {
+            Authorization: "Bearer " + apiKey,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "openai/gpt-5.4-nano",
+            messages,
+            stream: false
+          })
+        }
+      );
 
       if (!response.ok) {
+        let details = {};
+
+        try {
+          details = await response.json();
+        } catch {}
+
         const retryable =
           response.status === 408 ||
           response.status === 429 ||
           response.status >= 500;
 
+        const error = new Error(
+          details.error?.message ||
+          "Сервис ИИ временно недоступен"
+        );
+
+        error.retryable = retryable;
+
         if (retryable && attempt === 0) {
-          lastError = new Error(
-            "Сервис ИИ временно недоступен"
-          );
-          continue;
+          lastError = error;
+        } else {
+          throw error;
         }
 
-        throw new Error(
-          response.status === 429
-            ? "Сервис ИИ перегружен. Попробуй позже."
-            : "Ошибка сервиса ИИ: " + response.status
-        );
+      } else {
+        const data = await response.json();
+        const answer =
+          data.choices?.[0]?.message?.content;
+
+        if (
+          typeof answer !== "string" ||
+          !answer.trim()
+        ) {
+          throw new Error("ИИ вернул пустой ответ");
+        }
+
+        return answer;
       }
 
-      const data = await response.json();
-      const answer = data.choices?.[0]?.message?.content;
-
-      if (typeof answer !== "string" || !answer.trim()) {
-        throw new Error("ИИ вернул пустой ответ");
-      }
-
-      return answer;
-
-    } catch (error) {
+    } catch(error) {
       lastError = error;
 
       const retryable =
+        error.retryable ||
         error.name === "AbortError" ||
         error instanceof TypeError;
 
@@ -150,13 +188,25 @@ async function askAI(messages, apiKey) {
       }
 
     } finally {
-      clearTimeout(timeout);
+      clearTimeout(timer);
     }
 
-    if (attempt === 0) await wait(400);
+    if (attempt === 0) {
+      await sleep(500);
+    }
   }
 
-  throw lastError || new Error("Сервис ИИ недоступен");
+  throw lastError ||
+    new Error("Сервис ИИ недоступен");
+}
+
+async function getHistory(db, userId, limit = 40) {
+  const rows = await db.prepare(
+    "SELECT role, content FROM chat_messages " +
+    "WHERE user_id = ? ORDER BY id DESC LIMIT ?"
+  ).bind(userId, limit).all();
+
+  return (rows.results || []).reverse();
 }
 
 export default {
@@ -164,9 +214,12 @@ export default {
     const headers = {
       "Access-Control-Allow-Origin":
         "https://anniveo-ai-app.pages.dev",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Content-Type": "application/json; charset=utf-8"
+      "Access-Control-Allow-Methods":
+        "POST, OPTIONS",
+      "Access-Control-Allow-Headers":
+        "Content-Type",
+      "Content-Type":
+        "application/json; charset=utf-8"
     };
 
     if (request.method === "OPTIONS") {
@@ -192,7 +245,10 @@ export default {
 
       if (!userId) {
         return json(
-          { error: "Открой ANNIVEO AI через Telegram" },
+          {
+            error:
+              "Открой ANNIVEO AI через Telegram"
+          },
           401,
           headers
         );
@@ -201,19 +257,23 @@ export default {
       if (action === "history") {
         if (!env.DB) {
           return json(
-            { error: "База данных не подключена" },
+            {
+              error:
+                "База данных не подключена"
+            },
             503,
             headers
           );
         }
 
-        const rows = await env.DB.prepare(
-          "SELECT role, content FROM chat_messages " +
-          "WHERE user_id = ? ORDER BY id DESC LIMIT 40"
-        ).bind(userId).all();
+        const messages = await getHistory(
+          env.DB,
+          userId,
+          40
+        );
 
         return json(
-          { messages: (rows.results || []).reverse() },
+          { messages },
           200,
           headers
         );
@@ -231,7 +291,10 @@ export default {
 
       if (!anonymous && !env.DB) {
         return json(
-          { error: "База данных не подключена" },
+          {
+            error:
+              "База данных не подключена"
+          },
           503,
           headers
         );
@@ -245,64 +308,131 @@ export default {
         );
       }
 
-      const message = String(body.message || "").trim();
+      const message = String(
+        body.message || ""
+      ).trim();
 
       if (!message || message.length > 4000) {
         return json(
-          { error: "Недопустимая длина сообщения" },
+          {
+            error:
+              "Недопустимая длина сообщения"
+          },
           400,
           headers
         );
       }
 
       let history = [];
+      let requestId = null;
 
       if (anonymous) {
-        history = Array.isArray(body.messages)
-          ? body.messages.slice(-12).filter(item =>
-              item &&
-              ["user", "assistant"].includes(item.role) &&
-              typeof item.content === "string" &&
-              item.content.length <= 4000
-            ).map(item => ({
-              role: item.role,
-              content: item.content
-            }))
-          : [];
-      } else {
-        const rows = await env.DB.prepare(
-          "SELECT role, content FROM chat_messages " +
-          "WHERE user_id = ? ORDER BY id DESC LIMIT 12"
-        ).bind(userId).all();
+        history = cleanHistory(
+          body.messages,
+          12
+        );
 
-        history = (rows.results || [])
-          .reverse()
-          .filter(item =>
-            ["user", "assistant"].includes(item.role) &&
-            typeof item.content === "string"
+      } else {
+        requestId = String(
+          body.requestId || ""
+        );
+
+        if (
+          !/^[a-zA-Z0-9_-]{8,100}$/.test(requestId)
+        ) {
+          return json(
+            {
+              error:
+                "Требуется идентификатор запроса"
+            },
+            400,
+            headers
           );
+        }
+
+        // Одна запись для одного запроса.
+        const inserted = await env.DB.prepare(
+          "INSERT OR IGNORE INTO chat_requests " +
+          "(user_id, request_id, status) " +
+          "VALUES (?, ?, 'processing')"
+        ).bind(userId, requestId).run();
+
+        if (!inserted.meta?.changes) {
+          const existing = await env.DB.prepare(
+            "SELECT status, reply " +
+            "FROM chat_requests " +
+            "WHERE user_id = ? AND request_id = ?"
+          ).bind(userId, requestId).first();
+
+          if (
+            existing?.status === "done" &&
+            typeof existing.reply === "string"
+          ) {
+            return json(
+              { reply: existing.reply },
+              200,
+              headers
+            );
+          }
+
+          return json(
+            {
+              error:
+                "Запрос ещё обрабатывается",
+              processing: true
+            },
+            202,
+            headers
+          );
+        }
+
+        history = await getHistory(
+          env.DB,
+          userId,
+          12
+        );
       }
 
       const messages = [
         {
           role: "system",
           content:
-            "Ты ANNIVEO AI — полезный, умный и " +
-            "дружелюбный ИИ-помощник. " +
+            "Ты ANNIVEO AI — полезный, умный " +
+            "и дружелюбный ИИ-помощник. " +
             "Отвечай на русском языке, если " +
             "пользователь не просит другой язык. " +
             "Отвечай понятно и по существу."
         },
         ...history,
-        { role: "user", content: message }
+        {
+          role: "user",
+          content: message
+        }
       ];
 
-      const answer = await askAI(
-        messages,
-        env.POLLINATIONS_API_KEY
-      );
+      let answer;
+
+      try {
+        answer = await askAI(
+          messages,
+          env.POLLINATIONS_API_KEY
+        );
+      } catch(error) {
+        if (!anonymous && requestId) {
+          await env.DB.prepare(
+            "DELETE FROM chat_requests " +
+            "WHERE user_id = ? " +
+            "AND request_id = ? " +
+            "AND status = 'processing'"
+          ).bind(userId, requestId).run();
+        }
+
+        throw error;
+      }
 
       if (!anonymous) {
+        // Сохраняем ответ и помечаем запрос
+        // завершённым одним пакетом.
         await env.DB.batch([
           env.DB.prepare(
             "INSERT INTO chat_messages " +
@@ -314,26 +444,34 @@ export default {
             "INSERT INTO chat_messages " +
             "(user_id, role, content) " +
             "VALUES (?, 'assistant', ?)"
-          ).bind(userId, answer)
+          ).bind(userId, answer),
+
+          env.DB.prepare(
+            "UPDATE chat_requests " +
+            "SET status = 'done', reply = ? " +
+            "WHERE user_id = ? AND request_id = ?"
+          ).bind(answer, userId, requestId)
         ]);
       }
 
-      return json({ reply: answer }, 200, headers);
+      return json(
+        { reply: answer },
+        200,
+        headers
+      );
 
-    } catch (error) {
-      console.error("ANNIVEO AI error:", error);
-
-      const message =
-        error.name === "AbortError"
-          ? "ИИ отвечает слишком долго. Попробуй ещё раз."
-          : error.message?.startsWith("Ошибка сервиса ИИ") ||
-            error.message?.startsWith("Сервис ИИ") ||
-            error.message === "ИИ вернул пустой ответ"
-          ? error.message
-          : "Временная ошибка. Попробуй ещё раз.";
+    } catch(error) {
+      console.error(
+        "ANNIVEO AI error:",
+        error
+      );
 
       return json(
-        { error: message },
+        {
+          error:
+            "Временная ошибка сервера. " +
+            "Попробуй ещё раз."
+        },
         503,
         headers
       );
