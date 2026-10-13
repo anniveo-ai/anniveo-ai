@@ -704,6 +704,50 @@ nav button {
   min-width: 0;
 }
 
+/* Исправление клавиатуры Telegram на iPhone */
+html {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+textarea,
+input,
+select {
+  font-size: 16px !important;
+}
+
+.dock {
+  position: fixed;
+  bottom: calc(75px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(730px, calc(100% - 30px));
+  z-index: 100;
+  transition: none !important;
+}
+
+body.keyboard-open .dock {
+  bottom: 10px !important;
+}
+
+body.keyboard-open nav {
+  display: none !important;
+}
+
+body.keyboard-open .app {
+  padding-bottom: 100px;
+}
+
+.composer textarea {
+  font-size: 16px !important;
+  min-width: 0;
+}
+
 </style>
 </head>
 
@@ -2001,6 +2045,54 @@ window.addEventListener("pagehide",()=>{
 showWelcome = true;
 renderChat();
 loadHistory();
+
+/* Управление клавиатурой на iPhone */
+(function () {
+  const input = document.getElementById("messageInput");
+  const dock = document.getElementById("dock");
+
+  if (!input || !dock) return;
+
+  const viewport = window.visualViewport;
+  if (!viewport) return;
+
+  function updateKeyboard() {
+    const keyboardHeight = Math.max(
+      0,
+      window.innerHeight -
+      viewport.height -
+      viewport.offsetTop
+    );
+
+    const isOpen =
+      document.activeElement === input &&
+      keyboardHeight > 120;
+
+    document.body.classList.toggle(
+      "keyboard-open",
+      isOpen
+    );
+
+    if (isOpen) {
+      dock.style.bottom =
+        Math.max(10, keyboardHeight + 10) + "px";
+    } else {
+      dock.style.bottom = "";
+    }
+  }
+
+  viewport.addEventListener("resize", updateKeyboard);
+  viewport.addEventListener("scroll", updateKeyboard);
+
+  input.addEventListener("focus", () => {
+    requestAnimationFrame(updateKeyboard);
+  });
+
+  input.addEventListener("blur", () => {
+    document.body.classList.remove("keyboard-open");
+    dock.style.bottom = "";
+  });
+})();
 
 </script>
 </body>
