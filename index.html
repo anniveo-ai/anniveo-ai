@@ -243,7 +243,6 @@ function showWelcome() {
  chat.appendChild(welcome);
 }
 
-// Безопасное отображение жирного Markdown-текста.
 function formatAnswer(element, text) {
  element.replaceChildren();
 
@@ -268,6 +267,10 @@ function formatAnswer(element, text) {
  });
 }
 
+function scrollChat() {
+ chat.scrollTop = chat.scrollHeight;
+}
+
 function add(text, role) {
  document.getElementById("welcome")?.remove();
 
@@ -281,7 +284,7 @@ function add(text, role) {
  }
 
  chat.appendChild(el);
- chat.scrollTop = chat.scrollHeight;
+ scrollChat();
  return el;
 }
 
@@ -367,8 +370,6 @@ async function api(payload, timeoutMs = 42000) {
    throw error;
   }
 
-  // Новый Worker возвращает 202,
-  // пока запрос ещё обрабатывается.
   if (response.status === 202 && data.processing) {
    return { processing:true };
   }
@@ -414,19 +415,232 @@ function canRetry(error) {
   error.status >= 500;
 }
 
-async function sendWithRecovery(payload, pending) {
- const isAnonymous = payload.action === "anonymous";
+// Получает потоковые события от Worker.
+// Текст выводится сразу при поступлении.
+async function streamAPI(payload, onToken) {
+ const controller = new AbortController();
 
- // Один и тот же requestId используется
- // во всех попытках обычного чата.
+ let timer;
+ let reader;
+ let receivedText = false;
+ let completed = false;
+ let answer = "";
+ let buffer = "";
+
+ const decoder = new TextDecoder();
+
+ const resetTimer = () => {
+  clearTimeout(timer);
+  timer = setTimeout(
+   () => controller.abort(),
+   45000
+  );
+ };
+
+ const processEvent = rawEvent => {
+  const lines = rawEvent.split("\n");
+
+  const raw = lines
+   .filter(line => line.startsWith("data:"))
+   .map(line => line.slice(5).trimStart())
+   .join("\n");
+
+  if (!raw.trim()) return;
+
+  let data;
+
+  try {
+   data = JSON.parse(raw);
+  } catch {
+   return;
+  }
+
+  if (data.type === "token") {
+   if (typeof data.content === "string") {
+    answer += data.content;
+    receivedText = true;
+    onToken(answer);
+   }
+  }
+
+  if (data.type === "done") {
+   completed = true;
+
+   if (typeof data.reply === "string") {
+    answer = data.reply;
+    onToken(answer);
+   }
+  }
+
+  if (data.type === "error") {
+   const error = new Error(
+    data.error || "Ошибка генерации"
+   );
+   error.partial = receivedText;
+   throw error;
+  }
+ };
+
+ try {
+  resetTimer();
+
+  const response = await fetch(API_URL, {
+   method:"POST",
+   signal:controller.signal,
+   headers:{
+    "Content-Type":"application/json"
+   },
+   body:JSON.stringify({
+    ...payload,
+    stream:true,
+    initData
+   })
+  });
+
+  if (response.status === 202) {
+   return { processing:true };
+  }
+
+  if (!response.ok) {
+   let data = {};
+
+   try {
+    data = await response.json();
+   } catch {}
+
+   const error = new Error(
+    data.error || "Ошибка сервера"
+   );
+   error.status = response.status;
+   throw error;
+  }
+
+  const contentType =
+   response.headers.get("content-type") || "";
+
+  // Совместимость со старым Worker:
+  // если вернулся JSON, принимаем обычный ответ.
+  if (!contentType.includes("text/event-stream")) {
+   const data = await response.json();
+
+   if (typeof data.reply !== "string") {
+    throw new Error(
+     "Сервер вернул некорректный ответ"
+    );
+   }
+
+   answer = data.reply;
+   completed = true;
+   onToken(answer);
+
+   return {reply:answer};
+  }
+
+  if (!response.body) {
+   throw new Error(
+    "Потоковая передача недоступна"
+   );
+  }
+
+  reader = response.body.getReader();
+
+  while (true) {
+   resetTimer();
+
+   const {done,value} = await reader.read();
+
+   if (done) break;
+
+   buffer += decoder.decode(
+    value,
+    {stream:true}
+   ).replace(/\r\n/g,"\n");
+
+   let boundary;
+
+   while (
+    (boundary = buffer.indexOf("\n\n")) !== -1
+   ) {
+    const eventText = buffer.slice(0,boundary);
+    buffer = buffer.slice(boundary + 2);
+    processEvent(eventText);
+   }
+
+   if (completed) break;
+  }
+
+  if (!completed) {
+   throw new Error(
+    "Соединение прервалось до завершения ответа"
+   );
+  }
+
+  if (!answer.trim()) {
+   throw new Error("ИИ вернул пустой ответ");
+  }
+
+  return {reply:answer};
+
+ } catch(error) {
+  if (error.name === "AbortError") {
+   const e = new Error(
+    "Превышено время ожидания ответа"
+   );
+   e.retryable = true;
+   e.partial = receivedText;
+   throw e;
+  }
+
+  if (error instanceof TypeError) {
+   const e = new Error(
+    "Соединение временно недоступно"
+   );
+   e.retryable = true;
+   e.partial = receivedText;
+   throw e;
+  }
+
+  if (receivedText) {
+   error.partial = true;
+  }
+
+  throw error;
+
+ } finally {
+  clearTimeout(timer);
+
+  if (reader) {
+   try {
+    await reader.cancel();
+   } catch {}
+  }
+
+  controller.abort();
+ }
+}
+
+async function sendWithRecovery(
+ payload,
+ pending,
+ onToken
+) {
+ const isAnonymous =
+  payload.action === "anonymous";
+
  const maxAttempts = isAnonymous ? 3 : 5;
 
- for (let attempt = 0; attempt < maxAttempts; attempt++) {
+ for (
+  let attempt = 0;
+  attempt < maxAttempts;
+  attempt++
+ ) {
   if (attempt > 0) {
    pending.textContent =
     "Восстанавливаю соединение…\n" +
     "Попытка " + (attempt + 1) +
     " из " + maxAttempts;
+
+   scrollChat();
 
    await sleep(Math.min(
     1200 * attempt,
@@ -434,8 +648,16 @@ async function sendWithRecovery(payload, pending) {
    ));
   }
 
+  let receivedText = false;
+
   try {
-   const data = await api(payload);
+   const data = await streamAPI(
+    payload,
+    text => {
+     receivedText = true;
+     onToken(text);
+    }
+   );
 
    if (data.processing) {
     if (attempt === maxAttempts - 1) {
@@ -457,7 +679,12 @@ async function sendWithRecovery(payload, pending) {
    return data;
 
   } catch(error) {
+   // Не повторяем запрос, если ответ уже
+   // начал приходить: это предотвращает
+   // повторную генерацию и дублирование.
    if (
+    receivedText ||
+    error.partial ||
     !canRetry(error) ||
     attempt === maxAttempts - 1
    ) {
@@ -473,7 +700,7 @@ async function sendWithRecovery(payload, pending) {
 
 async function fetchHistory() {
  const data = await api(
-  { action:"history" },
+  {action:"history"},
   15000
  );
 
@@ -489,7 +716,6 @@ async function synchronizeHistory() {
  try {
   const serverHistory = await fetchHistory();
 
-  // Не перезаписываем более новую локальную историю.
   if (version !== historyVersion) return;
 
   history = serverHistory;
@@ -587,13 +813,21 @@ form.addEventListener("submit", async event => {
   "assistant"
  );
 
+ let partialAnswer = "";
+
  try {
   const data = await sendWithRecovery(
    payload,
-   pending
+   pending,
+   text => {
+    partialAnswer = text;
+    formatAnswer(pending, text);
+    scrollChat();
+   }
   );
 
   formatAnswer(pending, data.reply);
+  scrollChat();
 
   const pair = [
    {role:"user",content:text},
@@ -601,7 +835,6 @@ form.addEventListener("submit", async event => {
   ];
 
   if (currentMode) {
-   // Только временная история в памяти страницы.
    temporaryHistory = validMessages([
     ...temporaryHistory,
     ...pair
@@ -618,13 +851,23 @@ form.addEventListener("submit", async event => {
   }
 
  } catch(error) {
-  pending.textContent =
-   "Не удалось получить ответ.\n" +
-   error.message +
-   "\nПроверь соединение и попробуй позже.";
+  if (partialAnswer.trim()) {
+   formatAnswer(pending, partialAnswer);
 
-  // Если обычный запрос завершился на сервере,
-  // восстанавливаем историю из D1.
+   const note = document.createElement("div");
+   note.className = "notice";
+   note.textContent =
+    "Ответ прервался. " +
+    "Попробуй отправить вопрос ещё раз.";
+   chat.appendChild(note);
+
+  } else {
+   pending.textContent =
+    "Не удалось получить ответ.\n" +
+    error.message +
+    "\nПроверь соединение и попробуй позже.";
+  }
+
   if (!currentMode) {
    await sleep(1000);
 
@@ -633,10 +876,11 @@ form.addEventListener("submit", async event => {
     history = serverHistory;
     historyVersion++;
     saveCache(history);
-    renderMessages(history);
-   } catch {
-    // Оставляем сообщение об ошибке видимым.
-   }
+
+    if (!partialAnswer.trim()) {
+     renderMessages(history);
+    }
+   } catch {}
   }
 
  } finally {
