@@ -178,11 +178,11 @@ function isRetryable(error) {
 // При исчерпании баланса Polza переключаем запросы на Pollinations
 // и на 5 минут пропускаем Polza, чтобы не тратить время на заведомо неудачные вызовы.
 let polzaCooldownUntil = 0;
-const POLZA_MODEL = "openai/gpt-4o";
-const POLZA_TIMEOUT_MS = 10000;
-const POLLINATIONS_TIMEOUT_MS = 25000;
-const POLLINATIONS_STREAM_TIMEOUT_MS = 25000;
-const STREAM_FIRST_TOKEN_TIMEOUT_MS = 12000;
+const POLZA_MODEL = "openai/gpt-4o-mini";
+const POLZA_TIMEOUT_MS = 8000;
+const POLLINATIONS_TIMEOUT_MS = 18000;
+const POLLINATIONS_STREAM_TIMEOUT_MS = 18000;
+const STREAM_FIRST_TOKEN_TIMEOUT_MS = 8000;
 const STREAM_IDLE_TIMEOUT_MS = 25000;
 
 function polzaAvailable(env) {
@@ -200,6 +200,7 @@ async function fetchPolza(messages, env, streaming, controller) {
     body: JSON.stringify({
       model: POLZA_MODEL,
       messages,
+      max_tokens: 900,
       stream: streaming
     })
   });
@@ -207,8 +208,10 @@ async function fetchPolza(messages, env, streaming, controller) {
   if (!response.ok) {
     const status = response.status;
     await response.body?.cancel();
-    if ([401, 402, 403, 429].includes(status)) {
+    if ([401, 402, 403, 404].includes(status)) {
       polzaCooldownUntil = Date.now() + 5 * 60 * 1000;
+    } else if (status === 429) {
+      polzaCooldownUntil = Date.now() + 30 * 1000;
     }
     throw new Error("Polza HTTP " + status);
   }
@@ -388,6 +391,7 @@ async function fetchAI(
       body: JSON.stringify({
         model: "openai/gpt-5.4-nano",
         messages,
+        max_tokens: 900,
         stream: streaming
       })
     }
