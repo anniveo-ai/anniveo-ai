@@ -485,7 +485,7 @@ header{
 
 /* СООБЩЕНИЯ */
 .voice-progress{
-  align-self:flex-end;margin-left:auto;margin-top:-7px;display:flex;align-items:center;gap:9px;
+  align-self:flex-end;margin-left:auto;margin-top:-7px;margin-bottom:18px;display:flex;align-items:center;gap:9px;
   max-width:calc(100% - 18px);padding:10px 13px;
   border:1px solid rgba(198,166,255,.25);border-radius:16px 16px 5px 16px;
   background:linear-gradient(125deg,rgba(69,55,88,.9),rgba(43,37,57,.94));
@@ -530,7 +530,7 @@ header{
   width:100%;
 }
 .message.assistant.sender-pending{
-  align-self:flex-end;width:auto;max-width:87%;margin-left:auto;
+  align-self:flex-end;width:auto;max-width:87%;margin-left:auto;margin-bottom:18px;
   padding:11px 14px;border:1px solid #544365;
   border-radius:17px 17px 5px 17px;
   background:linear-gradient(135deg,rgba(59,47,75,.94),rgba(43,37,57,.96));
@@ -757,6 +757,7 @@ header{
 .mic-swipe-hint.visible{opacity:1;visibility:visible;transform:translateY(0) scale(1)}
 .mic-swipe-track{
   position:absolute;right:0;top:0;bottom:0;z-index:0;width:82px;
+  pointer-events:auto;touch-action:none;
   border:1px solid rgba(204,177,245,.34);border-radius:44px;
   background:linear-gradient(180deg,rgba(44,37,61,.78),rgba(27,25,40,.58));
   -webkit-backdrop-filter:blur(18px) saturate(135%);backdrop-filter:blur(18px) saturate(135%);
@@ -799,6 +800,9 @@ header{
 }
 .mic-swipe-track.dragging .mic-swipe-shadow{
   filter:blur(8px);opacity:1;box-shadow:0 0 46px rgba(193,145,255,.62);
+}
+.mic-swipe-track.returning .mic-swipe-shadow{
+  transition:transform .2s cubic-bezier(.2,.8,.2,1),opacity .12s linear,filter .12s linear;
 }
 .mic-swipe-hint.locked .mic-guide-lock{
   opacity:1;transform:scale(1.04);border-color:#f0deff;
@@ -1752,6 +1756,55 @@ function setupMicGestures(){
     },1400);
   };
   const suppressClick=()=>{ignoreMicClickUntil=Date.now()+700;};
+  let trackDrag=null;
+  const trackProgressAt=clientY=>{
+    if(!swipeTrack||!swipeShadow) return 1;
+    const rect=swipeTrack.getBoundingClientRect();
+    const trackHeight=swipeTrack.clientHeight||rect.height||216;
+    const shadowSize=swipeShadow.offsetHeight||72;
+    const bottomCenter=trackHeight-8-shadowSize/2;
+    const lockCenter=(lockButton?.offsetTop||9)+(lockButton?.offsetHeight||56)/2;
+    const travel=Math.max(1,bottomCenter-lockCenter);
+    const localY=clientY-rect.top-swipeTrack.clientTop;
+    return Math.max(0,Math.min(1,(bottomCenter-localY)/travel));
+  };
+  const startTrackDrag=event=>{
+    if(!recording||!button.classList.contains("locked")||!swipeTrack) return;
+    event.preventDefault();
+    clearTimeout(hintTimer);
+    swipeHint?.classList.add("visible","locked");
+    swipeHint?.setAttribute("aria-hidden","false");
+    trackDrag={id:event.pointerId,progress:trackProgressAt(event.clientY)};
+    swipeTrack.classList.remove("returning");
+    swipeTrack.setPointerCapture?.(event.pointerId);
+    moveSwipeHint(trackDrag.progress*lockDistance);
+    $("chatStatus").textContent="Потяни свечение вниз к микрофону, чтобы удалить запись";
+  };
+  const moveTrackDrag=event=>{
+    if(!trackDrag||trackDrag.id!==event.pointerId) return;
+    event.preventDefault();
+    trackDrag.progress=trackProgressAt(event.clientY);
+    moveSwipeHint(trackDrag.progress*lockDistance);
+    if(trackDrag.progress<=.035){
+      trackDrag=null;
+      cancelMicRecording();
+    }
+  };
+  const finishTrackDrag=event=>{
+    if(!trackDrag||trackDrag.id!==event.pointerId) return;
+    event.preventDefault();
+    const shouldCancel=trackDrag.progress<=.12;
+    trackDrag=null;
+    if(shouldCancel){cancelMicRecording();return;}
+    swipeTrack?.classList.add("returning");
+    moveSwipeHint(lockDistance);
+    $("chatStatus").textContent="Запись закреплена · крестик отменит, микрофон или замок завершит";
+    setTimeout(()=>swipeTrack?.classList.remove("returning"),230);
+  };
+  swipeTrack?.addEventListener("pointerdown",startTrackDrag);
+  swipeTrack?.addEventListener("pointermove",moveTrackDrag);
+  swipeTrack?.addEventListener("pointerup",finishTrackDrag);
+  swipeTrack?.addEventListener("pointercancel",finishTrackDrag);
   const beginGestureRecording=state=>{
     if(state.started||state.held) return Promise.resolve();
     state.held=true;
@@ -1761,7 +1814,7 @@ function setupMicGestures(){
   };
   const updateDirection=(state,x,y)=>{
     const dx=x-state.x,dy=state.y-y;
-    moveSwipeHint(state.locked?lockDistance:dy);
+    moveSwipeHint(dy);
     const progress=Math.max(0,Math.min(1,(-dx)/(cancelDistance*1.25)));
     const liftProgress=Math.max(0,Math.min(1,dy/lockDistance));
     const feedbackProgress=Math.max(progress,liftProgress*.48);
@@ -2445,14 +2498,14 @@ async function sendMessage(text,audioURL,spokenVoice=false){
 
   addMessage(text,"user",audioURL);
   const pending=addMessage(
-    "ANNIVEO AI думает…","assistant"
+    spokenVoice?"ANNIVEO думает…":"ANNIVEO AI думает…","assistant"
   );
   pending.closest(".message")?.classList.add("sender-pending");
 
   $("chatStatus").textContent="Готовлю ответ…";
   busy=true;
   updateControls();
-  if(spokenVoice){app.scrollTop=0;$("voiceStatus").textContent="Думаю над ответом…";}
+  if(spokenVoice){app.scrollTop=0;$("voiceStatus").textContent="ANNIVEO думает…";}
   else scrollAppToBottom();
 
   try{
@@ -2826,8 +2879,8 @@ async function finishVoice(){
   }
   transcribing=true;
   if(!spokenVoice){showWelcome=false;updateWelcome();}
-  setVoiceProgress("Распознаю запись… текст появится здесь");
-  if(spokenVoice) $("voiceStatus").textContent="Распознаю твою речь…";
+  setVoiceProgress("ANNIVEO распознаёт запись… текст появится здесь");
+  if(spokenVoice) $("voiceStatus").textContent="ANNIVEO распознаёт твою речь…";
   updateControls();
   $("chatStatus").textContent=
     "Распознаю голосовое сообщение…";
@@ -2853,8 +2906,8 @@ async function finishVoice(){
       if(spokenVoice) $("voiceStatus").textContent=message;
       $("chatStatus").textContent=message;
       setVoiceProgress(message==="Ответ ещё готовится…"
-        ?"Распознаю речь… сервер обрабатывает запись"
-        :"Распознавание: "+message);
+        ?"ANNIVEO распознаёт… сервер обрабатывает запись"
+        :"ANNIVEO распознаёт: "+message);
     },"Распознавание речи задержалось. Попробуй записать короче.");
     if(!response.ok||!data.text){
       throw Error(
