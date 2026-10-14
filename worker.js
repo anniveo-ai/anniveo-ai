@@ -259,11 +259,11 @@ async function primeAIStream(response, controller, timeoutMs) {
 
   const hasToken = eventText => {
     const lines = eventText
-      .split("\\n")
+      .split("\n")
       .filter(line => line.startsWith("data:"))
       .map(line => line.slice(5).trimStart());
     if (!lines.length) return false;
-    const raw = lines.join("\\n").trim();
+    const raw = lines.join("\n").trim();
     if (!raw || raw === "[DONE]") return false;
     try {
       const data = JSON.parse(raw);
@@ -280,9 +280,9 @@ async function primeAIStream(response, controller, timeoutMs) {
       const { done, value } = await reader.read();
       if (done) break;
       queued.push(value);
-      buffer += decoder.decode(value, { stream: true }).replace(/\\r\\n/g, "\\n");
+      buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
       let boundary;
-      while ((boundary = buffer.indexOf("\\n\\n")) !== -1) {
+      while ((boundary = buffer.indexOf("\n\n")) !== -1) {
         const eventText = buffer.slice(0, boundary);
         buffer = buffer.slice(boundary + 2);
         if (hasToken(eventText)) {
