@@ -714,6 +714,19 @@ header{
   position:relative;isolation:isolate;overflow:visible;
   transition:none;z-index:1;
 }
+#attachButton.recording-cancel{
+  border:1px solid rgba(255,164,195,.52);
+  background:linear-gradient(145deg,rgba(199,93,132,.92),rgba(112,49,83,.96));
+  color:#ffe7ef;
+  box-shadow:0 0 0 2px rgba(255,151,190,.27),0 0 21px rgba(243,83,144,.38);
+}
+#attachButton.recording-cancel:before{
+  opacity:.62;transform:scale(.9);filter:blur(10px);
+  background:radial-gradient(circle,#ff6e9ab8 0%,#ef3b704d 48%,transparent 76%);
+}
+#attachButton.recording-cancel #attachGlyph{
+  transform:rotate(0deg) scale(1);color:#ffe7ef;font-size:22px;font-weight:700;
+}
 #attachButton:before{
   content:"";position:absolute;z-index:-1;inset:-14px;
   border-radius:50%;pointer-events:none;
@@ -776,13 +789,13 @@ header{
 .mic-guide-lock:focus-visible{outline:2px solid #f2dcff;outline-offset:4px}
 .mic-guide-lock svg{width:23px;height:23px;filter:drop-shadow(0 0 6px rgba(234,211,255,.7))}
 .mic-swipe-shadow{
-  position:absolute;left:50%;top:138px;z-index:1;
+  position:absolute;left:50%;right:auto;top:auto;bottom:8px;z-index:1;
   width:72px;height:72px;border-radius:50%;pointer-events:none;
   background:radial-gradient(ellipse at 50% 55%,rgba(250,237,255,.58) 0%,rgba(211,176,255,.38) 27%,rgba(182,129,255,.23) 50%,rgba(156,108,221,.1) 68%,transparent 82%);
-  filter:blur(9px);opacity:.52;transform:translateX(-50%) scale(.94);
+  filter:blur(9px);opacity:.52;transform:translate3d(-50%,0,0) scale(.94);
   box-shadow:0 0 31px rgba(174,119,255,.28);
-  transition:top .05s linear,opacity .08s linear,transform .05s linear,filter .08s linear;
-  will-change:top,opacity,transform;
+  transition:opacity .08s linear,filter .08s linear;
+  will-change:transform,opacity;
 }
 .mic-swipe-track.dragging .mic-swipe-shadow{
   filter:blur(8px);opacity:1;box-shadow:0 0 46px rgba(193,145,255,.62);
@@ -1441,7 +1454,7 @@ select{
     </div>
   </div>
   <form id="chatForm" class="composer">
-    <button type="button" id="attachButton" class="circle" aria-label="Добавить вложение" aria-expanded="false" onclick="toggleAttachmentMenu()"><span id="attachGlyph">＋</span></button>
+    <button type="button" id="attachButton" class="circle" aria-label="Добавить вложение" aria-expanded="false" onclick="handleAttachmentButton()"><span id="attachGlyph">＋</span></button>
     <textarea id="messageInput" rows="1"
       maxlength="4000"
       placeholder="Спроси ANNIVEO…"></textarea>
@@ -1612,6 +1625,7 @@ function paintSearchWave(level,now=performance.now()){
   }
 }
 function setComposerRecording(active){
+  if(!active) setAttachmentCancelMode(false);
   $("chatForm").classList.toggle("recording-mode",active);
   $("dock").classList.toggle("recording-mode",active);
   clearInterval(micElapsedTimer);
@@ -1689,8 +1703,15 @@ function setupMicGestures(){
   const button=$("mic"),plus=$("attachButton");
   if(!button||button.dataset.gesturesReady) return;
   button.dataset.gesturesReady="1";
-  const lockDistance=52,cancelDistance=72;
-  const swipeHint=$("micSwipeHint"),swipeTrack=$("micSwipeTrack"),swipeShadow=$("micSwipeShadow");
+  const cancelDistance=72;
+  const swipeHint=$("micSwipeHint"),swipeTrack=$("micSwipeTrack"),swipeShadow=$("micSwipeShadow"),lockButton=$("micLockButton");
+  const lockDistance=(()=>{
+    const trackHeight=swipeTrack?.clientHeight||216;
+    const shadowSize=swipeShadow?.offsetHeight||72;
+    const bottomTop=Math.max(0,trackHeight-shadowSize-8);
+    const lockCenter=(lockButton?.offsetTop||9)+(lockButton?.offsetHeight||56)/2;
+    return Math.max(52,Math.round(bottomTop-Math.max(0,lockCenter-shadowSize/2)));
+  })();
   let hintTimer=0;
   const moveSwipeHint=distance=>{
     const progress=Math.max(0,Math.min(1,distance/lockDistance));
@@ -1698,11 +1719,11 @@ function setupMicGestures(){
       const trackHeight=swipeTrack.clientHeight||218;
       const shadowSize=swipeShadow.offsetHeight||72;
       const bottomTop=Math.max(0,trackHeight-shadowSize-8);
-      const topTop=Math.min(bottomTop,82);
-      const top=bottomTop-(bottomTop-topTop)*progress;
-      swipeShadow.style.top=top.toFixed(1)+"px";
-      swipeShadow.style.opacity=(.38+.62*progress).toFixed(2);
-      swipeShadow.style.transform="translateX(-50%) scale("+(.9+.12*progress).toFixed(3)+")";
+      const lockCenter=(lockButton?.offsetTop||9)+(lockButton?.offsetHeight||56)/2;
+      const topTop=Math.max(0,lockCenter-shadowSize/2);
+      const travel=Math.max(0,bottomTop-topTop);
+      swipeShadow.style.opacity=(.52+.48*progress).toFixed(2);
+      swipeShadow.style.transform="translate3d(-50%,"+(-travel*progress).toFixed(1)+"px,0) scale("+(.94+.08*progress).toFixed(3)+")";
     }
     swipeTrack?.classList.toggle("dragging",progress>.015);
   };
@@ -1739,10 +1760,11 @@ function setupMicGestures(){
   };
   const updateDirection=(state,x,y)=>{
     const dx=x-state.x,dy=state.y-y;
-    moveSwipeHint(dy);
+    moveSwipeHint(state.locked?lockDistance:dy);
     const progress=Math.max(0,Math.min(1,(-dx)/(cancelDistance*1.25)));
-    const turn=progress*45;
-    const scale=1+progress*.48;
+    const liftProgress=Math.max(0,Math.min(1,dy/lockDistance));
+    const turn=Math.max(progress,liftProgress)*45;
+    const scale=1+progress*.48+liftProgress*.1;
     const red=Math.round(57+(190-57)*progress);
     const green=Math.round(57+(57-57)*progress);
     const blue=Math.round(71+(91-71)*progress);
@@ -1777,8 +1799,9 @@ function setupMicGestures(){
       button.classList.remove("cancel-armed","gesture-active");
       resetCancelVisual();
       button.classList.add("locked");
+      setAttachmentCancelMode(true);
       suppressClick();
-      $("chatStatus").textContent="Запись закреплена · нажми на замок или микрофон, чтобы отправить";
+      $("chatStatus").textContent="Запись закреплена · крестик отменит, микрофон или замок завершит";
       return;
     }
     if(state.cancelArmed){
@@ -1803,6 +1826,7 @@ function setupMicGestures(){
     }
     resetCancelVisual();
     if(state.locked){
+      setAttachmentCancelMode(true);
       suppressClick();
       micGesture=null;
       return;
@@ -2352,6 +2376,24 @@ function toggleAttachmentMenu(){
   $("attachButton").setAttribute("aria-expanded",String(isOpen));
   if(isOpen) tg?.HapticFeedback?.impactOccurred("light");
 }
+function setAttachmentCancelMode(active){
+  const button=$("attachButton"),glyph=$("attachGlyph");
+  if(!button||!glyph) return;
+  button.classList.toggle("recording-cancel",active);
+  glyph.textContent=active?"×":"＋";
+  glyph.style.transform="rotate(0deg) scale(1)";
+  glyph.style.color="";
+  button.setAttribute("aria-label",active?"Отменить запись":"Добавить вложение");
+  button.title=active?"Нажми, чтобы отменить запись":"Добавить вложение";
+  button.setAttribute("aria-expanded","false");
+}
+function handleAttachmentButton(){
+  if($("attachButton").classList.contains("recording-cancel")&&(recording||openingMic)){
+    cancelMicRecording();
+    return;
+  }
+  toggleAttachmentMenu();
+}
 function chooseAttachment(kind){
   $("attachmentMenu").classList.add("hidden");
   $("attachButton").setAttribute("aria-expanded","false");
@@ -2726,6 +2768,7 @@ async function handleMic(){
       }
     },120000);
   }catch(e){
+    setAttachmentCancelMode(false);
     releaseMicrophone();
     stopVoiceMeter();
     orbVoiceActive=false;
