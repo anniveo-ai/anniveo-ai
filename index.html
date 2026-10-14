@@ -1791,6 +1791,7 @@ let voiceSessionVersion=0;
 let voiceHeard=false;
 let voiceAnalyser=null,voiceAudioContext=null,voiceFrame=0;
 let voiceSourceNode=null;
+let bargeInAnalyser=null,bargeInSourceNode=null,bargeInFrame=0;
 let micElapsedTimer=null,recordingStartedAt=0;
 let voiceProgressText="",voiceProgressError=false;
 let voiceUtterance=null;
@@ -3110,13 +3111,56 @@ function suggestIdea(){
 /* РАЗГОВОР ПО НАЖАТИЮ НА ШАР */
 function stopVoiceMeter(){
   cancelAnimationFrame(voiceFrame);voiceFrame=0;
+  stopBargeInMonitor();
   voiceSourceNode?.disconnect();voiceSourceNode=null;voiceAnalyser=null;
   $("planetResponse").style.setProperty("--voice-level","0");
   $("mic").style.setProperty("--mic-scale","1");
   $("mic").style.setProperty("--mic-lift","0px");
   $("mic").classList.remove("locked","gesture-active");
 }
+function stopBargeInMonitor(){
+  cancelAnimationFrame(bargeInFrame);bargeInFrame=0;
+  bargeInSourceNode?.disconnect();bargeInSourceNode=null;bargeInAnalyser=null;
+}
+function startBargeInMonitor(session){
+  stopBargeInMonitor();
+  if(!orbVoiceActive||!microphoneStream||!voiceAudioContext) return;
+  try{
+    if(voiceAudioContext.state==="suspended") void voiceAudioContext.resume().catch(()=>{});
+    bargeInAnalyser=voiceAudioContext.createAnalyser();
+    bargeInAnalyser.fftSize=1024;
+    bargeInAnalyser.smoothingTimeConstant=0;
+    bargeInSourceNode=voiceAudioContext.createMediaStreamSource(microphoneStream);
+    bargeInSourceNode.connect(bargeInAnalyser);
+    const samples=new Float32Array(bargeInAnalyser.fftSize);
+    const armedAt=performance.now()+420;
+    let speechFrames=0;
+    function watch(now){
+      if(session!==voiceSessionVersion||!orbVoiceActive||!window.speechSynthesis?.speaking){
+        stopBargeInMonitor();return;
+      }
+      bargeInAnalyser.getFloatTimeDomainData(samples);
+      let energy=0;
+      for(const sample of samples) energy+=sample*sample;
+      const rms=Math.sqrt(energy/samples.length);
+      if(now>armedAt&&rms>.028) speechFrames++;
+      else speechFrames=Math.max(0,speechFrames-2);
+      if(speechFrames>=10){
+        stopBargeInMonitor();
+        stopSpokenReply();
+        setVoiceChatStatus("Слышу тебя — говори","listening");
+        void handleMic();
+        return;
+      }
+      bargeInFrame=requestAnimationFrame(watch);
+    }
+    bargeInFrame=requestAnimationFrame(watch);
+  }catch(error){
+    stopBargeInMonitor();
+  }
+}
 function stopSpokenReply(){
+  stopBargeInMonitor();
   if(voiceUtterance){
     voiceUtterance.onstart=null;
     voiceUtterance.onend=null;
@@ -3236,18 +3280,23 @@ function speakReply(text){
     .trim();
   voiceUtterance=new SpeechSynthesisUtterance(plain);
   voiceUtterance.lang="ru-RU";
-  voiceUtterance.rate=.93;
-  voiceUtterance.pitch=1.16;
+  voiceUtterance.rate=.95;
+  voiceUtterance.pitch=1.06;
+  voiceUtterance.volume=1;
   const voices=window.speechSynthesis.getVoices();
   const russian=voices.filter(v=>v.lang.toLowerCase().startsWith("ru"));
   const gentleFoxVoice=
-    russian.find(v=>/milena|elena|yelena|alena|anna|irina|svetlana|female|woman/i.test(v.name))||
-    russian.find(v=>!/yuri|dmitri|dmitry|male/i.test(v.name))||
+    russian.find(v=>/siri|premium|enhanced|natural|milena|yelena/i.test(v.name))||
+    russian.find(v=>/elena|alena|anna|irina|svetlana|female|woman/i.test(v.name))||
+    russian.find(v=>v.lang.toLowerCase()==="ru-ru"&&v.localService===false)||
     russian[0];
   if(gentleFoxVoice) voiceUtterance.voice=gentleFoxVoice;
   const session=voiceSessionVersion;
   voiceUtterance.onstart=()=>{
-    if(session===voiceSessionVersion) setVoiceChatStatus("ANNIVEO отвечает…","speaking");
+    if(session===voiceSessionVersion){
+      setVoiceChatStatus("ANNIVEO отвечает… можешь перебить","speaking");
+      startBargeInMonitor(session);
+    }
   };
   voiceUtterance.onend=()=>{
     if(session!==voiceSessionVersion) return;
