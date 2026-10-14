@@ -1730,7 +1730,7 @@ select{
           <span style="--bar-height:15px;--bar-delay:-.4s"></span>
           <span style="--bar-height:8px;--bar-delay:-.3s"></span>
         </span>
-        <span id="chatOrbHintText" class="chat-orb-hint-text">Говори, я слушаю</span>
+        <span id="chatOrbHintText" class="chat-orb-hint-text">Говори, я рядом</span>
       </div>
       <button type="submit" id="send" aria-label="Говорить с ANNIVEO AI" title="Нажми на шар и скажи, что нужно"
         class="circle send planet" data-mode="voice"><span id="sendGlyph" aria-hidden="true">➤</span><img class="orb-twenty" src="orb20-real.webp" alt="" draggable="false"></button>
@@ -3030,7 +3030,7 @@ function syncChatOrbUI(){
   const visible=inChat&&voiceMode&&(
     voiceActive||(!recording&&!openingMic&&!transcribing&&!busy)
   );
-  let phase="idle",text="Говори, я слушаю";
+  let phase="idle",text="Говори, я рядом";
   if(voiceActive){
     if(openingMic){phase="starting";text="Включаю микрофон…";}
     else if(transcribing){phase="transcribing";text="Распознаю речь…";}
