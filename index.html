@@ -753,12 +753,12 @@ header{
 }
 .status:empty{display:none}
 .mic-swipe-hint{
-  position:absolute;left:0;right:auto;bottom:calc(100% + 5px);z-index:46;
+  position:absolute;left:0;right:auto;top:0;bottom:auto;z-index:46;
   width:190px;height:164px;pointer-events:none;
-  opacity:0;visibility:hidden;transform:translateY(9px) scale(.98);
+  opacity:0;visibility:hidden;transform:scale(.98);
   transition:opacity .2s ease,transform .2s ease,visibility .2s;
 }
-.mic-swipe-hint.visible{opacity:1;visibility:visible;transform:translateY(0) scale(1)}
+.mic-swipe-hint.visible{opacity:1;visibility:visible;transform:scale(1)}
 .mic-swipe-track{
   position:absolute;right:0;top:0;bottom:0;z-index:0;width:62px;
   pointer-events:auto;touch-action:none;
@@ -794,7 +794,7 @@ header{
 .mic-guide-lock:focus-visible{outline:2px solid #f2dcff;outline-offset:4px}
   .mic-guide-lock svg{width:18px;height:18px;filter:drop-shadow(0 0 6px rgba(234,211,255,.7))}
 .mic-swipe-shadow{
-  position:absolute;left:50%;right:auto;top:auto;bottom:8px;z-index:1;
+  position:absolute;left:50%;right:auto;top:auto;bottom:-27px;z-index:1;
   width:54px;height:54px;border-radius:50%;pointer-events:none;
   background:radial-gradient(ellipse at 50% 55%,rgba(250,237,255,.58) 0%,rgba(211,176,255,.38) 27%,rgba(182,129,255,.23) 50%,rgba(156,108,221,.1) 68%,transparent 82%);
   filter:blur(7px);opacity:.52;transform:translate3d(-50%,0,0) scale(.94);
@@ -1715,8 +1715,8 @@ function setupMicGestures(){
   const lockDistance=(()=>{
     const trackHeight=swipeTrack?.clientHeight||164;
     const shadowSize=swipeShadow?.offsetHeight||54;
-    const bottomTop=Math.max(0,trackHeight-shadowSize-8);
-    const lockCenter=(lockButton?.offsetTop||9)+(lockButton?.offsetHeight||42)/2;
+    const bottomTop=trackHeight-shadowSize/2;
+    const lockCenter=(lockButton?.offsetTop||9)+(lockButton?.offsetHeight||42)/2-(swipeTrack?.clientTop||1);
     return Math.max(52,Math.round(bottomTop-Math.max(0,lockCenter-shadowSize/2)));
   })();
   let hintTimer=0;
@@ -1725,8 +1725,8 @@ function setupMicGestures(){
     if(swipeShadow&&swipeTrack){
       const trackHeight=swipeTrack.clientHeight||164;
       const shadowSize=swipeShadow.offsetHeight||54;
-      const bottomTop=Math.max(0,trackHeight-shadowSize-8);
-      const lockCenter=(lockButton?.offsetTop||9)+(lockButton?.offsetHeight||42)/2;
+      const bottomTop=trackHeight-shadowSize/2;
+      const lockCenter=(lockButton?.offsetTop||9)+(lockButton?.offsetHeight||42)/2-(swipeTrack?.clientTop||1);
       const topTop=Math.max(0,lockCenter-shadowSize/2);
       const travel=Math.max(0,bottomTop-topTop);
       swipeShadow.style.opacity=(.52+.48*progress).toFixed(2);
@@ -1740,9 +1740,14 @@ function setupMicGestures(){
     const micRect=button.getBoundingClientRect();
     const trackWidth=swipeTrack.offsetWidth||62;
     const hintWidth=swipeHint.offsetWidth||190;
+    const trackHeight=swipeTrack.clientHeight||swipeTrack.offsetHeight||164;
+    const trackTopInset=swipeTrack.clientTop||1;
     const left=micRect.left+micRect.width/2-dockRect.left-(hintWidth-trackWidth/2);
+    const top=micRect.top+micRect.height/2-dockRect.top-trackHeight-trackTopInset;
     swipeHint.style.left=left.toFixed(1)+"px";
+    swipeHint.style.top=top.toFixed(1)+"px";
     swipeHint.style.right="auto";
+    swipeHint.style.bottom="auto";
   };
   window.addEventListener("resize",positionSwipeHint,{passive:true});
   window.visualViewport?.addEventListener("resize",positionSwipeHint,{passive:true});
@@ -1775,10 +1780,10 @@ function setupMicGestures(){
   const trackProgressAt=clientY=>{
     if(!swipeTrack||!swipeShadow) return 1;
     const rect=swipeTrack.getBoundingClientRect();
-    const trackHeight=swipeTrack.clientHeight||rect.height||216;
+    const trackHeight=swipeTrack.clientHeight||rect.height||164;
     const shadowSize=swipeShadow.offsetHeight||54;
-    const bottomCenter=trackHeight-8-shadowSize/2;
-    const lockCenter=(lockButton?.offsetTop||9)+(lockButton?.offsetHeight||42)/2;
+    const bottomCenter=trackHeight;
+    const lockCenter=(lockButton?.offsetTop||9)+(lockButton?.offsetHeight||42)/2-(swipeTrack?.clientTop||1);
     const travel=Math.max(1,bottomCenter-lockCenter);
     const localY=clientY-rect.top-swipeTrack.clientTop;
     return Math.max(0,Math.min(1,(bottomCenter-localY)/travel));
