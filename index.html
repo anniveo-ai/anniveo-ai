@@ -686,7 +686,7 @@ header{
   border:1px solid rgba(196,166,225,.68);
   border-radius:30px;
   box-shadow:0 8px 25px #0005,inset 0 1px 1px #ffffff18;
-  transition:min-height .42s cubic-bezier(.22,1,.36,1);
+  transition:min-height .3s cubic-bezier(.22,1,.36,1);
 }
 .attachment-menu{
   position:absolute;left:4px;bottom:calc(100% + 12px);z-index:45;
@@ -878,7 +878,7 @@ header{
 .status:empty{display:none}
 .mic-swipe-hint{
   position:absolute;left:0;right:auto;top:0;bottom:auto;z-index:46;
-  width:174px;height:154px;pointer-events:none;
+  width:174px;height:138px;pointer-events:none;
   opacity:0;visibility:hidden;transform:scale(.98);
   transition:opacity .28s ease,transform .34s cubic-bezier(.2,.75,.25,1),visibility .28s;
 }
@@ -905,7 +905,7 @@ header{
 .mic-swipe-copy strong{display:block;color:#f6edff;font-size:12px;font-weight:650;line-height:1.35}
 .mic-swipe-copy span{display:block;margin-top:3px;color:#c9bddb;font-size:11px;line-height:1.35}
 .mic-guide-lock{
-  position:absolute;left:127px;top:8px;z-index:3;width:38px;height:38px;padding:0;
+  position:absolute;left:127px;top:12px;z-index:3;width:32px;height:32px;padding:0;
   display:grid;place-items:center;border-radius:50%;appearance:none;
   color:#f2e6ff;border:1.5px solid rgba(218,190,255,.82);
   background:radial-gradient(circle at 50% 35%,rgba(193,145,255,.42),rgba(93,62,132,.3) 72%);
@@ -916,7 +916,7 @@ header{
 }
 .mic-guide-lock:active{transform:scale(.9)}
 .mic-guide-lock:focus-visible{outline:2px solid #f2dcff;outline-offset:4px}
-  .mic-guide-lock svg{width:17px;height:17px;filter:drop-shadow(0 0 6px rgba(234,211,255,.7))}
+  .mic-guide-lock svg{width:15px;height:15px;filter:drop-shadow(0 0 6px rgba(234,211,255,.7))}
 .mic-swipe-shadow{
   position:absolute;left:50%;right:auto;top:auto;bottom:-48px;z-index:1;
   width:56px;height:56px;border-radius:50%;pointer-events:none;
@@ -1933,7 +1933,7 @@ function setupMicGestures(){
   const cancelDistance=72;
   const swipeHint=$("micSwipeHint"),swipeTrack=$("micSwipeTrack"),swipeShadow=$("micSwipeShadow"),lockButton=$("micLockButton");
   let lockDistance=(()=>{
-    const trackHeight=swipeTrack?.clientHeight||154;
+    const trackHeight=swipeTrack?.clientHeight||138;
     const shadowSize=swipeShadow?.offsetHeight||48;
     const bottomTop=trackHeight-shadowSize/2;
     const lockCenter=(lockButton?.offsetTop||8)+(lockButton?.offsetHeight||38)/2-(swipeTrack?.clientTop||1);
@@ -1950,21 +1950,30 @@ function setupMicGestures(){
       const value=queuedSearchProgress??0;
       queuedSearchProgress=null;
       const dock=$("dock"),display=$("searchRecordingDisplay");
-      clearTimeout(searchPreviewTimer);
+      const isPreview=dock.classList.contains("swipe-preview");
       if(value>.005){
-        ensureSearchVoiceBars();
-        dock.classList.remove("swipe-settling");
-        dock.classList.add("swipe-preview");
+        if(searchPreviewTimer){
+          clearTimeout(searchPreviewTimer);
+          searchPreviewTimer=0;
+        }
+        if(!isPreview){
+          ensureSearchVoiceBars();
+          dock.classList.add("swipe-preview");
+          display?.setAttribute("aria-hidden","false");
+        }
+        if(dock.classList.contains("swipe-settling")){
+          dock.classList.remove("swipe-settling");
+        }
         dock.style.setProperty("--swipe-input-opacity",(1-value).toFixed(3));
         dock.style.setProperty("--swipe-wave-opacity",(.96*value).toFixed(3));
         dock.style.setProperty("--swipe-reveal",((1-value)*100).toFixed(1)+"%");
-        display?.setAttribute("aria-hidden","false");
-      }else if(dock.classList.contains("swipe-preview")){
+      }else if(isPreview&&!dock.classList.contains("swipe-settling")){
         dock.classList.add("swipe-settling");
         dock.style.setProperty("--swipe-input-opacity","1");
         dock.style.setProperty("--swipe-wave-opacity","0");
         dock.style.setProperty("--swipe-reveal","100%");
         searchPreviewTimer=setTimeout(()=>{
+          searchPreviewTimer=0;
           if(dock.classList.contains("recording-mode")) return;
           dock.classList.remove("swipe-preview","swipe-settling");
           ["--swipe-input-opacity","--swipe-wave-opacity","--swipe-reveal"].forEach(name=>dock.style.removeProperty(name));
@@ -1973,7 +1982,7 @@ function setupMicGestures(){
       }
     });
   };
-  let swipeTrackHeight=swipeTrack?.clientHeight||swipeTrack?.offsetHeight||154;
+  let swipeTrackHeight=swipeTrack?.clientHeight||swipeTrack?.offsetHeight||138;
   let swipeShadowSize=swipeShadow?.offsetHeight||48;
   let swipeVisualFrame=0,queuedSwipeVisual=null;
   const lockCenterY=()=>swipeLockCenterY;
@@ -2013,7 +2022,7 @@ function setupMicGestures(){
     const micRect=button.getBoundingClientRect();
     const trackWidth=swipeTrack.offsetWidth||56;
     const hintWidth=swipeHint.offsetWidth||174;
-    const trackHeight=swipeTrack.clientHeight||swipeTrack.offsetHeight||154;
+    const trackHeight=swipeTrack.clientHeight||swipeTrack.offsetHeight||138;
     const trackTopInset=swipeTrack.clientTop||1;
     const left=micRect.left+micRect.width/2-dockRect.left-(hintWidth-trackWidth/2);
     // Нижний край дорожки крепится к верхней кромке микрофона,
@@ -2026,7 +2035,7 @@ function setupMicGestures(){
     swipeHint.style.bottom="auto";
     const trackRect=swipeTrack.getBoundingClientRect();
     swipeTrackBottomY=trackRect.bottom;
-    swipeTrackHeight=trackRect.height||swipeTrack.clientHeight||154;
+    swipeTrackHeight=trackRect.height||swipeTrack.clientHeight||138;
     swipeShadowSize=swipeShadow?.getBoundingClientRect().height||swipeShadowSize||48;
     const currentLock=lockButton?.getBoundingClientRect();
     if(currentLock){
@@ -2069,7 +2078,7 @@ function setupMicGestures(){
   const trackProgressAt=clientY=>{
     if(!swipeTrack||!swipeShadow) return 1;
     const rect=swipeTrack.getBoundingClientRect();
-    const trackHeight=swipeTrack.clientHeight||rect.height||154;
+    const trackHeight=swipeTrack.clientHeight||rect.height||138;
     const shadowSize=swipeShadow.offsetHeight||48;
     const bottomCenter=trackHeight;
     const lockCenter=(lockButton?.offsetTop||8)+(lockButton?.offsetHeight||38)/2-(swipeTrack?.clientTop||1);
