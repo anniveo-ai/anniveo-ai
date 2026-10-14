@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#101119">
 <title>ANNIVEO AI</title>
+<link rel="preload" as="image" href="orb20-real.webp">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
@@ -1202,37 +1203,46 @@ select{
 }
 .splash-orb{
   position:relative;
-  width:130px;height:130px;
-  border-radius:50%;
-  background:
-    radial-gradient(ellipse at 28% 18%,#ffffff 0%,#ffeaff 5%,#f8bdffcc 13%,transparent 31%),
-    radial-gradient(ellipse at 77% 30%,#ff5bdc 0%,#f12affbb 22%,transparent 48%),
-    radial-gradient(ellipse at 18% 73%,#94b6ff 0%,#7050ffdd 26%,transparent 53%),
-    radial-gradient(circle at 70% 86%,#eea0ff 0%,#c746ff77 22%,transparent 42%),
-    linear-gradient(140deg,#f0b2ff 0%,#be39ff 32%,#7420c9 62%,#d078ff 100%);
-  box-shadow:
-    inset -11px -15px 23px #270b58aa,
-    inset 6px 6px 15px #ffffff88,
-    inset 0 0 22px #f8c6ff99,
-    0 0 17px #eda6ffdd,
-    0 0 40px #cc55ffbb,
-    0 0 75px #a83cff88,
-    0 0 110px #862dff44;
-  animation:splashPulse 2s ease-in-out infinite;
+  width:clamp(190px,56vw,230px);
+  aspect-ratio:1;
+  isolation:isolate;
+  filter:drop-shadow(0 0 18px rgba(150,60,238,.34));
 }
-.splash-orb:before,.splash-orb:after{
-  content:"";
-  position:absolute;
-  inset:17px -32px;
-  border:2px solid #ffe1ffcc;
-  box-shadow:0 0 12px #e89aff99;
-  border-radius:50%;
-  animation:splashRing 2.5s linear infinite;
+.splash-orb::after{
+  content:"";position:absolute;inset:13%;z-index:-1;border-radius:50%;
+  background:radial-gradient(circle,rgba(221,129,255,.68),rgba(132,54,233,.3) 35%,transparent 72%);
+  opacity:0;animation:splashJoinGlow 2.2s ease-out both;
 }
-.splash-orb:after{
-  transform:rotate(75deg);
-  animation-duration:3.5s;
-  border-color:#d999ffbb;
+.splash-piece{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+  pointer-events:none;will-change:transform;user-select:none;
+}
+.splash-piece.left{
+  clip-path:polygon(0 0,51% 0,49% 13%,52% 23%,50% 29%,54% 37%,52% 43%,57% 50%,54% 55%,50% 64%,53% 71%,51% 80%,55% 91%,54% 100%,0 100%);
+  animation:splashJoinLeft 2.2s cubic-bezier(.16,.75,.24,1) both;
+}
+.splash-piece.right{
+  clip-path:polygon(51% 0,100% 0,100% 100%,54% 100%,55% 91%,51% 80%,53% 71%,50% 64%,54% 55%,57% 50%,52% 43%,54% 37%,50% 29%,52% 23%,49% 13%);
+  animation:splashJoinRight 2.2s cubic-bezier(.16,.75,.24,1) both;
+}
+@keyframes splashJoinLeft{
+  0%{transform:translate(-90px,9px) rotate(-7deg) scale(.96);opacity:.85}
+  65%{transform:translate(-5px,0) rotate(-.6deg) scale(1);opacity:1}
+  79%,100%{transform:none;opacity:1}
+}
+@keyframes splashJoinRight{
+  0%{transform:translate(90px,-9px) rotate(7deg) scale(.96);opacity:.85}
+  65%{transform:translate(5px,0) rotate(.6deg) scale(1);opacity:1}
+  79%,100%{transform:none;opacity:1}
+}
+@keyframes splashJoinGlow{
+  0%,60%{opacity:0;transform:scale(.6)}
+  80%{opacity:1;transform:scale(1.2)}
+  100%{opacity:.32;transform:scale(1)}
+}
+@media(prefers-reduced-motion:reduce){
+  .splash-piece.left,.splash-piece.right,.splash-orb::after{animation:none!important}
+  .splash-piece{transform:none!important;opacity:1!important}
 }
 .splash-logo{
   font-size:24px;
@@ -1311,7 +1321,7 @@ select{
 
 <!-- ЗАСТАВКА -->
 <div id="splash">
-  <div class="splash-orb"></div>
+  <div class="splash-orb" aria-hidden="true"><img class="splash-piece left" src="orb20-real.webp" alt=""><img class="splash-piece right" src="orb20-real.webp" alt=""></div>
   <div class="splash-logo">✦ ANNIVEO <span>AI</span></div>
   <div class="splash-subtitle">ТВОЙ ИНТЕЛЛЕКТУАЛЬНЫЙ МИР</div>
   <div class="splash-progress"></div>
@@ -1776,11 +1786,11 @@ setupMicGestures();
 window.addEventListener("load",()=>{
   setTimeout(()=>{
     $("splash").classList.add("finished");
-  },1800);
+  },2500);
 });
 setTimeout(()=>{
   $("splash").classList.add("finished");
-},5000);
+},6000);
 
 /* УВЕДОМЛЕНИЯ */
 function toast(message){
