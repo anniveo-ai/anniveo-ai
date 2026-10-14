@@ -179,6 +179,11 @@ function isRetryable(error) {
 // и на 5 минут пропускаем Polza, чтобы не тратить время на заведомо неудачные вызовы.
 let polzaCooldownUntil = 0;
 const POLZA_MODEL = "openai/gpt-4o";
+const POLZA_TIMEOUT_MS = 10000;
+const POLLINATIONS_TIMEOUT_MS = 25000;
+const POLLINATIONS_STREAM_TIMEOUT_MS = 25000;
+const STREAM_FIRST_TOKEN_TIMEOUT_MS = 12000;
+const STREAM_IDLE_TIMEOUT_MS = 25000;
 
 function polzaAvailable(env) {
   return !!env.POLZA_API_KEY && Date.now() >= polzaCooldownUntil;
@@ -214,7 +219,7 @@ async function fetchPolza(messages, env, streaming, controller) {
 async function askPreferredAI(messages, env, mode) {
   if (polzaAvailable(env)) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 30000);
+    const timer = setTimeout(() => controller.abort(), POLZA_TIMEOUT_MS);
 
     try {
       const response = await fetchPolza(messages, env, false, controller);
@@ -243,10 +248,90 @@ async function askPreferredAI(messages, env, mode) {
   return askAI(messages, env.POLLINATIONS_API_KEY, mode);
 }
 
+
+async function primeAIStream(response, controller, timeoutMs) {
+  const reader = response.body.getReader();
+  const queued = [];
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let firstTokenSeen = false;
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  const hasToken = eventText => {
+    const lines = eventText
+      .split("\\n")
+      .filter(line => line.startsWith("data:"))
+      .map(line => line.slice(5).trimStart());
+    if (!lines.length) return false;
+    const raw = lines.join("\\n").trim();
+    if (!raw || raw === "[DONE]") return false;
+    try {
+      const data = JSON.parse(raw);
+      const token = data.choices?.[0]?.delta?.content;
+      return (typeof token === "string" && token.length > 0) ||
+        (Array.isArray(token) && token.some(part => part?.type === "text" && part.text));
+    } catch {
+      return false;
+    }
+  };
+
+  try {
+    while (!firstTokenSeen) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      queued.push(value);
+      buffer += decoder.decode(value, { stream: true }).replace(/\\r\\n/g, "\\n");
+      let boundary;
+      while ((boundary = buffer.indexOf("\\n\\n")) !== -1) {
+        const eventText = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+        if (hasToken(eventText)) {
+          firstTokenSeen = true;
+          break;
+        }
+      }
+    }
+
+    if (!firstTokenSeen) throw new Error("Поток завершился до первого токена");
+
+    const replay = new ReadableStream({
+      async pull(target) {
+        if (queued.length) {
+          target.enqueue(queued.shift());
+          return;
+        }
+        const { done, value } = await reader.read();
+        if (done) {
+          target.close();
+          try { reader.releaseLock(); } catch {}
+          return;
+        }
+        target.enqueue(value);
+      },
+      async cancel(reason) {
+        controller.abort();
+        try { await reader.cancel(reason); } catch {}
+      }
+    });
+
+    return new Response(replay, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers
+    });
+  } catch (error) {
+    controller.abort();
+    try { await reader.cancel(); } catch {}
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function openPreferredAIStream(messages, env, mode) {
   if (polzaAvailable(env)) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 30000);
+    const timer = setTimeout(() => controller.abort(), POLZA_TIMEOUT_MS);
 
     try {
       const started = Date.now();
@@ -260,7 +345,12 @@ async function openPreferredAIStream(messages, env, mode) {
       }
 
       clearTimeout(timer);
-      return { response, controller, attempt: 1, started };
+      const primedResponse = await primeAIStream(
+        response,
+        controller,
+        STREAM_FIRST_TOKEN_TIMEOUT_MS
+      );
+      return { response: primedResponse, controller, attempt: 1, started };
     } catch (error) {
       controller.abort();
       console.warn("Поток Polza недоступен; переключаюсь на Pollinations", {
@@ -328,7 +418,7 @@ async function askAI(messages, apiKey, mode) {
 
     const timer = setTimeout(
       () => controller.abort(),
-      30000
+      POLLINATIONS_TIMEOUT_MS
     );
 
     try {
@@ -409,7 +499,7 @@ async function openAIStream(
     // Ограничиваем ожидание первых данных.
     const timer = setTimeout(
       () => controller.abort(),
-      30000
+      POLLINATIONS_TIMEOUT_MS
     );
 
     try {
@@ -443,11 +533,15 @@ async function openAIStream(
         );
       }
 
-      // Таймер далее контролируется при чтении.
       clearTimeout(timer);
+      const primedResponse = await primeAIStream(
+        response,
+        controller,
+        STREAM_FIRST_TOKEN_TIMEOUT_MS
+      );
 
       return {
-        response,
+        response: primedResponse,
         controller,
         attempt,
         started
@@ -499,7 +593,7 @@ async function readAIStream(
     clearTimeout(timer);
     timer = setTimeout(
       () => controller.abort(),
-      30000
+      STREAM_IDLE_TIMEOUT_MS
     );
   };
 
