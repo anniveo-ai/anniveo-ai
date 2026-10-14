@@ -3071,7 +3071,7 @@ async function generateMedia(kind){
     const payload={
       action:kind,
       prompt,
-      model:$(kind+"Model").value,
+      model:kind==="image"&&file?"kontext":kind==="video"&&file?"bytedance/seedance-2.5":$(kind+"Model").value,
       ratio:$(kind+"Ratio").value,
       initData
     };
