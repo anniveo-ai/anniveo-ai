@@ -826,6 +826,37 @@ header{
   opacity:1;transition:none;
 }
 #send:disabled{opacity:1}
+#send.planet{
+  position:relative;isolation:isolate;
+  background:
+    radial-gradient(ellipse at 28% 18%,#ffffff 0%,#ffeaff 5%,#f8bdffcc 13%,transparent 31%),
+    radial-gradient(ellipse at 77% 30%,#ff5bdc 0%,#f12affbb 22%,transparent 48%),
+    radial-gradient(ellipse at 18% 73%,#94b6ff 0%,#7050ffdd 26%,transparent 53%),
+    radial-gradient(circle at 70% 86%,#eea0ff 0%,#c746ff77 22%,transparent 42%),
+    linear-gradient(140deg,#f0b2ff 0%,#be39ff 32%,#7420c9 62%,#d078ff 100%);
+  box-shadow:
+    inset -5px -7px 11px #270b58aa,
+    inset 3px 3px 7px #ffffff88,
+    inset 0 0 11px #f8c6ff99,
+    0 0 8px #eda6ffdd,
+    0 0 19px #cc55ffbb,
+    0 0 34px #a83cff88;
+  color:transparent;
+  animation:planetSpin 14s linear infinite;
+}
+#send.planet:before{
+  content:"";position:absolute;inset:20% -12%;
+  border:1px solid #ffe1ffcc;border-radius:50%;
+  box-shadow:0 0 7px #e89aff99;
+  transform:rotate(-26deg);pointer-events:none;
+}
+#send.planet:after{
+  content:"";position:absolute;left:13%;top:45%;width:80%;height:30%;
+  border-radius:50%;
+  background:linear-gradient(#ffe5ffbb,#df91ff44,transparent);
+  transform:rotate(25deg);pointer-events:none;
+}
+#send.planet #sendGlyph{font-size:0;opacity:0}
 #mic{
   display:grid;place-items:center;padding:0;position:relative;
   touch-action:none;user-select:none;-webkit-user-select:none;
@@ -1649,8 +1680,8 @@ select{
         <rect x="6" y="6" width="12" height="12" rx="2"/>
       </svg>
     </button>
-    <button type="submit" id="send" aria-label="Отправить сообщение" title="Отправить распознанный текст"
-      class="circle send">➤</button>
+    <button type="submit" id="send" aria-label="Говорить с ANNIVEO AI" title="Нажми на шар, чтобы поговорить"
+      class="circle send planet"><span id="sendGlyph" aria-hidden="true">➤</span></button>
   </form>
   <div id="chatStatus" class="status"></div>
 </div>
@@ -2908,7 +2939,12 @@ function toggleAnonymous(){
 /* КНОПКИ */
 function updateControls(){
   const locked=busy||recording||transcribing||openingMic;
-  $("send").disabled=busy||transcribing||openingMic;
+  const send=$("send");
+  const hasText=$("messageInput").value.trim().length>0;
+  send.classList.toggle("planet",!hasText);
+  send.setAttribute("aria-label",hasText?"Отправить сообщение":"Говорить с ANNIVEO AI");
+  send.title=hasText?"Отправить сообщение":"Нажми на шар, чтобы поговорить";
+  send.disabled=busy||transcribing||openingMic;
   $("anonToggle").disabled=locked;
   $("mic").disabled=busy||transcribing||(openingMic&&!micGesture);
   $("messageInput").disabled=
@@ -3156,13 +3192,17 @@ $("chatForm").onsubmit=e=>{
   }
   if(busy||transcribing||openingMic) return;
   const text=$("messageInput").value.trim();
-  if(!text) return;
+  if(!text){
+    void handleOrbVoice();
+    return;
+  }
   if(!initData||!user){
     toast("Открой приложение через Telegram");
     return;
   }
   $("messageInput").value="";
   $("messageInput").style.height="";
+  updateControls();
   $("messageInput").blur();
   sendMessage(text);
 };
@@ -3172,6 +3212,7 @@ $("messageInput").oninput=()=>{
   input.style.height="auto";
   input.style.height=
     Math.min(input.scrollHeight,95)+"px";
+  updateControls();
 };
 
 $("messageInput").onkeydown=e=>{
@@ -3186,6 +3227,7 @@ function suggestIdea(){
   $("messageInput").value=
     "Помоги придумать интересную идею для моего проекта. "+
     "Сначала задай мне несколько уточняющих вопросов.";
+  updateControls();
   $("messageInput").focus();
 }
 
@@ -4084,6 +4126,7 @@ function setupSupportButton(){
 setupSupportButton();
 showWelcome=true;
 renderChat();
+updateControls();
 loadHistory();
 </script>
 
