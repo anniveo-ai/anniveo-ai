@@ -656,7 +656,7 @@ header{
   transform:translateX(-50%);
   bottom:calc(110px + env(safe-area-inset-bottom));
   width:min(760px,calc(100% - 16px));
-  transition:bottom .18s ease-out;
+  transition:bottom .44s cubic-bezier(.22,.78,.25,1);
 }
 .composer{
   display:flex;
@@ -717,7 +717,10 @@ header{
 }
 .composer.recording-mode #messageInput{display:none}
 .composer.recording-mode #send{display:grid}
-.composer.recording-mode .search-recording-display{display:flex}
+.composer.recording-mode .search-recording-display{
+  display:flex;
+  animation:searchRecordingEnter .34s cubic-bezier(.2,.75,.25,1) both;
+}
 .search-recording-time{
   flex:none;min-width:34px;color:#e9ddfb;font-size:12px;
   font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:.2px;
@@ -736,6 +739,10 @@ header{
   transition:height .08s linear,opacity .08s linear;
 }
 .search-voice-bar:nth-child(5n + 2){background:linear-gradient(to top,#c47eff,#fff0ff)}
+@keyframes searchRecordingEnter{
+  from{opacity:0;transform:translateY(5px)}
+  to{opacity:1;transform:translateY(0)}
+}
 @keyframes searchWaveIdle{
   from{transform:scaleY(.42);opacity:.58}
   to{transform:scaleY(1);opacity:1}
@@ -828,7 +835,7 @@ header{
   position:absolute;left:0;right:auto;top:0;bottom:auto;z-index:46;
   width:174px;height:142px;pointer-events:none;
   opacity:0;visibility:hidden;transform:scale(.98);
-  transition:opacity .2s ease,transform .2s ease,visibility .2s;
+  transition:opacity .28s ease,transform .34s cubic-bezier(.2,.75,.25,1),visibility .28s;
 }
 .mic-swipe-hint.visible{opacity:1;visibility:visible;transform:scale(1)}
 .mic-swipe-track{
