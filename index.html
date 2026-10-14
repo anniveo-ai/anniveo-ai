@@ -1596,6 +1596,7 @@ function handleMicClick(){
   void handleMic();
 }
 function resetCancelVisual(){
+  setAttachmentCancelMode(false);
   const button=$("attachButton"),glyph=$("attachGlyph"),mic=$("mic");
   button.classList.remove("cancel-armed");
   button.style.removeProperty("transform");
@@ -1625,7 +1626,7 @@ function paintSearchWave(level,now=performance.now()){
   }
 }
 function setComposerRecording(active){
-  if(!active) setAttachmentCancelMode(false);
+  if(!active) resetCancelVisual();
   $("chatForm").classList.toggle("recording-mode",active);
   $("dock").classList.toggle("recording-mode",active);
   clearInterval(micElapsedTimer);
@@ -1763,23 +1764,26 @@ function setupMicGestures(){
     moveSwipeHint(state.locked?lockDistance:dy);
     const progress=Math.max(0,Math.min(1,(-dx)/(cancelDistance*1.25)));
     const liftProgress=Math.max(0,Math.min(1,dy/lockDistance));
+    const feedbackProgress=Math.max(progress,liftProgress*.48);
     const turn=Math.max(progress,liftProgress)*45;
     const scale=1+progress*.48+liftProgress*.1;
-    const red=Math.round(57+(190-57)*progress);
-    const green=Math.round(57+(57-57)*progress);
-    const blue=Math.round(71+(91-71)*progress);
-    $("attachGlyph").style.transform=
-      "rotate("+turn.toFixed(1)+"deg) scale("+scale.toFixed(3)+")";
-    $("attachGlyph").style.color=
-      "rgb("+Math.round(245+(255-245)*progress)+","+
-      Math.round(243+(75-243)*progress)+","+
-      Math.round(255+(112-255)*progress)+")";
-    plus.style.backgroundColor="rgb("+red+","+green+","+blue+")";
-    plus.style.setProperty("--cancel-cloud-opacity",(progress*.92).toFixed(3));
-    plus.style.setProperty("--cancel-cloud-scale",(0.6+progress*.95).toFixed(3));
-    plus.style.setProperty("--cancel-cloud-blur",(progress*11).toFixed(1)+"px");
-    plus.style.boxShadow="0 0 "+(progress*20).toFixed(1)+"px rgba(255,58,112,"+(progress*.72).toFixed(2)+")";
-    plus.style.transform="scale("+(1+progress*.2).toFixed(3)+")";
+    if(!plus.classList.contains("recording-cancel")){
+      const red=Math.round(57+(190-57)*feedbackProgress);
+      const green=Math.round(57+(57-57)*feedbackProgress);
+      const blue=Math.round(71+(91-71)*feedbackProgress);
+      $("attachGlyph").style.transform=
+        "rotate("+turn.toFixed(1)+"deg) scale("+scale.toFixed(3)+")";
+      $("attachGlyph").style.color=
+        "rgb("+Math.round(245+(255-245)*feedbackProgress)+","+
+        Math.round(243+(75-243)*feedbackProgress)+","+
+        Math.round(255+(112-255)*feedbackProgress)+")";
+      plus.style.backgroundColor="rgb("+red+","+green+","+blue+")";
+      plus.style.setProperty("--cancel-cloud-opacity",(feedbackProgress*.92).toFixed(3));
+      plus.style.setProperty("--cancel-cloud-scale",(0.6+feedbackProgress*.95).toFixed(3));
+      plus.style.setProperty("--cancel-cloud-blur",(feedbackProgress*11).toFixed(1)+"px");
+      plus.style.boxShadow="0 0 "+(feedbackProgress*20).toFixed(1)+"px rgba(255,58,112,"+(feedbackProgress*.72).toFixed(2)+")";
+      plus.style.transform="scale("+(1+feedbackProgress*.2).toFixed(3)+")";
+    }
     plus.classList.toggle("cancel-armed",progress>.08);
     if(!state.started&&!state.held&&(dy>lockDistance||dx < -cancelDistance)){
       beginGestureRecording(state);
@@ -2768,7 +2772,7 @@ async function handleMic(){
       }
     },120000);
   }catch(e){
-    setAttachmentCancelMode(false);
+    resetCancelVisual();
     releaseMicrophone();
     stopVoiceMeter();
     orbVoiceActive=false;
