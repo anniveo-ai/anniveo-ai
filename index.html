@@ -640,7 +640,16 @@ header{
   content:"";position:absolute;inset:-5px;border-radius:50%;
   border:1px solid rgba(226,205,255,.75);pointer-events:none;
 }
+#mic.cancel-armed{
+  background:rgba(219,77,123,.36);
+  box-shadow:0 0 0 2px rgba(255,152,188,.55),0 0 20px rgba(243,83,144,.45);
+}
 #mic.gesture-active{transform:scale(.94)}
+#attachButton{transition:transform .22s cubic-bezier(.2,.8,.2,1),color .2s}
+#attachGlyph{display:inline-block;transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+#attachButton.cancel-armed #attachGlyph{
+  transform:rotate(45deg) scale(1.12);color:#ffd8e6;
+}
 .recording{background:#8e3f58}
 .status{
   font-size:11px;
@@ -1266,7 +1275,7 @@ select{
   <input id="attachmentVideo" class="attachment-input" type="file" accept="video/*" onchange="attachmentPicked(this)">
 
   <form id="chatForm" class="composer">
-    <button type="button" id="attachButton" class="circle" aria-label="Добавить вложение" aria-expanded="false" onclick="toggleAttachmentMenu()">＋</button>
+    <button type="button" id="attachButton" class="circle" aria-label="Добавить вложение" aria-expanded="false" onclick="toggleAttachmentMenu()"><span id="attachGlyph">＋</span></button>
     <textarea id="messageInput" rows="1"
       maxlength="4000"
       placeholder="Спроси ANNIVEO…"></textarea>
@@ -1369,6 +1378,7 @@ let voiceSourceNode=null;
 let voiceUtterance=null;
 let micGesture=null;
 let ignoreMicClickUntil=0;
+let cancelMicStartRequested=false;
 
 const cacheKey = user?.id
   ? "anniveo_chat_cache_v3_" + user.id
@@ -1400,13 +1410,96 @@ function handleMicClick(){
   if(Date.now()<ignoreMicClickUntil) return;
   void handleMic();
 }
+function cancelMicRecording(){
+  cancelMicStartRequested=true;
+  clearTimeout(recordTimer);
+  const activeRecorder=recorder;
+  if(activeRecorder?.state==="recording"){
+    activeRecorder.onstop=null;
+    activeRecorder.stop();
+  }
+  recording=false;
+  audioChunks=[];
+  stopVoiceMeter();
+  releaseMicrophone();
+  orbVoiceActive=false;
+  $("mic").classList.remove("recording","locked","cancel-armed","gesture-active");
+  $("mic").setAttribute("aria-label","Записать голосовое сообщение");
+  $("mic").title="Записать голосовое сообщение";
+  $("attachButton").classList.remove("cancel-armed");
+  $("chatStatus").textContent="Запись отменена";
+  updateControls();
+  setTimeout(()=>{
+    if($("chatStatus").textContent==="Запись отменена") $("chatStatus").textContent="";
+  },1400);
+}
 function setupMicGestures(){
-  const button=$("mic");
+  const button=$("mic"),plus=$("attachButton");
   if(!button||button.dataset.gesturesReady) return;
   button.dataset.gesturesReady="1";
-  const lockDistance=52;
+  const lockDistance=52,cancelDistance=72;
   const suppressClick=()=>{ignoreMicClickUntil=Date.now()+700;};
-
+  const beginGestureRecording=state=>{
+    if(state.started||state.held) return;
+    state.held=true;
+    clearTimeout(state.timer);
+    button.classList.remove("gesture-active");
+    void handleMic();
+  };
+  const updateDirection=(state,x,y)=>{
+    const dx=x-state.x,dy=state.y-y;
+    if(!state.started&&!state.held&&(dy>lockDistance||dx < -cancelDistance)){
+      beginGestureRecording(state);
+    }
+    if(dx < -cancelDistance&&Math.abs(dx)>dy*1.1){
+      state.cancelArmed=true;
+      state.locked=false;
+      button.classList.remove("locked");
+      button.classList.add("cancel-armed");
+      plus.classList.add("cancel-armed");
+      $("chatStatus").textContent="Отпусти, чтобы отменить запись";
+      return;
+    }
+    if(dy>lockDistance&&dy>=Math.abs(dx)){
+      state.locked=true;
+      state.cancelArmed=false;
+      button.classList.remove("cancel-armed","gesture-active");
+      plus.classList.remove("cancel-armed");
+      button.classList.add("locked");
+      suppressClick();
+      $("chatStatus").textContent="Запись закреплена · нажми микрофон, чтобы отправить";
+      return;
+    }
+    if(state.cancelArmed){
+      state.cancelArmed=false;
+      button.classList.remove("cancel-armed");
+      plus.classList.remove("cancel-armed");
+      $("chatStatus").textContent="Запись идёт…";
+    }
+  };
+  const finishGesture=state=>{
+    clearTimeout(state.timer);
+    state.released=true;
+    button.classList.remove("gesture-active");
+    if(state.cancelArmed){
+      suppressClick();
+      micGesture=null;
+      cancelMicRecording();
+      return;
+    }
+    if(state.locked){
+      suppressClick();
+      micGesture=null;
+      return;
+    }
+    if(state.held||state.started){
+      suppressClick();
+      if(recording){micGesture=null;void handleMic();}
+      // Если доступ к микрофону ещё запрашивается, удерживающий обработчик остановит запись после старта.
+      return;
+    }
+    micGesture=null;
+  };
   if(("ontouchstart" in window)||navigator.maxTouchPoints>0){
     const findTouch=(list,id)=>{
       for(const item of list) if(item.identifier===id) return item;
@@ -1414,113 +1507,57 @@ function setupMicGestures(){
     };
     const startHeldRecording=async state=>{
       if(micGesture!==state) return;
-      state.held=true;
-      button.classList.remove("gesture-active");
-      await handleMic();
+      beginGestureRecording(state);
+      await Promise.resolve();
       if(micGesture!==state) return;
-      if(state.released&&!state.locked&&recording) await handleMic();
-      if(micGesture===state) micGesture=null;
+      if(state.released&&!state.locked&&!state.cancelArmed&&recording){
+        micGesture=null;
+        void handleMic();
+      }
     };
     button.addEventListener("touchstart",event=>{
       if(button.disabled||busy||transcribing||openingMic) return;
       const touch=event.changedTouches[0];
       if(!touch) return;
       event.preventDefault();
-      const state={id:touch.identifier,y:touch.clientY,started:recording,held:false,locked:false,released:false,timer:null};
+      const state={id:touch.identifier,x:touch.clientX,y:touch.clientY,started:recording,held:false,locked:false,cancelArmed:false,released:false,timer:null};
       micGesture=state;
       button.classList.add("gesture-active");
-      if(!state.started){
-        state.timer=setTimeout(()=>void startHeldRecording(state),220);
-      }
+      if(!state.started) state.timer=setTimeout(()=>void startHeldRecording(state),220);
     },{passive:false});
     button.addEventListener("touchmove",event=>{
       const state=micGesture;
       if(!state) return;
       if(event.cancelable) event.preventDefault();
       const touch=findTouch(event.touches,state.id);
-      if(!touch||state.y-touch.clientY<lockDistance||state.locked) return;
-      state.locked=true;
-      clearTimeout(state.timer);
-      button.classList.add("locked");
-      button.classList.remove("gesture-active");
-      suppressClick();
-      if(!state.started&&!state.held){
-        state.held=true;
-        void handleMic();
-      }
-      $("chatStatus").textContent="Запись закреплена · нажми микрофон, чтобы отправить";
+      if(touch) updateDirection(state,touch.clientX,touch.clientY);
     },{passive:false});
     const finishTouch=event=>{
       const state=micGesture;
-      if(!state) return;
-      const touch=findTouch(event.changedTouches,state.id);
-      if(!touch) return;
+      if(!state||!findTouch(event.changedTouches,state.id)) return;
       if(event.cancelable) event.preventDefault();
-      clearTimeout(state.timer);
-      state.released=true;
-      button.classList.remove("gesture-active");
-      suppressClick();
-      if(state.locked){micGesture=null;return;}
-      if(state.held){
-        if(recording){void handleMic();micGesture=null;}
-        // Если системный запрос доступа ещё открыт, startHeldRecording остановит запись после старта.
-        return;
-      }
-      if(state.started&&recording){
-        micGesture=null;
-        void handleMic();
-      }else{
-        micGesture=null;
-        void handleMic();
-      }
+      finishGesture(state);
     };
     button.addEventListener("touchend",finishTouch,{passive:false});
     button.addEventListener("touchcancel",finishTouch,{passive:false});
     return;
   }
-
-  // Fallback для устройств без сенсорного ввода.
   button.addEventListener("pointerdown",event=>{
     if(button.disabled||busy||transcribing||openingMic) return;
-    const state={id:event.pointerId,y:event.clientY,started:recording,held:false,locked:false,released:false,timer:null};
+    const state={id:event.pointerId,x:event.clientX,y:event.clientY,started:recording,held:false,locked:false,cancelArmed:false,released:false,timer:null};
     micGesture=state;
     button.setPointerCapture?.(event.pointerId);
     button.classList.add("gesture-active");
-    if(!state.started) state.timer=setTimeout(async()=>{
-      if(micGesture!==state) return;
-      state.held=true;
-      button.classList.remove("gesture-active");
-      await handleMic();
-      if(micGesture!==state) return;
-      if(state.released&&!state.locked&&recording) await handleMic();
-      if(micGesture===state) micGesture=null;
-    },220);
+    if(!state.started) state.timer=setTimeout(()=>void startHeldRecording(state),220);
   });
   button.addEventListener("pointermove",event=>{
     const state=micGesture;
-    if(!state||state.id!==event.pointerId||state.y-event.clientY<lockDistance||state.locked) return;
-    state.locked=true;
-    clearTimeout(state.timer);
-    button.classList.add("locked");
-    button.classList.remove("gesture-active");
-    suppressClick();
-    if(!state.started&&!state.held){state.held=true;void handleMic();}
-    $("chatStatus").textContent="Запись закреплена · нажми микрофон, чтобы отправить";
+    if(state?.id===event.pointerId) updateDirection(state,event.clientX,event.clientY);
   });
   const finishPointer=event=>{
     const state=micGesture;
-    if(!state||state.id!==event.pointerId) return;
-    clearTimeout(state.timer);
-    state.released=true;
-    button.classList.remove("gesture-active");
-    suppressClick();
-    if(state.locked){micGesture=null;return;}
-    if(state.held){
-      if(recording){void handleMic();micGesture=null;}
-      return;
-    }
-    micGesture=null;
-    if(state.started&&recording) void handleMic();
+    if(state?.id!==event.pointerId) return;
+    finishGesture(state);
   };
   button.addEventListener("pointerup",finishPointer);
   button.addEventListener("pointercancel",finishPointer);
@@ -2256,6 +2293,7 @@ async function handleMic(){
   }
 
   openingMic=true;
+  cancelMicStartRequested=false;
   updateControls();
 
   try{
@@ -2265,6 +2303,19 @@ async function handleMic(){
       microphoneStream=await navigator.mediaDevices.getUserMedia({
         audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}
       });
+    }
+    if(cancelMicStartRequested){
+      releaseMicrophone();
+      audioChunks=[];
+      return;
+    }
+    const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+    if(!voiceAudioContext&&AudioContextClass) voiceAudioContext=new AudioContextClass();
+    if(voiceAudioContext?.state==="suspended") await voiceAudioContext.resume().catch(()=>{});
+    if(cancelMicStartRequested){
+      releaseMicrophone();
+      audioChunks=[];
+      return;
     }
     $("endVoice").classList.remove("hidden");
     const mimeCandidates=[
@@ -2306,9 +2357,6 @@ async function handleMic(){
     recorder.start();
     recording=true;
     voiceHeard=false;
-    const AudioContextClass=window.AudioContext||window.webkitAudioContext;
-    if(!voiceAudioContext&&AudioContextClass) voiceAudioContext=new AudioContextClass();
-    if(voiceAudioContext?.state==="suspended") await voiceAudioContext.resume().catch(()=>{});
     startVoiceMeter();
     $("mic").setAttribute("aria-label","Остановить запись и отправить");
     $("mic").title="Запись: нажми для отправки или потяни вверх, чтобы закрепить";
