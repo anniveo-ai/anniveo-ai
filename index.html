@@ -240,33 +240,33 @@ header{
 @media(prefers-reduced-motion:reduce){.voice-assistant-button[data-phase="thinking"],.voice-assistant-button[data-phase="transcribing"]{animation:none}.end-voice{transition:none}}
 .planet:focus-visible{outline:2px solid #ffe0ff;outline-offset:8px}
 .planet{
-  border:1px solid rgba(237,225,255,.68);padding:0;cursor:pointer;position:relative;isolation:isolate;
+  border:1px solid rgba(246,227,255,.85);padding:0;cursor:pointer;position:relative;isolation:isolate;
   width:clamp(188px,58vw,224px);height:clamp(188px,58vw,224px);
   border-radius:50%;z-index:3;overflow:hidden;display:block;
   background:
-    radial-gradient(ellipse at 25% 22%,rgba(255,248,255,.9) 0%,rgba(243,224,255,.52) 8%,transparent 29%),
-    radial-gradient(ellipse at 76% 27%,rgba(170,151,255,.68),transparent 37%),
-    radial-gradient(ellipse at 25% 75%,rgba(142,160,255,.54),transparent 44%),
-    radial-gradient(ellipse at 72% 76%,rgba(224,158,255,.48),transparent 42%),
-    radial-gradient(circle at 50% 50%,rgba(61,51,115,.42),rgba(24,23,46,.88) 72%);
+    radial-gradient(ellipse at 27% 19%,rgba(255,252,255,.98) 0%,rgba(246,216,255,.84) 8%,rgba(208,154,255,.34) 17%,transparent 34%),
+    radial-gradient(ellipse at 78% 25%,rgba(215,157,255,.86),rgba(164,89,255,.46) 27%,transparent 51%),
+    radial-gradient(ellipse at 18% 77%,rgba(151,160,255,.68),rgba(133,83,255,.46) 31%,transparent 55%),
+    radial-gradient(ellipse at 75% 78%,rgba(248,161,255,.72),rgba(190,98,255,.38) 29%,transparent 53%),
+    radial-gradient(circle at 50% 53%,rgba(49,34,102,.58),rgba(59,36,123,.93) 55%,rgba(33,22,74,.98) 86%);
   box-shadow:
-    inset 0 0 0 2px rgba(255,255,255,.11),
-    inset 12px 13px 25px rgba(255,255,255,.18),
-    inset -18px -20px 32px rgba(21,14,50,.48),
-    0 0 10px rgba(226,194,255,.55),
-    0 0 28px rgba(145,105,255,.40),
-    0 12px 38px rgba(60,43,121,.34);
+    inset 0 0 0 2px rgba(255,244,255,.22),
+    inset 12px 13px 27px rgba(255,255,255,.28),
+    inset -18px -21px 34px rgba(29,10,67,.55),
+    0 0 11px rgba(239,201,255,.74),
+    0 0 31px rgba(175,103,255,.55),
+    0 12px 42px rgba(100,54,186,.41);
   animation:planetSpin 22s linear infinite;
 }
 .planet:before,#send[data-mode="voice"]:before{
-  content:"";position:absolute;inset:1.5%;z-index:3;border:1px solid rgba(248,239,255,.65);
-  border-radius:50%;box-shadow:inset 0 0 12px rgba(255,255,255,.2),0 0 8px rgba(203,164,255,.38);
+  content:"";position:absolute;inset:1.5%;z-index:3;border:1px solid rgba(255,244,255,.81);
+  border-radius:50%;box-shadow:inset 0 0 15px rgba(255,255,255,.29),0 0 11px rgba(220,158,255,.53);
   pointer-events:none;
 }
 .planet:after,#send[data-mode="voice"]:after{
   content:"";position:absolute;left:11%;top:9%;width:27%;height:57%;z-index:4;
   border-radius:55% 45% 60% 40%;
-  background:linear-gradient(155deg,rgba(255,255,255,.42),rgba(224,210,255,.14) 48%,transparent 82%);
+  background:linear-gradient(155deg,rgba(255,255,255,.62),rgba(238,212,255,.24) 48%,transparent 82%);
   filter:blur(1px);transform:rotate(26deg);pointer-events:none;
 }
 .planet-response{position:relative;z-index:3;display:block;width:fit-content;height:fit-content;line-height:0;transform:scale(calc(1 + var(--voice-level,0) * .18));transition:transform .06s linear}
@@ -782,13 +782,13 @@ header{
 #send[data-mode="voice"]{
   position:relative;isolation:isolate;overflow:hidden;
   background:
-    radial-gradient(ellipse at 25% 22%,rgba(255,248,255,.9) 0%,rgba(243,224,255,.52) 8%,transparent 29%),
-    radial-gradient(ellipse at 76% 27%,rgba(170,151,255,.68),transparent 37%),
-    radial-gradient(ellipse at 25% 75%,rgba(142,160,255,.54),transparent 44%),
-    radial-gradient(ellipse at 72% 76%,rgba(224,158,255,.48),transparent 42%),
-    radial-gradient(circle at 50% 50%,rgba(61,51,115,.42),rgba(24,23,46,.88) 72%);
-  border:1px solid rgba(237,225,255,.68);
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.11),inset 3px 3px 7px rgba(255,255,255,.18),inset -5px -6px 10px rgba(21,14,50,.48),0 0 8px rgba(226,194,255,.55),0 0 18px rgba(145,105,255,.4);
+    radial-gradient(ellipse at 27% 19%,rgba(255,252,255,.98) 0%,rgba(246,216,255,.84) 8%,rgba(208,154,255,.34) 17%,transparent 34%),
+    radial-gradient(ellipse at 78% 25%,rgba(215,157,255,.86),rgba(164,89,255,.46) 27%,transparent 51%),
+    radial-gradient(ellipse at 18% 77%,rgba(151,160,255,.68),rgba(133,83,255,.46) 31%,transparent 55%),
+    radial-gradient(ellipse at 75% 78%,rgba(248,161,255,.72),rgba(190,98,255,.38) 29%,transparent 53%),
+    radial-gradient(circle at 50% 53%,rgba(49,34,102,.58),rgba(59,36,123,.93) 55%,rgba(33,22,74,.98) 86%);
+  border:1px solid rgba(246,227,255,.85);
+  box-shadow:inset 0 0 0 1px rgba(255,244,255,.22),inset 3px 3px 7px rgba(255,255,255,.28),inset -5px -6px 10px rgba(29,10,67,.55),0 0 9px rgba(239,201,255,.74),0 0 19px rgba(175,103,255,.55);
   color:transparent;animation:planetSpin 22s linear infinite;
 }
 #send[data-mode="voice"] #sendGlyph{display:none!important}
@@ -1342,9 +1342,9 @@ select{
       <span class="orb-floor" aria-hidden="true"></span>
       <button type="button" class="planet" id="voiceOrb" onclick="handleOrbVoice()"
         aria-label="Говорить с ANNIVEO AI" title="Нажми на шар и скажи, что нужно, что нужно"><svg class="orb-ribbons" viewBox="0 0 260 260" aria-hidden="true" focusable="false">
-        <path d="M-18 152C35 84 72 83 116 129S190 188 279 99" fill="none" stroke="#c9b4ff" stroke-opacity=".38" stroke-width="30" stroke-linecap="round"/>
-        <path d="M-10 114C40 178 82 201 126 149S205 76 273 142" fill="none" stroke="#93a5ff" stroke-opacity=".3" stroke-width="20" stroke-linecap="round"/>
-        <path d="M-8 153C45 98 76 96 117 136S191 181 267 104" fill="none" stroke="#fff0ff" stroke-opacity=".42" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M-18 152C35 84 72 83 116 129S190 188 279 99" fill="none" stroke="#c9b4ff" stroke-opacity=".52" stroke-width="30" stroke-linecap="round"/>
+        <path d="M-10 114C40 178 82 201 126 149S205 76 273 142" fill="none" stroke="#93a5ff" stroke-opacity=".40" stroke-width="20" stroke-linecap="round"/>
+        <path d="M-8 153C45 98 76 96 117 136S191 181 267 104" fill="none" stroke="#fff0ff" stroke-opacity=".58" stroke-width="2.2" stroke-linecap="round"/>
       </svg></button>
     </div>
     <i class="spark a"></i><i class="spark b"></i><i class="spark c"></i>
@@ -1603,9 +1603,9 @@ select{
     </button>
     <button type="submit" id="send" aria-label="Говорить с ANNIVEO AI" title="Нажми на шар и скажи, что нужно"
       class="circle send planet" data-mode="voice"><span id="sendGlyph" aria-hidden="true">➤</span><svg class="orb-ribbons" viewBox="0 0 260 260" aria-hidden="true" focusable="false">
-        <path d="M-18 152C35 84 72 83 116 129S190 188 279 99" fill="none" stroke="#c9b4ff" stroke-opacity=".38" stroke-width="30" stroke-linecap="round"/>
-        <path d="M-10 114C40 178 82 201 126 149S205 76 273 142" fill="none" stroke="#93a5ff" stroke-opacity=".3" stroke-width="20" stroke-linecap="round"/>
-        <path d="M-8 153C45 98 76 96 117 136S191 181 267 104" fill="none" stroke="#fff0ff" stroke-opacity=".42" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M-18 152C35 84 72 83 116 129S190 188 279 99" fill="none" stroke="#c9b4ff" stroke-opacity=".52" stroke-width="30" stroke-linecap="round"/>
+        <path d="M-10 114C40 178 82 201 126 149S205 76 273 142" fill="none" stroke="#93a5ff" stroke-opacity=".40" stroke-width="20" stroke-linecap="round"/>
+        <path d="M-8 153C45 98 76 96 117 136S191 181 267 104" fill="none" stroke="#fff0ff" stroke-opacity=".58" stroke-width="2.2" stroke-linecap="round"/>
       </svg></button>
   </form>
   <div id="chatStatus" class="status"></div>
@@ -2435,10 +2435,15 @@ function collapseChat(){
 }
 function returnToChat(){
   if(anonymous||!returnToChatAvailable||!normalHistory.length)return;
+  if(recording||transcribing||openingMic){
+    toast("Сначала заверши голосовое сообщение");
+    return;
+  }
+  if(orbVoiceActive) endVoiceSession();
   returnToChatAvailable=false;
   showWelcome=false;newestFirstChat=false;
   updateWelcome();renderChat();
-  app.scrollTo({top:0,behavior:"smooth"});
+  scrollAppToBottom();
   tg?.HapticFeedback?.impactOccurred("light");
 }
 
@@ -3032,12 +3037,19 @@ async function sendMessage(text,audioURL,spokenVoice=false){
     return;
   }
 
-  if(tryHandleAppCommand(text)) return;
+  if(tryHandleAppCommand(text)){
+    if(spokenVoice&&orbVoiceActive&&currentView==="chat"){
+      continueVoiceAfterReply(voiceSessionVersion);
+    }
+    return;
+  }
 
   clearVoiceProgress();
   const isAnonymous=anonymous;
   const reorderForChat=newestFirstChat;
-  returnToChatAvailable=false;newestFirstChat=false;
+  if(!spokenVoice){
+    returnToChatAvailable=false;newestFirstChat=false;
+  }
   const voiceReplySession=voiceSessionVersion;
   const context=cleanHistory(anonymousHistory).slice(-12);
 
@@ -3061,7 +3073,7 @@ async function sendMessage(text,audioURL,spokenVoice=false){
   activeRequestTask=task;
   pendingBubble?.append(createTaskCancelButton("Отменить запрос"));
 
-  $("chatStatus").textContent="Готовлю ответ…";
+  $("chatStatus").textContent=spokenVoice?"":"Готовлю ответ…";
   busy=true;
   updateControls();
   if(spokenVoice){app.scrollTop=0;setVoiceChatStatus("ANNIVEO думает…","thinking");}
@@ -3078,7 +3090,7 @@ async function sendMessage(text,audioURL,spokenVoice=false){
       if(!task.hasResponseText){
         task.hasResponseText=true;
         task.thinkingStatus?.remove();
-        $("chatStatus").textContent="ANNIVEO отвечает…";
+        $("chatStatus").textContent=spokenVoice?"":"ANNIVEO отвечает…";
         if(spokenVoice) setVoiceChatStatus("ANNIVEO отвечает…","thinking");
       }
       pending.textContent+=token;
@@ -3128,6 +3140,7 @@ async function sendMessage(text,audioURL,spokenVoice=false){
       syncTaskCancelControls();
       updateControls();
       $("chatStatus").textContent="";
+      if(spokenVoice&&returnToChatAvailable&&showWelcome&&!isAnonymous) renderChat();
       if(!spokenVoice) scrollAppToBottom();
     }
   }
@@ -3252,6 +3265,7 @@ function setVoiceChatStatus(text,phase="idle"){
   $("voiceStatus").closest(".voice-status-row")?.classList.toggle("voice-chat-active",orbVoiceActive);
   $("voiceOrb").classList.toggle("voice-chat-active",orbVoiceActive);
   syncTaskCancelControls();
+  if(orbVoiceActive) $("chatStatus").textContent="";
   if(phase==="idle"&&text!=="Нажми на шар и скажи, что нужно"){
     voiceStatusResetTimer=setTimeout(()=>{
       if(!orbVoiceActive&&!recording&&!transcribing&&!busy&&!openingMic){
@@ -3289,6 +3303,10 @@ async function handleOrbVoice(){
   }
   if(busy||transcribing||openingMic){toast("Подожди, ANNIVEO готовит ответ");return;}
   if(!initData||!user){toast("Открой приложение через Telegram");return;}
+  if(!showWelcome&&!anonymous&&currentView==="chat"){
+    collapseChat();
+    app.scrollTop=0;
+  }
   stopSpokenReply();
   const AudioContextClass=window.AudioContext||window.webkitAudioContext;
   if(!AudioContextClass){toast("Голосовой чат недоступен в этом браузере");return;}
@@ -3389,13 +3407,13 @@ function speakWithDeviceVoice(plain,session){
   if(preferred)voiceUtterance.voice=preferred;
   voiceUtterance.onstart=()=>{if(session===voiceSessionVersion){setVoiceChatStatus("ANNIVEO отвечает… можешь перебить","speaking");startBargeInMonitor(session);}};
   voiceUtterance.onend=()=>continueVoiceAfterReply(session);
-  voiceUtterance.onerror=()=>{if(session===voiceSessionVersion){orbVoiceActive=false;$("endVoice").classList.add("hidden");releaseMicrophone();setVoiceChatStatus("Ответ есть в чате. Нажми на шар, чтобы продолжить","idle");}};
+  voiceUtterance.onerror=()=>{if(session===voiceSessionVersion){setVoiceChatStatus("Ответ есть в чате. Слушаю дальше…","listening");continueVoiceAfterReply(session);}};
   window.speechSynthesis.speak(voiceUtterance);
 }
 async function speakReply(text){
   stopSpokenReply();
   const plain=String(text).replace(/\[([^\]]+)\]\([^)]+\)/g,"$1").replace(/https?:\/\/\S+/g,"").replace(/[*_~#\x60]/g,"").replace(/\s+/g," ").trim();
-  if(!plain)return;
+  if(!plain){continueVoiceAfterReply(voiceSessionVersion);return;}
   const session=voiceSessionVersion,controller=new AbortController();ttsRequestController=controller;
   setVoiceChatStatus("ANNIVEO готовит голос…","speaking");
   try{
@@ -3416,7 +3434,13 @@ async function speakReply(text){
     if(ttsRequestController===controller)ttsRequestController=null;
     if(controller.signal.aborted||session!==voiceSessionVersion||!orbVoiceActive)return;
     console.warn("Neural voice unavailable; using device voice",error);
-    setVoiceChatStatus("Нейросетевой голос недоступен — отвечу голосом устройства","speaking");speakWithDeviceVoice(plain,session);
+    setVoiceChatStatus("Нейросетевой голос недоступен — отвечу голосом устройства","speaking");
+    try{speakWithDeviceVoice(plain,session);}
+    catch(fallbackError){
+      console.warn("Device voice unavailable",fallbackError);
+      setVoiceChatStatus("Ответ есть в чате. Слушаю дальше…","listening");
+      continueVoiceAfterReply(session);
+    }
   }
 }
 /* ГОЛОС */
@@ -3489,6 +3513,7 @@ async function handleMic(){
       recording=false;
       setComposerRecording(false);
       setVoiceAssistantRecording(false);
+      const wasOrbVoice=orbVoiceActive;
       orbVoiceActive=false;
       recorder.onstop=null;
       audioChunks=[];
@@ -3498,7 +3523,7 @@ async function handleMic(){
       $("mic").setAttribute("aria-label","Записать голосовое сообщение");
       $("mic").title="Записать голосовое сообщение";
       const message="Запись прервалась. Проверь доступ к микрофону и попробуй ещё раз.";
-      $("chatStatus").textContent=message;
+      $("chatStatus").textContent=wasOrbVoice?"":message;
       setVoiceChatStatus(message,"idle");
       toast(message);
       updateControls();
@@ -3531,6 +3556,7 @@ async function handleMic(){
     resetCancelVisual();
     releaseMicrophone();
     stopVoiceMeter();
+    const wasOrbVoice=orbVoiceActive;
     orbVoiceActive=false;
     const denied=e.name==="NotAllowedError"||e.name==="PermissionDeniedError";
     const missing=e.name==="NotFoundError"||e.name==="DevicesNotFoundError";
@@ -3540,7 +3566,7 @@ async function handleMic(){
         ?"Не нашёл микрофон на устройстве."
         :"Не удалось включить микрофон. Проверь разрешение и попробуй ещё раз.";
     setVoiceChatStatus(message,"idle");
-    $("chatStatus").textContent=message;
+    $("chatStatus").textContent=wasOrbVoice?"":message;
     toast(message);
   }finally{
     openingMic=false;
@@ -3580,11 +3606,10 @@ async function finishVoice(){
   }
 
   if(spokenVoice&&!voiceHeard){
-    orbVoiceActive=false;
-    $("endVoice").classList.add("hidden");
-    setVoiceChatStatus("Не услышал речь. Нажми на шар и скажи, что нужно","idle");
+    setVoiceChatStatus("Не расслышал. Слушаю дальше…","listening");
     $("chatStatus").textContent="";
     updateControls();
+    continueVoiceAfterReply(voiceSessionVersion);
     return;
   }
 
@@ -3592,7 +3617,7 @@ async function finishVoice(){
   if(!spokenVoice){showWelcome=false;updateWelcome();}
   if(spokenVoice) setVoiceChatStatus("ANNIVEO распознаёт твою речь…","transcribing");
   else setVoiceProgress("ANNIVEO распознаёт запись… текст появится здесь");
-  $("chatStatus").textContent="Распознаю голосовое сообщение…";
+  $("chatStatus").textContent=spokenVoice?"":"Распознаю голосовое сообщение…";
 
   const task={
     kind:"transcription",controller:new AbortController(),cancelled:false,spokenVoice
@@ -3614,7 +3639,7 @@ async function finishVoice(){
     },message=>{
       if(task.cancelled||activeRequestTask!==task) return;
       if(spokenVoice) setVoiceChatStatus(message,"transcribing");
-      $("chatStatus").textContent=message;
+      $("chatStatus").textContent=spokenVoice?"":message;
       if(!spokenVoice) setVoiceProgress(message==="Ответ ещё готовится…"
         ?"ANNIVEO распознаёт… сервер обрабатывает запись"
         :"ANNIVEO распознаёт: "+message);
