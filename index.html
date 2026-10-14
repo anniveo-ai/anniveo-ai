@@ -1290,18 +1290,16 @@ select{
   .splash-progress:before{animation:none!important}
 }
 
-/* Вариант №20: графит и сиреневое стекло с живым световым разломом. */
-.orb20-definitions{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
+/* Реалистичный вариант №20: одна текстура для главного шара и миниатюры. */
 #voiceOrb,#send[data-mode="voice"]{
-  background:#171220;
-  border:0;
-  box-shadow:inset 0 0 0 1px rgba(239,178,255,.18),0 0 12px rgba(202,110,255,.48),0 0 31px rgba(160,68,231,.38),0 12px 36px rgba(78,30,125,.25);
+  background:transparent;border:0;overflow:visible;
+  box-shadow:none;
 }
 #voiceOrb::before,#voiceOrb::after,#send[data-mode="voice"]::before,#send[data-mode="voice"]::after{content:none}
-.orb-twenty{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;filter:drop-shadow(0 0 4px rgba(213,118,255,.43))}
+.orb-twenty{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;object-fit:contain;filter:drop-shadow(0 0 8px rgba(170,66,242,.38))}
 #send[data-mode="send"] .orb-twenty{display:none}
 #voiceOrb .orb-twenty,#send[data-mode="voice"] .orb-twenty{animation:orb20Glow 3.5s ease-in-out infinite alternate}
-@keyframes orb20Glow{from{filter:drop-shadow(0 0 2px rgba(211,112,255,.37))}to{filter:drop-shadow(0 0 8px rgba(224,142,255,.78))}}
+@keyframes orb20Glow{from{filter:drop-shadow(0 0 4px rgba(170,66,242,.28))}to{filter:drop-shadow(0 0 11px rgba(196,101,255,.62))}}
 @media(prefers-reduced-motion:reduce){#voiceOrb .orb-twenty,#send[data-mode="voice"] .orb-twenty{animation:none}}
 
 </style>
@@ -1309,56 +1307,7 @@ select{
 
 <body>
 
-<!-- Шар №20: общий SVG-рисунок для большого шара и кнопки ввода -->
-<svg class="orb20-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <defs>
-    <radialGradient id="orb20-graphite" cx="28%" cy="23%" r="80%">
-      <stop offset="0" stop-color="#555165"/>
-      <stop offset=".26" stop-color="#393644"/>
-      <stop offset=".62" stop-color="#24212f"/>
-      <stop offset="1" stop-color="#0d0b18"/>
-    </radialGradient>
-    <radialGradient id="orb20-amethyst" cx="78%" cy="34%" r="87%">
-      <stop offset="0" stop-color="#fa9fff"/>
-      <stop offset=".25" stop-color="#d874f7"/>
-      <stop offset=".52" stop-color="#ab53de"/>
-      <stop offset=".78" stop-color="#6e289e"/>
-      <stop offset="1" stop-color="#32134f"/>
-    </radialGradient>
-    <radialGradient id="orb20-gloss" cx="70%" cy="19%" r="70%">
-      <stop offset="0" stop-color="#fff3ff" stop-opacity=".55"/>
-      <stop offset=".33" stop-color="#f5bcff" stop-opacity=".18"/>
-      <stop offset="1" stop-color="#b74cff" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="orb20-seam" x1="114" y1="8" x2="161" y2="250" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#f8baff"/>
-      <stop offset=".42" stop-color="#d681ff"/>
-      <stop offset=".75" stop-color="#ffb4fc"/>
-      <stop offset="1" stop-color="#ae58ff"/>
-    </linearGradient>
-    <linearGradient id="orb20-rim" x1="15" y1="15" x2="245" y2="240" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#80728f"/>
-      <stop offset=".36" stop-color="#25202f"/>
-      <stop offset=".65" stop-color="#d68dff"/>
-      <stop offset="1" stop-color="#a14be5"/>
-    </linearGradient>
-    <clipPath id="orb20-disc"><circle cx="130" cy="130" r="126"/></clipPath>
-    <path id="orb20-fracture" d="M137 3 L140 35 L131 49 L145 69 L139 91 L152 110 L146 131 L160 153 L153 174 L166 192 L160 212 L173 230 L169 258"/>
-    <symbol id="orb20-art" viewBox="0 0 260 260">
-      <circle cx="130" cy="130" r="128" fill="url(#orb20-graphite)"/>
-      <g clip-path="url(#orb20-disc)">
-        <path d="M137 3 L140 35 L131 49 L145 69 L139 91 L152 110 L146 131 L160 153 L153 174 L166 192 L160 212 L173 230 L169 258 H270 V-10 H137Z" fill="url(#orb20-amethyst)"/>
-        <circle cx="130" cy="130" r="126" fill="url(#orb20-gloss)"/>
-        <use href="#orb20-fracture" fill="none" stroke="#9b2bd6" stroke-width="11" opacity=".75"/>
-        <use href="#orb20-fracture" fill="none" stroke="#f2a0ff" stroke-width="5" opacity=".42"/>
-        <use href="#orb20-fracture" fill="none" stroke="url(#orb20-seam)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
-      </g>
-      <circle cx="130" cy="130" r="125.5" fill="none" stroke="url(#orb20-rim)" stroke-width="2.5"/>
-      <path d="M16 114 A116 116 0 0 1 105 16" fill="none" stroke="#ffffff" stroke-opacity=".20" stroke-width="3" stroke-linecap="round"/>
-      <path d="M178 249 A124 124 0 0 0 250 168" fill="none" stroke="#ffd0ff" stroke-opacity=".35" stroke-width="2"/>
-    </symbol>
-  </defs>
-</svg>
+
 
 <!-- ЗАСТАВКА -->
 <div id="splash">
@@ -1407,7 +1356,7 @@ select{
     <div class="planet-response" id="planetResponse">
       <span class="orb-floor" aria-hidden="true"></span>
       <button type="button" class="planet" id="voiceOrb" onclick="handleOrbVoice()"
-        aria-label="Говорить с ANNIVEO AI" title="Нажми на шар и скажи, что нужно, что нужно"><svg class="orb-twenty" viewBox="0 0 260 260" aria-hidden="true" focusable="false"><use href="#orb20-art"></use></svg></button>
+        aria-label="Говорить с ANNIVEO AI" title="Нажми на шар и скажи, что нужно, что нужно"><img class="orb-twenty" src="orb20-real.webp" alt="" draggable="false"></button>
     </div>
     <i class="spark a"></i><i class="spark b"></i><i class="spark c"></i>
   </div>
@@ -1664,7 +1613,7 @@ select{
       </svg>
     </button>
     <button type="submit" id="send" aria-label="Говорить с ANNIVEO AI" title="Нажми на шар и скажи, что нужно"
-      class="circle send planet" data-mode="voice"><span id="sendGlyph" aria-hidden="true">➤</span><svg class="orb-twenty" viewBox="0 0 260 260" aria-hidden="true" focusable="false"><use href="#orb20-art"></use></svg></button>
+      class="circle send planet" data-mode="voice"><span id="sendGlyph" aria-hidden="true">➤</span><img class="orb-twenty" src="orb20-real.webp" alt="" draggable="false"></button>
   </form>
   <div id="chatStatus" class="status"></div>
 </div>
