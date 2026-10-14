@@ -1303,15 +1303,49 @@ select{
 /* Реалистичный вариант №20: одна текстура для главного шара и миниатюры. */
 #voiceOrb,#send[data-mode="voice"]{
   background:transparent;border:0;overflow:visible;
-  box-shadow:none;
+  box-shadow:none;animation:none;
 }
 #voiceOrb::before,#voiceOrb::after,#send[data-mode="voice"]::before,#send[data-mode="voice"]::after{content:none}
-.orb-twenty{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;object-fit:contain;filter:drop-shadow(0 0 8px rgba(170,66,242,.38))}
+#voiceOrb{
+  --orb-turn-x:0deg;--orb-turn-y:0deg;--orb-press:1;
+  touch-action:manipulation;filter:none;
+  transform:perspective(780px) rotateX(calc(var(--orb-turn-x) + var(--orb-pointer-x,0deg))) rotateY(calc(var(--orb-turn-y) + var(--orb-pointer-y,0deg))) scale(var(--orb-press));
+  transition:transform .55s cubic-bezier(.2,.8,.2,1);
+}
+#voiceOrb[data-phase="attentive"]{--orb-turn-x:7deg;--orb-turn-y:-10deg}
+#voiceOrb[data-phase="listening"]{--orb-turn-x:3deg;--orb-turn-y:-5deg}
+#voiceOrb:active{--orb-press:.96}
+#send[data-mode="voice"]{transition:transform .4s ease}
+#send[data-mode="voice"][data-phase="attentive"]{transform:perspective(240px) rotateY(-12deg)}
+.orb-twenty{
+  position:absolute;inset:0;width:100%;height:100%;display:block;
+  pointer-events:none;object-fit:contain;user-select:none;-webkit-user-select:none;
+  filter:drop-shadow(0 0 8px rgba(170,66,242,.38));
+}
 #send[data-mode="send"] .orb-twenty{display:none}
-#voiceOrb,#send[data-mode="voice"]{animation-duration:31s}
-#voiceOrb .orb-twenty,#send[data-mode="voice"] .orb-twenty{animation:orb20Glow 3.5s ease-in-out infinite alternate}
-@keyframes orb20Glow{from{filter:drop-shadow(0 0 4px rgba(170,66,242,.28))}to{filter:drop-shadow(0 0 11px rgba(196,101,255,.62))}}
-@media(prefers-reduced-motion:reduce){#voiceOrb .orb-twenty,#send[data-mode="voice"] .orb-twenty{animation:none}}
+#voiceOrb .orb-twenty,#send[data-mode="voice"] .orb-twenty{
+  animation:orb20Rotate 31s linear infinite,orb20Glow 3.5s ease-in-out infinite alternate;
+}
+#voiceOrb[data-phase="attentive"] .orb-twenty,#send[data-mode="voice"][data-phase="attentive"] .orb-twenty{animation-play-state:paused,running}
+#voiceOrb[data-phase="thinking"] .orb-twenty,#send[data-mode="voice"][data-phase="thinking"] .orb-twenty{animation-duration:31s,1.3s}
+#voiceOrb[data-phase="listening"] .orb-twenty,#send[data-mode="voice"][data-phase="listening"] .orb-twenty{animation-duration:31s,1.9s}
+#voiceOrb[data-phase="speaking"] .orb-twenty,#send[data-mode="voice"][data-phase="speaking"] .orb-twenty{
+  animation:orb20Rotate 31s linear infinite,orb20Glow 2s ease-in-out infinite alternate,orb20Speak 1.6s ease-in-out infinite;
+}
+@keyframes orb20Rotate{to{transform:rotate(360deg)}}
+@keyframes orb20Glow{
+  from{filter:drop-shadow(0 0 calc(4px + var(--voice-level,0) * 14px) rgba(170,66,242,.28)) brightness(calc(1 + var(--voice-level,0) * .2))}
+  to{filter:drop-shadow(0 0 calc(11px + var(--voice-level,0) * 14px) rgba(196,101,255,.62)) brightness(calc(1.035 + var(--voice-level,0) * .2))}
+}
+@keyframes orb20Speak{
+  0%,100%{scale:1}
+  50%{scale:1.035}
+}
+.orb20-paused .orb-twenty{animation-play-state:paused!important}
+@media(prefers-reduced-motion:reduce){
+  #voiceOrb .orb-twenty,#send[data-mode="voice"] .orb-twenty{animation:none!important}
+  #voiceOrb,#send[data-mode="voice"],#planetResponse{transform:none!important;transition:none!important}
+}
 
 </style>
 </head>
@@ -1783,6 +1817,7 @@ const cacheKey = user?.id
   : null;
 
 setupMicGestures();
+setupOrbReaction();
 
 /* ЗАСТАВКА */
 window.addEventListener("load",()=>{
@@ -2909,6 +2944,40 @@ function toggleAnonymous(){
 }
 
 /* КНОПКИ */
+function syncOrbAppearance(){
+  const input=$("messageInput");
+  const voicePhase=$("voiceStatus").dataset.phase;
+  let phase="idle";
+  if(transcribing||busy) phase="thinking";
+  else if(openingMic||recording) phase="listening";
+  else if(orbVoiceActive&&voicePhase==="speaking") phase="speaking";
+  else if(orbVoiceActive&&voicePhase==="listening") phase="listening";
+  else if(document.activeElement===input||input.value.trim()) phase="attentive";
+  $("voiceOrb").dataset.phase=phase;
+  $("send").dataset.phase=phase;
+}
+function setupOrbReaction(){
+  const orb=$("voiceOrb"),input=$("messageInput");
+  const reduced=window.matchMedia("(prefers-reduced-motion: reduce)");
+  input.addEventListener("focus",syncOrbAppearance);
+  input.addEventListener("blur",()=>requestAnimationFrame(syncOrbAppearance));
+  orb.addEventListener("pointermove",event=>{
+    if(reduced.matches||(event.pointerType!=="mouse"&&event.pointerType!=="pen")) return;
+    const rect=orb.getBoundingClientRect();
+    if(!rect.width||!rect.height) return;
+    const x=Math.max(-1,Math.min(1,(event.clientX-rect.left)/rect.width*2-1));
+    const y=Math.max(-1,Math.min(1,(event.clientY-rect.top)/rect.height*2-1));
+    orb.style.setProperty("--orb-pointer-x",(-y*5).toFixed(2)+"deg");
+    orb.style.setProperty("--orb-pointer-y",(x*7).toFixed(2)+"deg");
+  });
+  orb.addEventListener("pointerleave",()=>{
+    orb.style.removeProperty("--orb-pointer-x");
+    orb.style.removeProperty("--orb-pointer-y");
+  });
+  const pause=()=>document.body.classList.toggle("orb20-paused",document.hidden);
+  document.addEventListener("visibilitychange",pause);
+  pause();
+}
 function updateControls(){
   const locked=busy||recording||transcribing||openingMic;
   const send=$("send");
@@ -2922,6 +2991,7 @@ function updateControls(){
   $("mic").disabled=busy||transcribing||(openingMic&&!micGesture);
   $("messageInput").disabled=
     recording||transcribing||openingMic;
+  syncOrbAppearance();
 }
 
 function toggleAttachmentMenu(){
@@ -3221,6 +3291,7 @@ function stopVoiceMeter(){
   stopBargeInMonitor();
   voiceSourceNode?.disconnect();voiceSourceNode=null;voiceAnalyser=null;
   $("planetResponse").style.setProperty("--voice-level","0");
+  $("send").style.setProperty("--voice-level","0");
   $("mic").style.setProperty("--mic-scale","1");
   $("mic").style.setProperty("--mic-lift","0px");
   $("mic").classList.remove("locked","gesture-active");
@@ -3283,6 +3354,7 @@ function setVoiceChatStatus(text,phase="idle"){
   clearTimeout(voiceStatusResetTimer);
   $("voiceStatus").textContent=text;$("voiceStatus").dataset.phase=phase;
   $("voiceAssistantButton").dataset.phase=phase;$("voiceAssistantButton").title=text;
+  syncOrbAppearance();
   $("voiceStatus").closest(".voice-status-row")?.classList.toggle("voice-chat-active",orbVoiceActive);
   $("voiceOrb").classList.toggle("voice-chat-active",orbVoiceActive);
   syncTaskCancelControls();
@@ -3293,6 +3365,7 @@ function setVoiceChatStatus(text,phase="idle"){
         $("voiceStatus").textContent="Нажми на шар и скажи, что нужно";
         $("voiceStatus").dataset.phase="idle";$("voiceAssistantButton").dataset.phase="idle";
         $("voiceAssistantButton").title="Нажми на шар и скажи, что нужно";
+        syncOrbAppearance();
       }
     },3200);
   }
@@ -3401,6 +3474,7 @@ function startVoiceMeter(){
         $("mic").style.setProperty("--mic-lift",(-level*2.2).toFixed(2)+"px");
       }
       $("planetResponse").style.setProperty("--voice-level",level.toFixed(3));
+      $("send").style.setProperty("--voice-level",level.toFixed(3));
       if(orbVoiceActive&&rms>.018){voiceHeard=true;lastSpeech=now;}
       if(orbVoiceActive&&((voiceHeard&&now-lastSpeech>1800)||(!voiceHeard&&now-began>12000))){
         if(recorder?.state==="recording") recorder.stop();
@@ -4136,3 +4210,4 @@ loadHistory();
 
 </body>
 </html>
+
