@@ -1218,21 +1218,21 @@ select{
   pointer-events:none;will-change:transform;user-select:none;
 }
 .splash-piece.left{
-  clip-path:polygon(0 0,51% 0,49% 13%,52% 23%,50% 29%,54% 37%,52% 43%,57% 50%,54% 55%,50% 64%,53% 71%,51% 80%,55% 91%,54% 100%,0 100%);
+  clip-path:polygon(0 0,0.00% 51.67%,9.57% 51.44%,11.96% 51.67%,15.95% 53.03%,19.94% 51.75%,23.92% 51.99%,27.91% 53.99%,31.90% 56.70%,35.89% 59.57%,39.87% 59.09%,43.86% 56.30%,47.85% 54.70%,51.83% 52.47%,55.82% 49.68%,59.81% 51.12%,63.80% 54.78%,67.78% 56.70%,71.77% 55.26%,75.76% 57.26%,79.74% 57.97%,83.73% 55.58%,87.72% 57.58%,90.91% 57.10%,100.00% 57.10%,0 100%);
   animation:splashJoinLeft 2.2s cubic-bezier(.16,.75,.24,1) both;
 }
 .splash-piece.right{
-  clip-path:polygon(51% 0,100% 0,100% 100%,54% 100%,55% 91%,51% 80%,53% 71%,50% 64%,54% 55%,57% 50%,52% 43%,54% 37%,50% 29%,52% 23%,49% 13%);
+  clip-path:polygon(0.00% 51.67%,100% 0,100% 100%,100.00% 57.10%,90.91% 57.10%,87.72% 57.58%,83.73% 55.58%,79.74% 57.97%,75.76% 57.26%,71.77% 55.26%,67.78% 56.70%,63.80% 54.78%,59.81% 51.12%,55.82% 49.68%,51.83% 52.47%,47.85% 54.70%,43.86% 56.30%,39.87% 59.09%,35.89% 59.57%,31.90% 56.70%,27.91% 53.99%,23.92% 51.99%,19.94% 51.75%,15.95% 53.03%,11.96% 51.67%,9.57% 51.44%);
   animation:splashJoinRight 2.2s cubic-bezier(.16,.75,.24,1) both;
 }
 @keyframes splashJoinLeft{
-  0%{transform:translate(-90px,9px) rotate(-7deg) scale(.96);opacity:.85}
-  65%{transform:translate(-5px,0) rotate(-.6deg) scale(1);opacity:1}
+  0%{transform:translateX(-90px);opacity:.85}
+  65%{transform:translateX(-5px);opacity:1}
   79%,100%{transform:none;opacity:1}
 }
 @keyframes splashJoinRight{
-  0%{transform:translate(90px,-9px) rotate(7deg) scale(.96);opacity:.85}
-  65%{transform:translate(5px,0) rotate(.6deg) scale(1);opacity:1}
+  0%{transform:translateX(90px);opacity:.85}
+  65%{transform:translateX(5px);opacity:1}
   79%,100%{transform:none;opacity:1}
 }
 @keyframes splashJoinGlow{
