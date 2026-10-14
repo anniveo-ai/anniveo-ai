@@ -1761,6 +1761,7 @@ let audioChunks = [];
 let audioURLs = [];
 let recordTimer = null;
 let orbVoiceActive=false;
+let orbVoiceStayInChat=false;
 let voiceSessionVersion=0;
 let voiceHeard=false;
 let voiceAnalyser=null,voiceAudioContext=null,voiceFrame=0;
@@ -3071,7 +3072,7 @@ async function sendMessage(text,audioURL,spokenVoice=false){
   const voiceReplySession=voiceSessionVersion;
   const context=cleanHistory(anonymousHistory).slice(-12);
 
-  showWelcome=spokenVoice&&!isAnonymous;
+  showWelcome=spokenVoice&&!isAnonymous&&!orbVoiceStayInChat;
   updateWelcome();
   if($("messages").children.length===0||reorderForChat) renderChat();
 
@@ -3094,8 +3095,10 @@ async function sendMessage(text,audioURL,spokenVoice=false){
   $("chatStatus").textContent=spokenVoice?"":"Готовлю ответ…";
   busy=true;
   updateControls();
-  if(spokenVoice){app.scrollTop=0;setVoiceChatStatus("ANNIVEO думает…","thinking");}
-  else scrollAppToBottom();
+  if(spokenVoice){
+    if(orbVoiceStayInChat) scrollAppToBottom(); else app.scrollTop=0;
+    setVoiceChatStatus("ANNIVEO думает…","thinking");
+  }else scrollAppToBottom();
   syncTaskCancelControls();
 
   try{
@@ -3159,7 +3162,7 @@ async function sendMessage(text,audioURL,spokenVoice=false){
       updateControls();
       $("chatStatus").textContent="";
       if(spokenVoice&&returnToChatAvailable&&showWelcome&&!isAnonymous) renderChat();
-      if(!spokenVoice) scrollAppToBottom();
+      if(!spokenVoice||orbVoiceStayInChat) scrollAppToBottom();
     }
   }
 }
@@ -3297,6 +3300,7 @@ function setVoiceChatStatus(text,phase="idle"){
 function endVoiceSession(){
   voiceSessionVersion++;
   orbVoiceActive=false;
+  orbVoiceStayInChat=false;
   clearTimeout(recordTimer);
   if(recorder?.state==="recording"){
     recorder.onstop=null;recorder.stop();
@@ -3321,10 +3325,8 @@ async function handleOrbVoice(){
   }
   if(busy||transcribing||openingMic){toast("Подожди, ANNIVEO готовит ответ");return;}
   if(!initData||!user){toast("Открой приложение через Telegram");return;}
-  if(!showWelcome&&!anonymous&&currentView==="chat"){
-    collapseChat();
-    app.scrollTop=0;
-  }
+  // Голосовой диалог из строки ввода остаётся внутри открытого чата.
+  orbVoiceStayInChat=currentView==="chat"&&!showWelcome;
   stopSpokenReply();
   const AudioContextClass=window.AudioContext||window.webkitAudioContext;
   if(!AudioContextClass){toast("Голосовой чат недоступен в этом браузере");return;}
