@@ -686,6 +686,7 @@ header{
   border:1px solid rgba(196,166,225,.68);
   border-radius:30px;
   box-shadow:0 8px 25px #0005,inset 0 1px 1px #ffffff18;
+  transition:min-height .42s cubic-bezier(.22,1,.36,1);
 }
 .attachment-menu{
   position:absolute;left:4px;bottom:calc(100% + 12px);z-index:45;
@@ -743,7 +744,10 @@ header{
 .composer.recording-mode .search-recording-display{
   flex-grow:1;opacity:1;transform:none;pointer-events:auto;
 }
-/* Keep the composer fixed while the waveform reveals from the mic side. */
+/* Expand the input smoothly for the voice waveform while keeping its bottom anchored. */
+.dock.swipe-preview .composer,
+.composer.recording-mode{min-height:62px}
+.dock.swipe-preview.swipe-settling .composer{min-height:54px}
 .dock.swipe-preview .composer{position:relative}
 .dock.swipe-preview .composer #messageInput{
   flex-grow:1;
@@ -942,6 +946,7 @@ header{
     .mic-swipe-copy{width:91px;padding-right:7px}
 }
 @media(prefers-reduced-motion:reduce){
+  .composer{transition:none}
   .mic-swipe-hint,.mic-swipe-shadow,.mic-guide-lock,.mic-swipe-copy,.mic-swipe-track,
   .dock.swipe-settling .composer #messageInput,
   .dock.swipe-settling .composer .search-recording-display{transition:none}
