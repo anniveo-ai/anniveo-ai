@@ -1791,6 +1791,7 @@ let voiceSessionVersion=0;
 let voiceHeard=false;
 let voiceAnalyser=null,voiceAudioContext=null,voiceFrame=0;
 let voiceSourceNode=null;
+let voiceAudioSource=null,ttsRequestController=null;
 let bargeInAnalyser=null,bargeInSourceNode=null,bargeInFrame=0;
 let micElapsedTimer=null,recordingStartedAt=0;
 let voiceProgressText="",voiceProgressError=false;
@@ -3136,7 +3137,7 @@ function startBargeInMonitor(session){
     const armedAt=performance.now()+420;
     let speechFrames=0;
     function watch(now){
-      if(session!==voiceSessionVersion||!orbVoiceActive||!window.speechSynthesis?.speaking){
+      if(session!==voiceSessionVersion||!orbVoiceActive||!(voiceAudioSource||window.speechSynthesis?.speaking)){
         stopBargeInMonitor();return;
       }
       bargeInAnalyser.getFloatTimeDomainData(samples);
@@ -3161,11 +3162,9 @@ function startBargeInMonitor(session){
 }
 function stopSpokenReply(){
   stopBargeInMonitor();
-  if(voiceUtterance){
-    voiceUtterance.onstart=null;
-    voiceUtterance.onend=null;
-    voiceUtterance.onerror=null;
-  }
+  if(ttsRequestController){ttsRequestController.abort();ttsRequestController=null;}
+  if(voiceAudioSource){voiceAudioSource.onended=null;try{voiceAudioSource.stop();}catch{}try{voiceAudioSource.disconnect();}catch{}voiceAudioSource=null;}
+  if(voiceUtterance){voiceUtterance.onstart=null;voiceUtterance.onend=null;voiceUtterance.onerror=null;}
   window.speechSynthesis?.cancel();voiceUtterance=null;
   $("voiceOrb").setAttribute("aria-label","Говорить с ANNIVEO AI");
 }
@@ -3201,37 +3200,21 @@ function endVoiceSession(){
 }
 async function handleOrbVoice(){
   if(recording){recorder?.stop();return;}
-  if(orbVoiceActive&&window.speechSynthesis?.speaking){
-    stopSpokenReply();
-    setVoiceChatStatus("Твой ход — слушаю","listening");
-    void handleMic();
-    return;
+  if(orbVoiceActive&&(voiceAudioSource||ttsRequestController||window.speechSynthesis?.speaking)){
+    stopSpokenReply();setVoiceChatStatus("Твой ход — слушаю","listening");void handleMic();return;
   }
   if(busy||transcribing||openingMic){toast("Подожди, ANNIVEO готовит ответ");return;}
   if(!initData||!user){toast("Открой приложение через Telegram");return;}
   stopSpokenReply();
-  if(!window.speechSynthesis||!window.SpeechSynthesisUtterance){
-    toast("Озвучка недоступна в этом браузере");return;
-  }
-  // Разблокируем озвучку в момент пользовательского нажатия.
-  const warmup=new SpeechSynthesisUtterance(" ");
-  warmup.volume=0;window.speechSynthesis.speak(warmup);
   const AudioContextClass=window.AudioContext||window.webkitAudioContext;
-  if(AudioContextClass){
-    if(!voiceAudioContext) voiceAudioContext=new AudioContextClass();
-    void voiceAudioContext.resume().catch(()=>{});
-  }
-  voiceSessionVersion++;
-  orbVoiceActive=true;voiceHeard=false;
+  if(!AudioContextClass){toast("Голосовой чат недоступен в этом браузере");return;}
+  if(!voiceAudioContext)voiceAudioContext=new AudioContextClass();
+  try{if(voiceAudioContext.state==="suspended")await voiceAudioContext.resume();}catch{}
+  voiceSessionVersion++;orbVoiceActive=true;voiceHeard=false;
   setVoiceChatStatus("Слушаю тебя — говори в своём темпе","listening");
   $("voiceOrb").setAttribute("aria-label","Остановить запись и отправить фразу");
   await handleMic();
-  if(!recording&&!openingMic&&orbVoiceActive){
-    orbVoiceActive=false;
-    $("voiceOrb").setAttribute("aria-label","Говорить с ANNIVEO AI");
-    $("endVoice").classList.add("hidden");
-    setVoiceChatStatus("Не удалось включить микрофон. Нажми на шар и попробуй ещё раз","idle");
-  }
+  if(!recording&&!openingMic&&orbVoiceActive){orbVoiceActive=false;$("voiceOrb").setAttribute("aria-label","Говорить с ANNIVEO AI");$("endVoice").classList.add("hidden");setVoiceChatStatus("Не удалось включить микрофон. Нажми на шар и попробуй ещё раз","idle");}
 }
 function startVoiceMeter(){
   if(!voiceAudioContext||!microphoneStream){
@@ -3270,55 +3253,49 @@ function startVoiceMeter(){
     $("voiceStatus").textContent="Говори. Нажми на шар ещё раз для отправки";
   }
 }
-function speakReply(text){
-  stopSpokenReply();
-  const plain=String(text)
-    .replace(/\[([^\]]+)\]\([^)]+\)/g,"$1")
-    .replace(/https?:\/\/\S+/g,"")
-    .replace(/[*_~#\x60]/g,"")
-    .replace(/\s+/g," ")
-    .trim();
-  voiceUtterance=new SpeechSynthesisUtterance(plain);
-  voiceUtterance.lang="ru-RU";
-  voiceUtterance.rate=.95;
-  voiceUtterance.pitch=1.06;
-  voiceUtterance.volume=1;
-  const voices=window.speechSynthesis.getVoices();
-  const russian=voices.filter(v=>v.lang.toLowerCase().startsWith("ru"));
-  const gentleFoxVoice=
-    russian.find(v=>/siri|premium|enhanced|natural|milena|yelena/i.test(v.name))||
-    russian.find(v=>/elena|alena|anna|irina|svetlana|female|woman/i.test(v.name))||
-    russian.find(v=>v.lang.toLowerCase()==="ru-ru"&&v.localService===false)||
-    russian[0];
-  if(gentleFoxVoice) voiceUtterance.voice=gentleFoxVoice;
-  const session=voiceSessionVersion;
-  voiceUtterance.onstart=()=>{
-    if(session===voiceSessionVersion){
-      setVoiceChatStatus("ANNIVEO отвечает… можешь перебить","speaking");
-      startBargeInMonitor(session);
-    }
-  };
-  voiceUtterance.onend=()=>{
-    if(session!==voiceSessionVersion) return;
-    if(orbVoiceActive){
-      setVoiceChatStatus("Твой ход — слушаю","listening");
-      setTimeout(()=>{
-        if(session===voiceSessionVersion&&orbVoiceActive&&!busy&&!transcribing&&!recording&&!openingMic) void handleMic();
-      },280);
-    }else{
-      setVoiceChatStatus("Нажми на шар, чтобы поговорить","idle");
-    }
-  };
-  voiceUtterance.onerror=()=>{
-    if(session!==voiceSessionVersion) return;
-    orbVoiceActive=false;
-    $("endVoice").classList.add("hidden");
-    releaseMicrophone();
-    setVoiceChatStatus("Ответ есть в чате. Нажми на шар, чтобы продолжить","idle");
-  };
+function continueVoiceAfterReply(session){
+  stopBargeInMonitor();if(session!==voiceSessionVersion)return;
+  if(orbVoiceActive){setVoiceChatStatus("Твой ход — слушаю","listening");setTimeout(()=>{if(session===voiceSessionVersion&&orbVoiceActive&&!busy&&!transcribing&&!recording&&!openingMic)void handleMic();},280);}
+  else setVoiceChatStatus("Нажми на шар, чтобы поговорить","idle");
+}
+function speakWithDeviceVoice(plain,session){
+  if(!window.speechSynthesis||!window.SpeechSynthesisUtterance)throw Error("fallback unavailable");
+  voiceUtterance=new SpeechSynthesisUtterance(plain);voiceUtterance.lang="ru-RU";voiceUtterance.rate=.95;voiceUtterance.pitch=1.06;voiceUtterance.volume=1;
+  const russian=window.speechSynthesis.getVoices().filter(v=>v.lang.toLowerCase().startsWith("ru"));
+  const preferred=russian.find(v=>/siri|premium|enhanced|natural|milena|yelena/i.test(v.name))||russian.find(v=>/elena|alena|anna|irina|svetlana|female|woman/i.test(v.name))||russian[0];
+  if(preferred)voiceUtterance.voice=preferred;
+  voiceUtterance.onstart=()=>{if(session===voiceSessionVersion){setVoiceChatStatus("ANNIVEO отвечает… можешь перебить","speaking");startBargeInMonitor(session);}};
+  voiceUtterance.onend=()=>continueVoiceAfterReply(session);
+  voiceUtterance.onerror=()=>{if(session===voiceSessionVersion){orbVoiceActive=false;$("endVoice").classList.add("hidden");releaseMicrophone();setVoiceChatStatus("Ответ есть в чате. Нажми на шар, чтобы продолжить","idle");}};
   window.speechSynthesis.speak(voiceUtterance);
 }
-
+async function speakReply(text){
+  stopSpokenReply();
+  const plain=String(text).replace(/\[([^\]]+)\]\([^)]+\)/g,"$1").replace(/https?:\/\/\S+/g,"").replace(/[*_~#\x60]/g,"").replace(/\s+/g," ").trim();
+  if(!plain)return;
+  const session=voiceSessionVersion,controller=new AbortController();ttsRequestController=controller;
+  setVoiceChatStatus("ANNIVEO готовит голос…","speaking");
+  try{
+    const response=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"speak",text:plain,initData}),signal:controller.signal});
+    if(!response.ok)throw new Error("TTS request failed: "+response.status);
+    const audioData=await response.arrayBuffer();
+    if(session!==voiceSessionVersion||!orbVoiceActive||controller.signal.aborted)return;
+    ttsRequestController=null;
+    if(!voiceAudioContext){const AudioContextClass=window.AudioContext||window.webkitAudioContext;if(!AudioContextClass)throw Error("AudioContext unavailable");voiceAudioContext=new AudioContextClass();}
+    if(voiceAudioContext.state==="suspended")await voiceAudioContext.resume();
+    const decoded=await voiceAudioContext.decodeAudioData(audioData);
+    if(session!==voiceSessionVersion||!orbVoiceActive||controller.signal.aborted)return;
+    const source=voiceAudioContext.createBufferSource();source.buffer=decoded;source.connect(voiceAudioContext.destination);voiceAudioSource=source;
+    source.onended=()=>{if(voiceAudioSource!==source)return;voiceAudioSource=null;try{source.disconnect();}catch{}continueVoiceAfterReply(session);};
+    setVoiceChatStatus("ANNIVEO отвечает… можешь перебить","speaking");source.start(0);
+    if(microphoneStream)startBargeInMonitor(session);
+  }catch(error){
+    if(ttsRequestController===controller)ttsRequestController=null;
+    if(controller.signal.aborted||session!==voiceSessionVersion||!orbVoiceActive)return;
+    console.warn("Neural voice unavailable; using device voice",error);
+    setVoiceChatStatus("Нейросетевой голос недоступен — отвечу голосом устройства","speaking");speakWithDeviceVoice(plain,session);
+  }
+}
 /* ГОЛОС */
 async function handleMic(){
   if(recording){
