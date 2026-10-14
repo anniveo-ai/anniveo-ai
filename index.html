@@ -91,6 +91,48 @@ header{
   background:none;
   font-size:22px;
 }
+
+/* СВЕРНУТЬ ДИАЛОГ */
+.collapse-chat-button{
+  position:fixed;
+  z-index:90;
+  top:calc(env(safe-area-inset-top,0px) + 10px);
+  left:16px;
+  min-height:42px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  padding:0 16px 0 13px;
+  border:1px solid rgba(235,215,255,.52);
+  border-radius:999px;
+  color:#fbf7ff;
+  font-size:14px;
+  font-weight:550;
+  letter-spacing:.01em;
+  background:linear-gradient(145deg,rgba(174,142,216,.66),rgba(93,73,127,.54));
+  -webkit-backdrop-filter:blur(22px) saturate(150%);
+  backdrop-filter:blur(22px) saturate(150%);
+  box-shadow:0 0 10px rgba(210,171,255,.48),0 0 28px rgba(174,119,255,.32),inset 0 1px 0 rgba(255,255,255,.48);
+  transform:translateZ(0) scale(1);
+  transition:transform .18s cubic-bezier(.2,.8,.2,1),box-shadow .2s,background .2s;
+  -webkit-tap-highlight-color:transparent;
+}
+.collapse-chat-button svg{
+  width:18px;height:18px;flex:none;
+  filter:drop-shadow(0 0 5px rgba(255,255,255,.45));
+  transition:transform .2s;
+}
+.collapse-chat-button:active,
+.collapse-chat-button.pressed{
+  transform:translateZ(0) scale(.94);
+  background:linear-gradient(145deg,rgba(199,163,239,.78),rgba(113,83,157,.7));
+  box-shadow:0 0 7px rgba(226,196,255,.62),0 0 18px rgba(174,119,255,.5),inset 0 2px 5px rgba(35,21,53,.22);
+}
+.collapse-chat-button:active svg,
+.collapse-chat-button.pressed svg{transform:translateY(1px)}
+.collapse-chat-button:focus-visible{outline:2px solid #f4e8ff;outline-offset:3px}
+
 .view{display:none;min-width:0}
 .view.active{display:block}
 
@@ -1191,6 +1233,15 @@ select{
 </div>
 
 <div class="app" id="app">
+<button id="collapseChatButton" class="collapse-chat-button hidden"
+  type="button" aria-label="Свернуть чат и вернуться к шару"
+  onclick="collapseChat()">
+  <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <path d="m4 7 6 6 6-6" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <span>Свернуть чат</span>
+</button>
 <header>
   <div class="logo">✦ ANNIVEO <span>AI</span></div>
   <button class="credit" onclick="openView('profile')">
@@ -2132,6 +2183,7 @@ function openView(name){
   endVoiceSession();
   $("messageInput").blur();
   currentView = name;
+  updateWelcome();
 
   document.querySelectorAll(".view").forEach(el=>{
     el.classList.toggle(
@@ -2156,7 +2208,22 @@ function openView(name){
 
 /* ГЛАВНЫЙ ЭКРАН */
 function updateWelcome(){
-  $("welcome").classList.toggle("hidden",!showWelcome||anonymous);
+  const landingVisible=showWelcome&&!anonymous;
+  $("welcome").classList.toggle("hidden",!landingVisible);
+  $("collapseChatButton")?.classList.toggle(
+    "hidden",landingVisible||anonymous||currentView!=="chat"
+  );
+}
+function collapseChat(){
+  if(recording||transcribing||openingMic){
+    toast("Сначала заверши голосовое сообщение");
+    return;
+  }
+  endVoiceSession();
+  showWelcome=true;
+  updateWelcome();
+  app.scrollTo({top:0,behavior:"smooth"});
+  tg?.HapticFeedback?.impactOccurred("light");
 }
 
 /* ФОРМАТИРОВАНИЕ */
