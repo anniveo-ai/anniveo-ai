@@ -1507,7 +1507,7 @@ function setupMicGestures(){
       state.locked=true;
       state.cancelArmed=false;
       button.classList.remove("cancel-armed","gesture-active");
-      plus.classList.remove("cancel-armed");
+      resetCancelVisual();
       button.classList.add("locked");
       suppressClick();
       $("chatStatus").textContent="Запись закреплена · нажми микрофон, чтобы отправить";
