@@ -31,6 +31,7 @@ button,textarea,select{font:inherit;color:inherit}
 button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 button:disabled{opacity:.5}
 .hidden{display:none!important}
+.app.has-return-to-chat{padding-top:calc(env(safe-area-inset-top,0px) + 112px)}
 .app{
   max-width:760px;
   height:100dvh;
@@ -230,6 +231,7 @@ header{
   -webkit-tap-highlight-color:transparent;
 }
 .end-voice:active{transform:scale(.96);filter:brightness(1.12)}
+#endVoice{display:none!important}
 .voice-status-row.voice-chat-active .voice-assistant-button{border-color:rgba(224,195,255,.78);box-shadow:0 0 13px rgba(193,145,255,.52),0 0 32px rgba(166,103,255,.32),inset 0 1px rgba(255,255,255,.26),inset 0 -8px 22px rgba(18,14,39,.2)}
 .voice-assistant-button[data-phase="speaking"]{border-color:rgba(255,160,239,.58)}
 .voice-assistant-button[data-phase="thinking"],.voice-assistant-button[data-phase="transcribing"]{animation:voiceButtonBreath 1.8s ease-in-out infinite}
@@ -238,34 +240,48 @@ header{
 @media(prefers-reduced-motion:reduce){.voice-assistant-button[data-phase="thinking"],.voice-assistant-button[data-phase="transcribing"]{animation:none}.end-voice{transition:none}}
 .planet:focus-visible{outline:2px solid #ffe0ff;outline-offset:8px}
 .planet{
-  border:0;padding:0;cursor:pointer;position:relative;isolation:isolate;
-  width:clamp(205px,64vw,252px);height:clamp(205px,64vw,252px);
-  border-radius:50%;z-index:3;overflow:hidden;
+  border:1px solid rgba(237,225,255,.68);padding:0;cursor:pointer;position:relative;isolation:isolate;
+  width:clamp(188px,58vw,224px);height:clamp(188px,58vw,224px);
+  border-radius:50%;z-index:3;overflow:hidden;display:block;
   background:
-    radial-gradient(ellipse at 28% 18%,#ffffff 0%,#ffeaff 5%,#f8bdffcc 13%,transparent 31%),
-    radial-gradient(ellipse at 77% 30%,#ff5bdc 0%,#f12affbb 22%,transparent 48%),
-    radial-gradient(ellipse at 18% 73%,#94b6ff 0%,#7050ffdd 26%,transparent 53%),
-    radial-gradient(circle at 70% 86%,#eea0ff 0%,#c746ff77 22%,transparent 42%),
-    linear-gradient(140deg,#f0b2ff 0%,#be39ff 32%,#7420c9 62%,#d078ff 100%);
+    radial-gradient(ellipse at 25% 22%,rgba(255,248,255,.9) 0%,rgba(243,224,255,.52) 8%,transparent 29%),
+    radial-gradient(ellipse at 76% 27%,rgba(170,151,255,.68),transparent 37%),
+    radial-gradient(ellipse at 25% 75%,rgba(142,160,255,.54),transparent 44%),
+    radial-gradient(ellipse at 72% 76%,rgba(224,158,255,.48),transparent 42%),
+    radial-gradient(circle at 50% 50%,rgba(61,51,115,.42),rgba(24,23,46,.88) 72%);
   box-shadow:
-    inset -22px -30px 48px #270b58aa,
-    inset 12px 12px 30px #ffffff88,
-    inset 0 0 40px #f8c6ff99,
-    0 0 15px #eda6ffdd,
-    0 0 38px #cc55ffbb,
-    0 0 68px #a83cff88;
-  animation:planetSpin 14s linear infinite;
+    inset 0 0 0 2px rgba(255,255,255,.11),
+    inset 12px 13px 25px rgba(255,255,255,.18),
+    inset -18px -20px 32px rgba(21,14,50,.48),
+    0 0 10px rgba(226,194,255,.55),
+    0 0 28px rgba(145,105,255,.40),
+    0 12px 38px rgba(60,43,121,.34);
+  animation:planetSpin 22s linear infinite;
 }
-.planet:before{
-  content:"";position:absolute;inset:20% -12%;
-  border:1px solid #ffe1ffcc;border-radius:50%;
-  box-shadow:0 0 12px #e89aff99;transform:rotate(-26deg);pointer-events:none;
+.planet:before,#send[data-mode="voice"]:before{
+  content:"";position:absolute;inset:1.5%;z-index:3;border:1px solid rgba(248,239,255,.65);
+  border-radius:50%;box-shadow:inset 0 0 12px rgba(255,255,255,.2),0 0 8px rgba(203,164,255,.38);
+  pointer-events:none;
 }
-.planet:after{
-  content:"";position:absolute;left:13%;top:45%;width:80%;height:30%;
-  border-radius:50%;background:linear-gradient(#ffe5ffbb,#df91ff44,transparent);
-  transform:rotate(25deg);pointer-events:none;
+.planet:after,#send[data-mode="voice"]:after{
+  content:"";position:absolute;left:11%;top:9%;width:27%;height:57%;z-index:4;
+  border-radius:55% 45% 60% 40%;
+  background:linear-gradient(155deg,rgba(255,255,255,.42),rgba(224,210,255,.14) 48%,transparent 82%);
+  filter:blur(1px);transform:rotate(26deg);pointer-events:none;
 }
+.planet-response{position:relative;z-index:3;display:block;width:fit-content;height:fit-content;line-height:0;transform:scale(calc(1 + var(--voice-level,0) * .18));transition:transform .06s linear}
+.orb-floor{
+  position:absolute;z-index:1;left:9%;bottom:-27px;width:82%;height:32px;
+  border-radius:50%;
+  background:radial-gradient(ellipse at 50% 22%,rgba(217,190,255,.63),rgba(128,99,237,.26) 28%,rgba(78,63,154,.12) 53%,transparent 78%);
+  filter:blur(8px);transform:scaleX(1.12);pointer-events:none;
+}
+.orb-ribbons{
+  position:absolute;inset:0;z-index:2;width:100%;height:100%;overflow:hidden;
+  pointer-events:none;filter:drop-shadow(0 0 5px rgba(193,165,255,.4));
+}
+.planet:focus-visible{outline:2px solid #ffe0ff;outline-offset:8px}
+@media(prefers-reduced-motion:reduce){.planet{animation:none}}
 .axis-ring{
   position:absolute;
   left:50%;top:50%;
@@ -763,37 +779,23 @@ header{
   opacity:1;transition:none;
 }
 #send:disabled{opacity:1}
-#send.planet{
-  position:relative;isolation:isolate;
+#send[data-mode="voice"]{
+  position:relative;isolation:isolate;overflow:hidden;
   background:
-    radial-gradient(ellipse at 28% 18%,#ffffff 0%,#ffeaff 5%,#f8bdffcc 13%,transparent 31%),
-    radial-gradient(ellipse at 77% 30%,#ff5bdc 0%,#f12affbb 22%,transparent 48%),
-    radial-gradient(ellipse at 18% 73%,#94b6ff 0%,#7050ffdd 26%,transparent 53%),
-    radial-gradient(circle at 70% 86%,#eea0ff 0%,#c746ff77 22%,transparent 42%),
-    linear-gradient(140deg,#f0b2ff 0%,#be39ff 32%,#7420c9 62%,#d078ff 100%);
-  box-shadow:
-    inset -5px -7px 11px #270b58aa,
-    inset 3px 3px 7px #ffffff88,
-    inset 0 0 11px #f8c6ff99,
-    0 0 8px #eda6ffdd,
-    0 0 19px #cc55ffbb,
-    0 0 34px #a83cff88;
-  color:transparent;
-  animation:planetSpin 14s linear infinite;
+    radial-gradient(ellipse at 25% 22%,rgba(255,248,255,.9) 0%,rgba(243,224,255,.52) 8%,transparent 29%),
+    radial-gradient(ellipse at 76% 27%,rgba(170,151,255,.68),transparent 37%),
+    radial-gradient(ellipse at 25% 75%,rgba(142,160,255,.54),transparent 44%),
+    radial-gradient(ellipse at 72% 76%,rgba(224,158,255,.48),transparent 42%),
+    radial-gradient(circle at 50% 50%,rgba(61,51,115,.42),rgba(24,23,46,.88) 72%);
+  border:1px solid rgba(237,225,255,.68);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.11),inset 3px 3px 7px rgba(255,255,255,.18),inset -5px -6px 10px rgba(21,14,50,.48),0 0 8px rgba(226,194,255,.55),0 0 18px rgba(145,105,255,.4);
+  color:transparent;animation:planetSpin 22s linear infinite;
 }
-#send.planet:before{
-  content:"";position:absolute;inset:20% -12%;
-  border:1px solid #ffe1ffcc;border-radius:50%;
-  box-shadow:0 0 7px #e89aff99;
-  transform:rotate(-26deg);pointer-events:none;
-}
-#send.planet:after{
-  content:"";position:absolute;left:13%;top:45%;width:80%;height:30%;
-  border-radius:50%;
-  background:linear-gradient(#ffe5ffbb,#df91ff44,transparent);
-  transform:rotate(25deg);pointer-events:none;
-}
-#send.planet #sendGlyph{font-size:0;opacity:0}
+#send[data-mode="voice"] #sendGlyph{display:none!important}
+#send[data-mode="send"] #sendGlyph{display:block!important;font-size:20px;line-height:1;opacity:1}
+#send:not([data-mode="voice"]){animation:none}
+#send .orb-ribbons{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;overflow:hidden;filter:drop-shadow(0 0 2px rgba(193,165,255,.38))}
+#send[data-mode="send"] .orb-ribbons{display:none}
 #mic{
   display:grid;place-items:center;padding:0;position:relative;
   touch-action:none;user-select:none;-webkit-user-select:none;
@@ -1337,19 +1339,24 @@ select{
 
   <div class="universe" id="universe">
     <div class="planet-response" id="planetResponse">
+      <span class="orb-floor" aria-hidden="true"></span>
       <button type="button" class="planet" id="voiceOrb" onclick="handleOrbVoice()"
-        aria-label="Говорить с ANNIVEO AI" title="Нажми на шар и скажи"></button>
+        aria-label="Говорить с ANNIVEO AI" title="Нажми на шар и скажи, что нужно, что нужно"><svg class="orb-ribbons" viewBox="0 0 260 260" aria-hidden="true" focusable="false">
+        <path d="M-18 152C35 84 72 83 116 129S190 188 279 99" fill="none" stroke="#c9b4ff" stroke-opacity=".38" stroke-width="30" stroke-linecap="round"/>
+        <path d="M-10 114C40 178 82 201 126 149S205 76 273 142" fill="none" stroke="#93a5ff" stroke-opacity=".3" stroke-width="20" stroke-linecap="round"/>
+        <path d="M-8 153C45 98 76 96 117 136S191 181 267 104" fill="none" stroke="#fff0ff" stroke-opacity=".42" stroke-width="2.2" stroke-linecap="round"/>
+      </svg></button>
     </div>
     <i class="spark a"></i><i class="spark b"></i><i class="spark c"></i>
   </div>
 
   <div class="voice-status-row">
-    <div id="voiceAssistantButton" class="voice-assistant-button" data-phase="idle" aria-label="Подсказка голосового чата" title="Нажми на шар и скажи">
+    <div id="voiceAssistantButton" class="voice-assistant-button" data-phase="idle" aria-label="Подсказка голосового чата" title="Нажми на шар и скажи, что нужно">
       <span class="voice-assistant-mic" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg></span>
-      <span id="voiceStatus" class="voice-status" role="status" aria-live="polite">Нажми на шар и скажи</span>
+      <span id="voiceStatus" class="voice-status" role="status" aria-live="polite">Нажми на шар и скажи, что нужно</span>
       <span id="voiceAssistantWave" class="voice-assistant-wave" aria-hidden="true"></span>
     </div>
-    <button id="voiceStatusCancel" class="task-cancel voice-status-cancel hidden" type="button" onclick="cancelActiveRequest(event)" aria-label="Отменить запрос" title="Отменить запрос">×</button>
+    <button id="voiceStatusCancel" class="task-cancel voice-status-cancel hidden" type="button" onclick="cancelHomeVoiceAction(event)" aria-label="Отменить запрос" title="Отменить запрос">×</button>
   </div>
   <button id="endVoice" type="button" class="end-voice hidden" onclick="endVoiceSession()" aria-label="Завершить голосовой чат">Завершить голосовой чат</button>
 
@@ -1594,8 +1601,12 @@ select{
         <rect x="6" y="6" width="12" height="12" rx="2"/>
       </svg>
     </button>
-    <button type="submit" id="send" aria-label="Говорить с ANNIVEO AI" title="Нажми на шар и скажи"
-      class="circle send planet"><span id="sendGlyph" aria-hidden="true">➤</span></button>
+    <button type="submit" id="send" aria-label="Говорить с ANNIVEO AI" title="Нажми на шар и скажи, что нужно"
+      class="circle send planet" data-mode="voice"><span id="sendGlyph" aria-hidden="true">➤</span><svg class="orb-ribbons" viewBox="0 0 260 260" aria-hidden="true" focusable="false">
+        <path d="M-18 152C35 84 72 83 116 129S190 188 279 99" fill="none" stroke="#c9b4ff" stroke-opacity=".38" stroke-width="30" stroke-linecap="round"/>
+        <path d="M-10 114C40 178 82 201 126 149S205 76 273 142" fill="none" stroke="#93a5ff" stroke-opacity=".3" stroke-width="20" stroke-linecap="round"/>
+        <path d="M-8 153C45 98 76 96 117 136S191 181 267 104" fill="none" stroke="#fff0ff" stroke-opacity=".42" stroke-width="2.2" stroke-linecap="round"/>
+      </svg></button>
   </form>
   <div id="chatStatus" class="status"></div>
 </div>
@@ -2405,7 +2416,9 @@ function updateWelcome(){
   const landingVisible=showWelcome&&!anonymous;
   $("welcome").classList.toggle("hidden",!landingVisible);
   $("collapseChatButton")?.classList.toggle("hidden",landingVisible||anonymous||currentView!=="chat");
-  $("returnToChatButton")?.classList.toggle("hidden",!landingVisible||!returnToChatAvailable||anonymous||currentView!=="chat");
+  const showReturn=landingVisible&&returnToChatAvailable&&!anonymous&&currentView==="chat";
+  $("returnToChatButton")?.classList.toggle("hidden",!showReturn);
+  $("app")?.classList.toggle("has-return-to-chat",showReturn);
   syncTaskCancelControls();
 }
 function collapseChat(){
@@ -2628,11 +2641,13 @@ function createTaskCancelButton(label){
 }
 function syncTaskCancelControls(){
   const task=activeRequestTask&&!activeRequestTask.cancelled?activeRequestTask:null;
-  const homeStatusVisible=Boolean(task?.spokenVoice&&showWelcome&&!anonymous);
+  const homeStatusVisible=Boolean(showWelcome&&!anonymous&&(task?.spokenVoice||orbVoiceActive));
   const statusButton=$("voiceStatusCancel");
   statusButton?.classList.toggle("hidden",!homeStatusVisible);
   if(statusButton&&homeStatusVisible){
-    const label=task.kind==="transcription"?"Отменить распознавание":"Отменить запрос";
+    const label=task
+      ?(task.kind==="transcription"?"Отменить распознавание":"Отменить запрос")
+      :"Завершить голосовой чат";
     statusButton.setAttribute("aria-label",label);statusButton.title=label;
   }
   const bubbleButton=task?.pendingBubble?.querySelector(".task-cancel");
@@ -2640,6 +2655,15 @@ function syncTaskCancelControls(){
   const progressButton=$("voiceProgressMessage")?.querySelector(".task-cancel");
   const showProgressCancel=Boolean(task?.kind==="transcription"&&!homeStatusVisible&&!voiceProgressError);
   progressButton?.classList.toggle("hidden",!showProgressCancel);
+}
+function cancelHomeVoiceAction(event){
+  if(activeRequestTask&&!activeRequestTask.cancelled){
+    cancelActiveRequest(event);
+    return;
+  }
+  event?.preventDefault();
+  event?.stopPropagation();
+  if(orbVoiceActive) endVoiceSession();
 }
 function cancelActiveRequest(event){
   event?.preventDefault();
@@ -2865,9 +2889,10 @@ function updateControls(){
   const locked=busy||recording||transcribing||openingMic;
   const send=$("send");
   const hasText=$("messageInput").value.trim().length>0;
+  send.dataset.mode=hasText?"send":"voice";
   send.classList.toggle("planet",!hasText);
   send.setAttribute("aria-label",hasText?"Отправить сообщение":"Говорить с ANNIVEO AI");
-  send.title=hasText?"Отправить сообщение":"Нажми на шар и скажи";
+  send.title=hasText?"Отправить сообщение":"Нажми на шар и скажи, что нужно";
   send.disabled=busy||transcribing||openingMic;
   $("anonToggle").disabled=locked;
   $("mic").disabled=busy||transcribing||(openingMic&&!micGesture);
@@ -3226,12 +3251,13 @@ function setVoiceChatStatus(text,phase="idle"){
   $("voiceAssistantButton").dataset.phase=phase;$("voiceAssistantButton").title=text;
   $("voiceStatus").closest(".voice-status-row")?.classList.toggle("voice-chat-active",orbVoiceActive);
   $("voiceOrb").classList.toggle("voice-chat-active",orbVoiceActive);
-  if(phase==="idle"&&text!=="Нажми на шар и скажи"){
+  syncTaskCancelControls();
+  if(phase==="idle"&&text!=="Нажми на шар и скажи, что нужно"){
     voiceStatusResetTimer=setTimeout(()=>{
       if(!orbVoiceActive&&!recording&&!transcribing&&!busy&&!openingMic){
-        $("voiceStatus").textContent="Нажми на шар и скажи";
+        $("voiceStatus").textContent="Нажми на шар и скажи, что нужно";
         $("voiceStatus").dataset.phase="idle";$("voiceAssistantButton").dataset.phase="idle";
-        $("voiceAssistantButton").title="Нажми на шар и скажи";
+        $("voiceAssistantButton").title="Нажми на шар и скажи, что нужно";
       }
     },3200);
   }
@@ -3252,7 +3278,7 @@ function endVoiceSession(){
   $("mic").title="Записать голосовое сообщение";
   $("voiceStatus").closest(".voice-status-row")?.classList.remove("voice-chat-active");
   $("voiceOrb").classList.remove("voice-chat-active");
-  setVoiceChatStatus("Голосовой чат завершён. Нажми на шар и скажи","idle");
+  setVoiceChatStatus("Голосовой чат завершён. Нажми на шар и скажи, что нужно","idle");
   $("chatStatus").textContent="";
   updateControls();
 }
@@ -3353,7 +3379,7 @@ function startVoiceMeter(){
 function continueVoiceAfterReply(session){
   stopBargeInMonitor();if(session!==voiceSessionVersion)return;
   if(orbVoiceActive){setVoiceChatStatus("Твой ход — слушаю","listening");setTimeout(()=>{if(session===voiceSessionVersion&&orbVoiceActive&&!busy&&!transcribing&&!recording&&!openingMic)void handleMic();},280);}
-  else setVoiceChatStatus("Нажми на шар и скажи","idle");
+  else setVoiceChatStatus("Нажми на шар и скажи, что нужно","idle");
 }
 function speakWithDeviceVoice(plain,session){
   if(!window.speechSynthesis||!window.SpeechSynthesisUtterance)throw Error("fallback unavailable");
@@ -3556,7 +3582,7 @@ async function finishVoice(){
   if(spokenVoice&&!voiceHeard){
     orbVoiceActive=false;
     $("endVoice").classList.add("hidden");
-    setVoiceChatStatus("Не услышал речь. Нажми на шар и скажи","idle");
+    setVoiceChatStatus("Не услышал речь. Нажми на шар и скажи, что нужно","idle");
     $("chatStatus").textContent="";
     updateControls();
     return;
@@ -3612,7 +3638,7 @@ async function finishVoice(){
     if(spokenVoice){
       orbVoiceActive=false;
       $("endVoice").classList.add("hidden");
-      setVoiceChatStatus("Не получилось распознать. Нажми на шар и скажи","idle");
+      setVoiceChatStatus("Не получилось распознать. Нажми на шар и скажи, что нужно","idle");
     }
     if(!spokenVoice){showWelcome=false;updateWelcome();}
     if(!spokenVoice) setVoiceProgress("Не удалось распознать запись: "+e.message,true);
