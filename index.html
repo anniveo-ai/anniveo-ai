@@ -645,9 +645,23 @@ header{
   box-shadow:0 0 0 2px rgba(255,152,188,.55),0 0 20px rgba(243,83,144,.45);
 }
 #mic.gesture-active{transform:scale(.94)}
-#attachButton{transition:color .2s}
-#attachGlyph{display:inline-block;transform:rotate(0deg);transition:color .2s}
-#attachButton.cancel-armed #attachGlyph{color:#ffd8e6}
+#attachButton{
+  position:relative;isolation:isolate;overflow:visible;
+  transition:none;z-index:1;
+}
+#attachButton:before{
+  content:"";position:absolute;z-index:-1;inset:-14px;
+  border-radius:50%;pointer-events:none;
+  opacity:var(--cancel-cloud-opacity,0);
+  transform:scale(var(--cancel-cloud-scale,.6));
+  filter:blur(var(--cancel-cloud-blur,0px));
+  background:radial-gradient(circle,#ff5a86b8 0%,#ef3b704d 48%,transparent 76%);
+  transition:opacity .04s linear,transform .04s linear,filter .04s linear;
+}
+#attachGlyph{
+  display:inline-block;transform:rotate(0deg) scale(1);
+  transition:transform .04s linear,color .04s linear;
+}
 .recording{background:#8e3f58}
 .status{
   font-size:11px;
@@ -1408,6 +1422,19 @@ function handleMicClick(){
   if(Date.now()<ignoreMicClickUntil) return;
   void handleMic();
 }
+function resetCancelVisual(){
+  const button=$("attachButton"),glyph=$("attachGlyph"),mic=$("mic");
+  button.classList.remove("cancel-armed");
+  button.style.removeProperty("transform");
+  button.style.removeProperty("background-color");
+  button.style.removeProperty("box-shadow");
+  button.style.removeProperty("--cancel-cloud-opacity");
+  button.style.removeProperty("--cancel-cloud-scale");
+  button.style.removeProperty("--cancel-cloud-blur");
+  glyph.style.transform="rotate(0deg) scale(1)";
+  glyph.style.color="";
+  mic.classList.remove("cancel-armed");
+}
 function cancelMicRecording(){
   cancelMicStartRequested=true;
   clearTimeout(recordTimer);
@@ -1424,8 +1451,7 @@ function cancelMicRecording(){
   $("mic").classList.remove("recording","locked","cancel-armed","gesture-active");
   $("mic").setAttribute("aria-label","Записать голосовое сообщение");
   $("mic").title="Записать голосовое сообщение";
-  $("attachButton").classList.remove("cancel-armed");
-  $("attachGlyph").style.transform="rotate(0deg)";
+  resetCancelVisual();
   $("chatStatus").textContent="Запись отменена";
   updateControls();
   setTimeout(()=>{
@@ -1447,9 +1473,25 @@ function setupMicGestures(){
   };
   const updateDirection=(state,x,y)=>{
     const dx=x-state.x,dy=state.y-y;
-    const turn=Math.max(0,Math.min(45,(-dx/cancelDistance)*45));
-    $("attachGlyph").style.transform="rotate("+turn.toFixed(1)+"deg)";
-    plus.classList.toggle("cancel-armed",turn>1);
+    const progress=Math.max(0,Math.min(1,(-dx)/(cancelDistance*1.25)));
+    const turn=progress*45;
+    const scale=1+progress*.48;
+    const red=Math.round(57+(190-57)*progress);
+    const green=Math.round(57+(57-57)*progress);
+    const blue=Math.round(71+(91-71)*progress);
+    $("attachGlyph").style.transform=
+      "rotate("+turn.toFixed(1)+"deg) scale("+scale.toFixed(3)+")";
+    $("attachGlyph").style.color=
+      "rgb("+Math.round(245+(255-245)*progress)+","+
+      Math.round(243+(75-243)*progress)+","+
+      Math.round(255+(112-255)*progress)+")";
+    plus.style.backgroundColor="rgb("+red+","+green+","+blue+")";
+    plus.style.setProperty("--cancel-cloud-opacity",(progress*.92).toFixed(3));
+    plus.style.setProperty("--cancel-cloud-scale",(0.6+progress*.95).toFixed(3));
+    plus.style.setProperty("--cancel-cloud-blur",(progress*11).toFixed(1)+"px");
+    plus.style.boxShadow="0 0 "+(progress*20).toFixed(1)+"px rgba(255,58,112,"+(progress*.72).toFixed(2)+")";
+    plus.style.transform="scale("+(1+progress*.2).toFixed(3)+")";
+    plus.classList.toggle("cancel-armed",progress>.08);
     if(!state.started&&!state.held&&(dy>lockDistance||dx < -cancelDistance)){
       beginGestureRecording(state);
     }
@@ -1488,9 +1530,7 @@ function setupMicGestures(){
       cancelMicRecording();
       return;
     }
-    $("attachGlyph").style.transform="rotate(0deg)";
-    plus.classList.remove("cancel-armed");
-    button.classList.remove("cancel-armed");
+    resetCancelVisual();
     if(state.locked){
       suppressClick();
       micGesture=null;
