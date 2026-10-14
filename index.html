@@ -669,6 +669,46 @@ header{
   padding:6px 14px;
 }
 .status:empty{display:none}
+.mic-swipe-hint{
+  position:absolute;right:48px;bottom:calc(100% + 10px);z-index:46;
+  display:flex;align-items:center;gap:11px;width:190px;min-height:66px;
+  padding:9px 11px 9px 14px;border:1px solid rgba(218,192,255,.34);
+  border-radius:19px;background:linear-gradient(135deg,rgba(48,39,66,.88),rgba(31,30,43,.82));
+  -webkit-backdrop-filter:blur(20px) saturate(135%);backdrop-filter:blur(20px) saturate(135%);
+  box-shadow:0 8px 26px rgba(0,0,0,.28),0 0 22px rgba(184,135,255,.18),inset 0 1px rgba(255,255,255,.11);
+  color:#e8dcff;opacity:0;visibility:hidden;transform:translateY(7px) scale(.97);
+  pointer-events:none;transition:opacity .2s ease,transform .2s ease,visibility .2s;
+}
+.mic-swipe-hint:before{
+  content:"";position:absolute;inset:-8px;border-radius:24px;z-index:-1;
+  background:radial-gradient(ellipse,rgba(190,143,255,.22),transparent 72%);filter:blur(12px);
+}
+.mic-swipe-hint.visible{opacity:1;visibility:visible;transform:translateY(0) scale(1)}
+.mic-swipe-copy{flex:1;font-size:11px;line-height:1.35;letter-spacing:.1px}
+.mic-swipe-copy strong{display:block;color:#f6edff;font-size:12px;font-weight:650}
+.mic-swipe-copy span{display:block;margin-top:3px;color:#c7b5df}
+.mic-swipe-rail{
+  position:relative;flex:none;width:24px;height:44px;border:1px solid rgba(207,178,255,.27);
+  border-radius:13px;background:rgba(204,175,255,.08);box-shadow:inset 0 0 10px rgba(189,143,255,.08);
+}
+.mic-swipe-rail:before{
+  content:"";position:absolute;left:10px;top:4px;width:2px;height:34px;border-radius:2px;
+  background:rgba(210,188,244,.27)
+}
+.mic-swipe-fill{
+  position:absolute;left:9px;bottom:4px;width:4px;height:0;border-radius:4px;
+  background:linear-gradient(0deg,#a87bdf,#efd9ff);box-shadow:0 0 9px rgba(220,187,255,.85);
+  transition:height .08s linear;
+}
+.mic-swipe-thumb{
+  position:absolute;left:3px;bottom:3px;width:16px;height:16px;border-radius:50%;
+  display:grid;place-items:center;background:#d7bdff;color:#38244d;font-size:11px;font-weight:800;
+  box-shadow:0 0 12px rgba(200,158,255,.62);transform:translateY(0);
+  transition:transform .08s linear,background .18s,box-shadow .18s;
+}
+.mic-swipe-hint.locked{border-color:rgba(224,203,255,.58);box-shadow:0 8px 28px #0005,0 0 27px rgba(190,143,255,.34),inset 0 1px #ffffff24}
+.mic-swipe-hint.locked .mic-swipe-thumb{background:#f0ddff;box-shadow:0 0 18px rgba(223,192,255,.95)}
+@media(prefers-reduced-motion:reduce){.mic-swipe-hint,.mic-swipe-fill,.mic-swipe-thumb{transition:none}}
 
 /* НИЖНЕЕ МЕНЮ */
 nav{
@@ -1286,6 +1326,10 @@ select{
   <input id="attachmentFile" class="attachment-input" type="file" onchange="attachmentPicked(this)">
   <input id="attachmentVideo" class="attachment-input" type="file" accept="video/*" onchange="attachmentPicked(this)">
 
+  <div id="micSwipeHint" class="mic-swipe-hint" aria-hidden="true">
+    <div class="mic-swipe-copy"><strong id="micSwipeTitle">Проведи вверх</strong><span id="micSwipeSubtitle">чтобы не держать запись</span></div>
+    <div class="mic-swipe-rail"><span id="micSwipeFill" class="mic-swipe-fill"></span><span id="micSwipeThumb" class="mic-swipe-thumb">↑</span></div>
+  </div>
   <form id="chatForm" class="composer">
     <button type="button" id="attachButton" class="circle" aria-label="Добавить вложение" aria-expanded="false" onclick="toggleAttachmentMenu()"><span id="attachGlyph">＋</span></button>
     <textarea id="messageInput" rows="1"
@@ -1436,6 +1480,8 @@ function resetCancelVisual(){
   mic.classList.remove("cancel-armed");
 }
 function cancelMicRecording(){
+  $("micSwipeHint")?.classList.remove("visible","locked");
+  $("micSwipeHint")?.setAttribute("aria-hidden","true");
   cancelMicStartRequested=true;
   clearTimeout(recordTimer);
   const activeRecorder=recorder;
@@ -1463,6 +1509,35 @@ function setupMicGestures(){
   if(!button||button.dataset.gesturesReady) return;
   button.dataset.gesturesReady="1";
   const lockDistance=52,cancelDistance=72;
+  const swipeHint=$("micSwipeHint"),swipeFill=$("micSwipeFill"),swipeThumb=$("micSwipeThumb");
+  let hintTimer=0;
+  const showSwipeHint=()=>{
+    clearTimeout(hintTimer);
+    swipeHint?.classList.remove("locked");
+    if(swipeFill) swipeFill.style.height="0px";
+    if(swipeThumb) swipeThumb.style.transform="translateY(0)";
+    $("micSwipeTitle").textContent="Проведи вверх";
+    $("micSwipeSubtitle").textContent="чтобы не держать запись";
+    swipeHint?.classList.add("visible");
+    swipeHint?.setAttribute("aria-hidden","false");
+  };
+  const moveSwipeHint=distance=>{
+    const progress=Math.max(0,Math.min(1,distance/lockDistance));
+    if(swipeFill) swipeFill.style.height=(progress*30).toFixed(1)+"px";
+    if(swipeThumb) swipeThumb.style.transform="translateY("+(-progress*25).toFixed(1)+"px)";
+  };
+  const hideSwipeHint=()=>{
+    swipeHint?.classList.remove("visible","locked");
+    swipeHint?.setAttribute("aria-hidden","true");
+  };
+  const lockSwipeHint=()=>{
+    if(swipeFill) swipeFill.style.height="30px";
+    if(swipeThumb) swipeThumb.style.transform="translateY(-25px)";
+    $("micSwipeTitle").textContent="Готово!";
+    $("micSwipeSubtitle").textContent="запись закреплена";
+    swipeHint?.classList.add("locked");
+    hintTimer=setTimeout(hideSwipeHint,900);
+  };
   const suppressClick=()=>{ignoreMicClickUntil=Date.now()+700;};
   const beginGestureRecording=state=>{
     if(state.started||state.held) return Promise.resolve();
@@ -1473,6 +1548,7 @@ function setupMicGestures(){
   };
   const updateDirection=(state,x,y)=>{
     const dx=x-state.x,dy=state.y-y;
+    moveSwipeHint(dy);
     const progress=Math.max(0,Math.min(1,(-dx)/(cancelDistance*1.25)));
     const turn=progress*45;
     const scale=1+progress*.48;
@@ -1506,6 +1582,7 @@ function setupMicGestures(){
     if(dy>lockDistance&&dy>=Math.abs(dx)){
       state.locked=true;
       state.cancelArmed=false;
+      lockSwipeHint();
       button.classList.remove("cancel-armed","gesture-active");
       resetCancelVisual();
       button.classList.add("locked");
@@ -1523,6 +1600,7 @@ function setupMicGestures(){
   const finishGesture=state=>{
     clearTimeout(state.timer);
     state.released=true;
+    if(!state.locked) hintTimer=setTimeout(hideSwipeHint,220);
     button.classList.remove("gesture-active");
     if(state.cancelArmed){
       suppressClick();
@@ -1565,6 +1643,7 @@ function setupMicGestures(){
       event.preventDefault();
       const state={id:touch.identifier,x:touch.clientX,y:touch.clientY,started:recording,held:false,locked:false,cancelArmed:false,released:false,timer:null};
       micGesture=state;
+      showSwipeHint();
       button.classList.add("gesture-active");
       if(!state.started) state.timer=setTimeout(()=>void startHeldRecording(state),220);
     },{passive:false});
@@ -1589,6 +1668,7 @@ function setupMicGestures(){
     if(button.disabled||busy||transcribing||openingMic) return;
     const state={id:event.pointerId,x:event.clientX,y:event.clientY,started:recording,held:false,locked:false,cancelArmed:false,released:false,timer:null};
     micGesture=state;
+    showSwipeHint();
     button.setPointerCapture?.(event.pointerId);
     button.classList.add("gesture-active");
     if(!state.started) state.timer=setTimeout(()=>void startHeldRecording(state),220);
