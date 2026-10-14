@@ -175,77 +175,107 @@ function isRetryable(error) {
   );
 }
 
-// При нехватке средств временно не повторяем заведомо неудачные запросы.
-let openAICooldownUntil = 0;
-const OPENAI_MODEL = "gpt-5";
-function openAIAvailable(env) {
-  return !!env.OPENAI_API_KEY && Date.now() >= openAICooldownUntil;
+// При исчерпании баланса Polza переключаем запросы на Pollinations
+// и на 5 минут пропускаем Polza, чтобы не тратить время на заведомо неудачные вызовы.
+let polzaCooldownUntil = 0;
+const POLZA_MODEL = "openai/gpt-4o";
+
+function polzaAvailable(env) {
+  return !!env.POLZA_API_KEY && Date.now() >= polzaCooldownUntil;
 }
-async function fetchOpenAI(messages, env, streaming, controller) {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+
+async function fetchPolza(messages, env, streaming, controller) {
+  const response = await fetch("https://polza.ai/api/v1/chat/completions", {
     method: "POST",
     signal: controller.signal,
     headers: {
-      Authorization: "Bearer " + env.OPENAI_API_KEY,
+      Authorization: "Bearer " + env.POLZA_API_KEY,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: OPENAI_MODEL,
+      model: POLZA_MODEL,
       messages,
       stream: streaming
     })
   });
+
   if (!response.ok) {
     const status = response.status;
     await response.body?.cancel();
     if ([401, 402, 403, 429].includes(status)) {
-      openAICooldownUntil = Date.now() + 5 * 60 * 1000;
+      polzaCooldownUntil = Date.now() + 5 * 60 * 1000;
     }
-    throw new Error("OpenAI HTTP " + status);
+    throw new Error("Polza HTTP " + status);
   }
+
   return response;
 }
+
 async function askPreferredAI(messages, env, mode) {
-  if (openAIAvailable(env)) {
+  if (polzaAvailable(env)) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30000);
+
     try {
-      const response = await fetchOpenAI(messages, env, false, controller);
+      const response = await fetchPolza(messages, env, false, controller);
       const data = await response.json();
       const content = data.choices?.[0]?.message?.content;
+
       if (typeof content !== "string" || !content.trim()) {
-        throw new Error("OpenAI returned empty answer");
+        throw new Error("Polza вернула пустой ответ");
       }
+
       return content.trim();
     } catch (error) {
-      console.warn("OpenAI unavailable; using fallback", error.message);
+      console.warn("Polza недоступна; переключаюсь на Pollinations", {
+        mode,
+        message: error.message
+      });
     } finally {
       clearTimeout(timer);
     }
   }
-  if (!env.POLLINATIONS_API_KEY) throw new Error("No fallback AI key");
+
+  if (!env.POLLINATIONS_API_KEY) {
+    throw new Error("Нет ключа Pollinations для резервного ответа");
+  }
+
   return askAI(messages, env.POLLINATIONS_API_KEY, mode);
 }
+
 async function openPreferredAIStream(messages, env, mode) {
-  if (openAIAvailable(env)) {
+  if (polzaAvailable(env)) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30000);
+
     try {
       const started = Date.now();
-      const response = await fetchOpenAI(messages, env, true, controller);
-      if (!response.body || !(response.headers.get("content-type") || "").includes("text/event-stream")) {
-        throw new Error("OpenAI streaming unavailable");
+      const response = await fetchPolza(messages, env, true, controller);
+
+      if (
+        !response.body ||
+        !(response.headers.get("content-type") || "").includes("text/event-stream")
+      ) {
+        throw new Error("Polza не поддержала потоковый ответ");
       }
+
       clearTimeout(timer);
       return { response, controller, attempt: 1, started };
     } catch (error) {
       controller.abort();
-      console.warn("OpenAI stream unavailable; using fallback", error.message);
+      console.warn("Поток Polza недоступен; переключаюсь на Pollinations", {
+        mode,
+        message: error.message
+      });
     } finally {
       clearTimeout(timer);
     }
   }
-  if (!env.POLLINATIONS_API_KEY) throw new Error("No fallback AI key");
+
+  if (!env.POLLINATIONS_API_KEY) {
+    throw new Error("Нет ключа Pollinations для резервного ответа");
+  }
+
   return openAIStream(messages, env.POLLINATIONS_API_KEY, mode);
 }
 
@@ -1058,7 +1088,7 @@ export default {
         );
       }
 
-      if (!env.POLLINATIONS_API_KEY && !env.OPENAI_API_KEY) {
+      if (!env.POLLINATIONS_API_KEY && !env.POLZA_API_KEY) {
         return json(
           { error: "Ключ ИИ не настроен" },
           503,
