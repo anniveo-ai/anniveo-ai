@@ -1308,6 +1308,7 @@ select{
 #voiceOrb::before,#voiceOrb::after,#send[data-mode="voice"]::before,#send[data-mode="voice"]::after{content:none}
 .orb-twenty{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;object-fit:contain;filter:drop-shadow(0 0 8px rgba(170,66,242,.38))}
 #send[data-mode="send"] .orb-twenty{display:none}
+#voiceOrb,#send[data-mode="voice"]{animation-duration:31s}
 #voiceOrb .orb-twenty,#send[data-mode="voice"] .orb-twenty{animation:orb20Glow 3.5s ease-in-out infinite alternate}
 @keyframes orb20Glow{from{filter:drop-shadow(0 0 4px rgba(170,66,242,.28))}to{filter:drop-shadow(0 0 11px rgba(196,101,255,.62))}}
 @media(prefers-reduced-motion:reduce){#voiceOrb .orb-twenty,#send[data-mode="voice"] .orb-twenty{animation:none}}
