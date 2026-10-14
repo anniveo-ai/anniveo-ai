@@ -234,24 +234,34 @@ header{
   border-color:rgba(198,166,255,.62);
   background:rgba(105,76,139,.42);
 }
+.voice-status-row{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  width:fit-content;max-width:100%;margin:-2px auto 13px;
+}
 .voice-status{
-  display:table;
-  max-width:calc(100% - 28px);
-  margin:-2px auto 13px;
-  padding:8px 15px;
+  display:block;flex:0 1 auto;min-width:0;max-width:100%;
+  margin:0;padding:8px 15px;
   border:1px solid rgba(198,166,255,.28);
   border-radius:999px;
   background:linear-gradient(110deg,rgba(139,91,190,.16),rgba(198,166,255,.09));
   box-shadow:0 0 22px rgba(166,103,255,.12),inset 0 1px rgba(255,255,255,.07);
-  color:#d9c1ff;
-  font-size:12px;
-  font-weight:550;
-  letter-spacing:.15px;
-  line-height:1.45;
-  text-align:center;
-  -webkit-backdrop-filter:blur(12px);
-  backdrop-filter:blur(12px);
+  color:#d9c1ff;font-size:12px;font-weight:550;
+  letter-spacing:.15px;line-height:1.45;text-align:center;
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
 }
+.task-cancel{
+  display:grid;place-items:center;flex:none;
+  width:25px;height:25px;padding:0;
+  border:1px solid rgba(219,188,255,.38);border-radius:50%;
+  background:rgba(72,55,94,.84);color:#ead8ff;
+  box-shadow:0 0 12px rgba(174,119,255,.22);
+  font-size:17px;line-height:1;
+  -webkit-tap-highlight-color:transparent;
+}
+.task-cancel:active{filter:brightness(1.18)}
+.voice-status-cancel{width:25px;height:25px;font-size:17px}
+.voice-progress-text{flex:1;min-width:0}
+.voice-progress .task-cancel{margin-left:2px}
 .end-voice{
   display:block;margin:0 auto 12px;padding:7px 13px;
   background:#30263e;border:1px solid #68517f;border-radius:16px;
@@ -595,8 +605,9 @@ header{
   width:100%;
 }
 .message.assistant.sender-pending{
+  position:relative;
   align-self:flex-start;width:auto;max-width:87%;margin-left:0;margin-right:auto;margin-bottom:18px;
-  padding:11px 14px;border:1px solid #544365;
+  padding:11px 40px 11px 14px;border:1px solid #544365;
   border-radius:17px 17px 17px 5px;
   background:linear-gradient(135deg,rgba(59,47,75,.94),rgba(43,37,57,.96));
   box-shadow:0 5px 18px rgba(0,0,0,.18),0 0 20px rgba(165,118,225,.08);
@@ -604,6 +615,9 @@ header{
 }
 .message.assistant.sender-pending .assistant-name,
 .message.assistant.sender-pending .copy{display:none}
+.message.assistant.sender-pending .task-cancel{
+  position:absolute;right:8px;top:50%;transform:translateY(-50%);
+}
 .assistant-name{
   color:var(--purple);
   font-size:11px;
@@ -656,7 +670,7 @@ header{
   transform:translateX(-50%);
   bottom:calc(110px + env(safe-area-inset-bottom));
   width:min(760px,calc(100% - 16px));
-  transition:bottom .44s cubic-bezier(.22,.78,.25,1);
+  transition:bottom .62s cubic-bezier(.18,.78,.2,1);
 }
 .composer{
   display:flex;
@@ -702,24 +716,31 @@ header{
   border:0;
   outline:none;
   resize:none;
-  flex:1;
-  width:100%;
+  flex:1 1 0px;
+  width:0;
   min-width:0;
   min-height:36px;
   max-height:95px;
   padding:8px 0;
   font-size:16px;
   line-height:20px;
+  transition:flex-grow .52s cubic-bezier(.2,.75,.25,1),
+    opacity .28s ease,transform .52s cubic-bezier(.2,.75,.25,1);
 }
 .search-recording-display{
-  display:none;align-items:center;gap:9px;flex:1;min-width:0;
-  height:38px;overflow:hidden;color:#e9ddfb;
+  display:flex;align-items:center;gap:9px;flex:0 1 0px;
+  width:0;min-width:0;height:38px;overflow:hidden;color:#e9ddfb;
+  opacity:0;transform:translateY(7px);pointer-events:none;
+  transition:flex-grow .52s cubic-bezier(.2,.75,.25,1),
+    opacity .3s ease,transform .52s cubic-bezier(.2,.75,.25,1);
 }
-.composer.recording-mode #messageInput{display:none}
+.composer.recording-mode #messageInput{
+  flex-grow:0;padding-left:0;padding-right:0;
+  opacity:0;transform:translateY(-6px);pointer-events:none;
+}
 .composer.recording-mode #send{display:grid}
 .composer.recording-mode .search-recording-display{
-  display:flex;
-  animation:searchRecordingEnter .34s cubic-bezier(.2,.75,.25,1) both;
+  flex-grow:1;opacity:1;transform:translateY(0);pointer-events:auto;
 }
 .search-recording-time{
   flex:none;min-width:34px;color:#e9ddfb;font-size:12px;
@@ -736,13 +757,9 @@ header{
   transform-origin:center;opacity:.82;
   animation:searchWaveIdle .78s ease-in-out infinite alternate;
   animation-delay:var(--wave-delay,0s);
-  transition:height .08s linear,opacity .08s linear;
+  transition:height .15s cubic-bezier(.2,.75,.25,1),opacity .15s ease;
 }
 .search-voice-bar:nth-child(5n + 2){background:linear-gradient(to top,#c47eff,#fff0ff)}
-@keyframes searchRecordingEnter{
-  from{opacity:0;transform:translateY(5px)}
-  to{opacity:1;transform:translateY(0)}
-}
 @keyframes searchWaveIdle{
   from{transform:scaleY(.42);opacity:.58}
   to{transform:scaleY(1);opacity:1}
@@ -1329,7 +1346,12 @@ select{
     <i class="fox-star" style="left:28%;top:90%;animation-delay:1.6s"></i>
   </div>
 
-  <div id="voiceStatus" class="voice-status" role="status">Нажми на шар, чтобы поговорить</div>
+  <div class="voice-status-row">
+    <div id="voiceStatus" class="voice-status" role="status">Нажми на шар, чтобы поговорить</div>
+    <button id="voiceStatusCancel" class="task-cancel voice-status-cancel hidden"
+      type="button" aria-label="Отменить запрос" title="Отменить запрос"
+      onclick="cancelActiveRequest(event)">×</button>
+  </div>
   <div class="quick-prompts" role="group" aria-label="Примеры запросов">
     <button class="quick-prompt" type="button" onclick="sendQuickPrompt('Помоги придумать интересную идею')">✨ Идея</button>
     <button class="quick-prompt" type="button" onclick="sendQuickPrompt('Объясни эту тему простыми словами')">💡 Объясни</button>
@@ -1703,6 +1725,7 @@ const user = tg?.initDataUnsafe?.user || null;
 let currentView = "chat";
 let anonymous = false;
 let busy = false;
+let activeRequestTask = null;
 let historyLoaded = false;
 let historyLoading = false;
 let normalHistory = [];
@@ -1878,28 +1901,38 @@ function setupMicGestures(){
     return Math.max(52,Math.round(bottomTop-Math.max(0,lockCenter-shadowSize/2)));
   })();
   let hintTimer=0;
-  const lockCenterY=()=>{
-    const rect=lockButton?.getBoundingClientRect();
-    return rect?rect.top+rect.height/2:0;
+  let swipeTrackBottomY=0,swipeLockCenterY=0;
+  let swipeTrackHeight=swipeTrack?.clientHeight||swipeTrack?.offsetHeight||142;
+  let swipeShadowSize=swipeShadow?.offsetHeight||48;
+  let swipeVisualFrame=0,queuedSwipeVisual=null;
+  const lockCenterY=()=>swipeLockCenterY;
+  const queueSwipeVisual=(opacity,transform)=>{
+    queuedSwipeVisual={opacity,transform};
+    if(swipeVisualFrame) return;
+    swipeVisualFrame=requestAnimationFrame(()=>{
+      swipeVisualFrame=0;
+      const visual=queuedSwipeVisual;
+      queuedSwipeVisual=null;
+      if(!visual||!swipeShadow) return;
+      swipeShadow.style.opacity=visual.opacity;
+      swipeShadow.style.transform=visual.transform;
+    });
   };
   const distanceToLock=startY=>Math.max(52,Math.round(startY-lockCenterY()));
   const moveSwipeHint=(distance,startY=null,travelDistance=lockDistance)=>{
     const progress=Math.max(0,Math.min(1,distance/Math.max(1,travelDistance)));
     if(swipeShadow&&swipeTrack){
-      const trackHeight=swipeTrack.clientHeight||142;
-      const shadowSize=swipeShadow.offsetHeight||48;
-      const bottomTop=trackHeight-shadowSize/2;
-      const lockCenter=(lockButton?.offsetTop||8)+(lockButton?.offsetHeight||38)/2-(swipeTrack?.clientTop||1);
-      const topTop=Math.max(0,lockCenter-shadowSize/2);
-      const travel=Math.max(0,bottomTop-topTop);
+      const lockLocal=swipeLockCenterY-(swipeTrackBottomY-swipeTrackHeight);
+      const travel=Math.max(0,swipeTrackHeight-lockLocal);
       let offsetY=-travel*progress;
       if(Number.isFinite(startY)){
-        const trackRect=swipeTrack.getBoundingClientRect();
         const targetY=Math.max(lockCenterY(),startY-Math.max(0,distance));
-        offsetY=targetY-trackRect.bottom;
+        offsetY=targetY-swipeTrackBottomY;
       }
-      swipeShadow.style.opacity=(.52+.48*progress).toFixed(2);
-      swipeShadow.style.transform="translate3d(-50%,"+offsetY.toFixed(1)+"px,0) scale("+(.94+.08*progress).toFixed(3)+")";
+      queueSwipeVisual(
+        (.52+.48*progress).toFixed(3),
+        "translate3d(-50%,"+offsetY.toFixed(2)+"px,0) scale("+(.94+.08*progress).toFixed(3)+")"
+      );
     }
     swipeTrack?.classList.toggle("dragging",progress>.015);
   };
@@ -1920,10 +1953,15 @@ function setupMicGestures(){
     swipeHint.style.top=top.toFixed(1)+"px";
     swipeHint.style.right="auto";
     swipeHint.style.bottom="auto";
+    const trackRect=swipeTrack.getBoundingClientRect();
+    swipeTrackBottomY=trackRect.bottom;
+    swipeTrackHeight=trackRect.height||swipeTrack.clientHeight||142;
+    swipeShadowSize=swipeShadow?.getBoundingClientRect().height||swipeShadowSize||48;
     const currentLock=lockButton?.getBoundingClientRect();
     if(currentLock){
+      swipeLockCenterY=currentLock.top+currentLock.height/2;
       lockDistance=Math.max(52,Math.round(
-        micRect.top+micRect.height/2-(currentLock.top+currentLock.height/2)
+        micRect.top+micRect.height/2-swipeLockCenterY
       ));
     }
   };
@@ -2011,7 +2049,6 @@ function setupMicGestures(){
   const updateDirection=(state,x,y)=>{
     const dx=x-state.x,dy=state.y-y;
     if(dy>10) state.swipeAttempted=true;
-    positionSwipeHint();
     const requiredLift=state.lockDistance||lockDistance;
     moveSwipeHint(dy,state.y,requiredLift);
     const progress=Math.max(0,Math.min(1,(-dx)/(cancelDistance*1.25)));
@@ -2305,6 +2342,7 @@ function updateWelcome(){
   $("collapseChatButton")?.classList.toggle(
     "hidden",landingVisible||anonymous||currentView!=="chat"
   );
+  syncTaskCancelControls();
 }
 function collapseChat(){
   if(recording||transcribing||openingMic){
@@ -2472,7 +2510,25 @@ function renderVoiceProgress(){
     list.append(message);
   }
   message.classList.toggle("error",voiceProgressError);
-  message.textContent=voiceProgressText;
+  let text=message.querySelector(".voice-progress-text");
+  if(!text){
+    message.replaceChildren();
+    text=document.createElement("span");
+    text.className="voice-progress-text";
+    message.append(text);
+  }
+  text.textContent=voiceProgressText;
+  const task=activeRequestTask;
+  const homeStatusVisible=Boolean(task?.spokenVoice&&showWelcome&&!anonymous);
+  const showCancel=Boolean(task?.kind==="transcription"&&!task.cancelled&&!voiceProgressError&&!homeStatusVisible);
+  let cancel=message.querySelector(".task-cancel");
+  if(showCancel&&!cancel){
+    cancel=createTaskCancelButton("Отменить распознавание");
+    message.append(cancel);
+  }else if(!showCancel){
+    cancel?.remove();
+  }
+  syncTaskCancelControls();
 }
 function setVoiceProgress(text,isError=false){
   voiceProgressText=String(text||"");
@@ -2486,6 +2542,66 @@ function clearVoiceProgress(){
   voiceProgressText="";
   voiceProgressError=false;
   $("voiceProgressMessage")?.remove();
+}
+function createTaskCancelButton(label){
+  const button=document.createElement("button");
+  button.type="button";
+  button.className="task-cancel";
+  button.setAttribute("aria-label",label);
+  button.title=label;
+  button.textContent="×";
+  button.addEventListener("click",cancelActiveRequest);
+  return button;
+}
+function syncTaskCancelControls(){
+  const task=activeRequestTask&&!activeRequestTask.cancelled?activeRequestTask:null;
+  const homeStatusVisible=Boolean(task?.spokenVoice&&showWelcome&&!anonymous);
+  const statusButton=$("voiceStatusCancel");
+  statusButton?.classList.toggle("hidden",!homeStatusVisible);
+  statusButton?.setAttribute("aria-label",task?.kind==="transcription"
+    ?"Отменить распознавание":"Отменить запрос");
+  const bubbleButton=task?.pendingBubble?.querySelector(".task-cancel");
+  bubbleButton?.classList.toggle("hidden",!task||homeStatusVisible);
+  const progressButton=$("voiceProgressMessage")?.querySelector(".task-cancel");
+  const showProgressCancel=Boolean(task?.kind==="transcription"&&!homeStatusVisible&&!voiceProgressError);
+  progressButton?.classList.toggle("hidden",!showProgressCancel);
+}
+function cancelActiveRequest(event){
+  event?.preventDefault();
+  event?.stopPropagation();
+  const task=activeRequestTask;
+  if(!task||task.cancelled) return;
+  task.cancelled=true;
+  activeRequestTask=null;
+  task.controller.abort();
+
+  if(task.kind==="transcription"){
+    transcribing=false;
+    clearVoiceProgress();
+  }else{
+    busy=false;
+    task.userBubble?.remove();
+    task.pendingBubble?.remove();
+    const input=$("messageInput");
+    input.value=task.text||"";
+    input.style.height=input.value?"auto":"";
+    if(input.value) input.style.height=Math.min(input.scrollHeight,95)+"px";
+  }
+
+  $("chatStatus").textContent="";
+  if(task.spokenVoice){
+    voiceSessionVersion++;
+    orbVoiceActive=false;
+    stopSpokenReply();
+    $("voiceOrb").setAttribute("aria-label","Говорить с ANNIVEO AI");
+    $("voiceStatus").textContent=task.kind==="transcription"
+      ?"Распознавание отменено. Нажми на шар, чтобы сказать заново"
+      :"Запрос отменён. Измени текст или начни новый разговор";
+  }
+  syncTaskCancelControls();
+  updateControls();
+  tg?.HapticFeedback?.impactOccurred("light");
+  toast("Запрос отменён");
 }
 function renderChat(){
   updateWelcome();
@@ -2504,6 +2620,25 @@ function renderChat(){
 }
 
 /* ПОВТОР ПРИ ВРЕМЕННОМ ОБРЫВЕ СВЯЗИ */
+function waitForRequestRetry(ms,signal){
+  return new Promise((resolve,reject)=>{
+    if(signal?.aborted){
+      reject(new DOMException("Aborted","AbortError"));
+      return;
+    }
+    const done=()=>{
+      signal?.removeEventListener("abort",cancel);
+      resolve();
+    };
+    const cancel=()=>{
+      clearTimeout(timer);
+      signal?.removeEventListener("abort",cancel);
+      reject(new DOMException("Aborted","AbortError"));
+    };
+    const timer=setTimeout(done,ms);
+    signal?.addEventListener("abort",cancel,{once:true});
+  });
+}
 async function requestJSON(url,options,onRetry=()=>{},timeoutMessage="Ответ задержался. Нажми на шар и попробуй ещё раз."){
   let networkAttempts=0,processingAttempts=0;
   while(true){
@@ -2514,7 +2649,7 @@ async function requestJSON(url,options,onRetry=()=>{},timeoutMessage="Ответ
       if(response.status===202&&data.processing&&processingAttempts<20){
         processingAttempts++;
         onRetry("Ответ ещё готовится…");
-        await new Promise(resolve=>setTimeout(resolve,1500));
+        await waitForRequestRetry(1500,options.signal);
         continue;
       }
       return {response,data};
@@ -2532,17 +2667,17 @@ async function requestJSON(url,options,onRetry=()=>{},timeoutMessage="Ответ
         throw Error("Соединение прервалось. Нажми на шар и повтори вопрос.");
       }
       onRetry("Восстанавливаю соединение…");
-      await new Promise(resolve=>setTimeout(resolve,800));
+      await waitForRequestRetry(800,options.signal);
     }
   }
 }
 
 /* API */
-async function api(payload,timeout=90000,onToken=null){
+async function api(payload,timeout=90000,onToken=null,requestController=null){
   if(!initData||!user){
     throw Error("Открой ANNIVEO AI через Telegram");
   }
-  const controller=new AbortController();
+  const controller=requestController||new AbortController();
   const timer=setTimeout(()=>controller.abort(),timeout);
   try{
     const {response,data}=await requestJSON(API_URL,{
@@ -2734,41 +2869,45 @@ async function sendMessage(text,audioURL,spokenVoice=false){
   updateWelcome();
   if($("messages").children.length===0) renderChat();
 
-  addMessage(text,"user",audioURL);
+  const userBubble=addMessage(text,"user",audioURL).closest(".message");
   const pending=addMessage(
     spokenVoice?"ANNIVEO думает…":"ANNIVEO AI думает…","assistant"
   );
-  pending.closest(".message")?.classList.add("sender-pending");
+  const pendingBubble=pending.closest(".message");
+  pendingBubble?.classList.add("sender-pending");
+
+  const task={
+    kind:"answer",controller:new AbortController(),cancelled:false,
+    spokenVoice,text,userBubble,pendingBubble
+  };
+  activeRequestTask=task;
+  pendingBubble?.append(createTaskCancelButton("Отменить запрос"));
 
   $("chatStatus").textContent="Готовлю ответ…";
   busy=true;
   updateControls();
   if(spokenVoice){app.scrollTop=0;$("voiceStatus").textContent="ANNIVEO думает…";}
   else scrollAppToBottom();
+  syncTaskCancelControls();
 
   try{
     const payload=isAnonymous
-      ?{
-        action:"anonymous",
-        message:text,
-        messages:context
-      }
-      :{
-        action:"chat",
-        message:text,
-        requestId:crypto.randomUUID()
-      };
+      ?{action:"anonymous",message:text,messages:context}
+      :{action:"chat",message:text,requestId:crypto.randomUUID()};
 
     const data=await api(payload,90000,token=>{
+      if(task.cancelled||activeRequestTask!==task) return;
       pending.textContent+=token;
       pending.style.whiteSpace="pre-wrap";
-    });
+    },task.controller);
 
+    if(task.cancelled||activeRequestTask!==task) return;
     if(typeof data.reply!=="string"||!data.reply.trim()){
       throw Error("Нейросеть вернула пустой ответ");
     }
 
-    pending.closest(".message")?.classList.remove("sender-pending");
+    pendingBubble?.classList.remove("sender-pending");
+    pendingBubble?.querySelector(".task-cancel")?.remove();
     formatAnswer(pending,data.reply);
     pending.dataset.raw=data.reply;
 
@@ -2776,29 +2915,34 @@ async function sendMessage(text,audioURL,spokenVoice=false){
       {role:"user",content:text},
       {role:"assistant",content:data.reply}
     ];
-
     if(isAnonymous){
-      anonymousHistory=cleanHistory([
-        ...anonymousHistory,...pair
-      ]);
+      anonymousHistory=cleanHistory([...anonymousHistory,...pair]);
     }else{
-      normalHistory=cleanHistory([
-        ...normalHistory,...pair
-      ]);
+      normalHistory=cleanHistory([...normalHistory,...pair]);
       historyLoaded=true;
       saveCache();
     }
     if(spokenVoice&&voiceReplySession===voiceSessionVersion) speakReply(data.reply);
   }catch(e){
+    if(task.cancelled||activeRequestTask!==task) return;
     if(spokenVoice) $("voiceStatus").textContent=e.message;
-    pending.closest(".message")?.classList.remove("sender-pending");
+    pendingBubble?.classList.remove("sender-pending");
+    pendingBubble?.querySelector(".task-cancel")?.remove();
     formatAnswer(pending,e.message);
     pending.dataset.raw=e.message;
   }finally{
-    busy=false;
-    updateControls();
-    $("chatStatus").textContent="";
-    if(!spokenVoice) scrollAppToBottom();
+    if(activeRequestTask===task){
+      activeRequestTask=null;
+      busy=false;
+      if(spokenVoice){
+        orbVoiceActive=false;
+        $("voiceOrb").setAttribute("aria-label","Говорить с ANNIVEO AI");
+      }
+      syncTaskCancelControls();
+      updateControls();
+      $("chatStatus").textContent="";
+      if(!spokenVoice) scrollAppToBottom();
+    }
   }
 }
 
@@ -3102,10 +3246,7 @@ async function finishVoice(){
   setComposerRecording(false);
 
   // Микрофон остаётся открыт до завершения разговора.
-
-  const blob=new Blob(audioChunks,{
-    type:recorder.mimeType||"audio/webm"
-  });
+  const blob=new Blob(audioChunks,{type:recorder.mimeType||"audio/webm"});
 
   if(!blob.size||blob.size>20*1024*1024){
     if(!spokenVoice){showWelcome=false;updateWelcome();}
@@ -3119,67 +3260,73 @@ async function finishVoice(){
   if(spokenVoice&&!voiceHeard){
     orbVoiceActive=false;
     $("voiceStatus").textContent="Не услышал речь. Нажми на шар и попробуй ещё раз";
-    $("chatStatus").textContent="";updateControls();return;
+    $("chatStatus").textContent="";
+    updateControls();
+    return;
   }
+
   transcribing=true;
   if(!spokenVoice){showWelcome=false;updateWelcome();}
   setVoiceProgress("ANNIVEO распознаёт запись… текст появится здесь");
   if(spokenVoice) $("voiceStatus").textContent="ANNIVEO распознаёт твою речь…";
-  updateControls();
-  $("chatStatus").textContent=
-    "Распознаю голосовое сообщение…";
+  $("chatStatus").textContent="Распознаю голосовое сообщение…";
 
-  const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),90000);
+  const task={
+    kind:"transcription",controller:new AbortController(),cancelled:false,spokenVoice
+  };
+  activeRequestTask=task;
+  task.timer=setTimeout(()=>task.controller.abort(),90000);
+  syncTaskCancelControls();
+  renderVoiceProgress();
+  updateControls();
 
   try{
     const form=new FormData();
     form.append("action","transcribe");
     form.append("initData",initData);
-    form.append(
-      "file",blob,
-      blob.type.includes("mp4")
-        ?"voice.m4a":"voice.webm"
-    );
+    form.append("file",blob,blob.type.includes("mp4")?"voice.m4a":"voice.webm");
 
     const {response,data}=await requestJSON(API_URL,{
-      method:"POST",
-      body:form,
-      signal:controller.signal
+      method:"POST",body:form,signal:task.controller.signal
     },message=>{
+      if(task.cancelled||activeRequestTask!==task) return;
       if(spokenVoice) $("voiceStatus").textContent=message;
       $("chatStatus").textContent=message;
       setVoiceProgress(message==="Ответ ещё готовится…"
         ?"ANNIVEO распознаёт… сервер обрабатывает запись"
         :"ANNIVEO распознаёт: "+message);
     },"Распознавание речи задержалось. Попробуй записать короче.");
+    if(task.cancelled||activeRequestTask!==task) return;
     if(!response.ok||!data.text){
-      throw Error(
-        data.error||"Не удалось распознать голос"
-      );
+      throw Error(data.error||"Не удалось распознать голос");
     }
 
     const text=String(data.text).trim();
     if(!text) throw Error("Не удалось разобрать речь. Попробуй записать ещё раз.");
-    if(text.length>4000){
-      throw Error("Голосовое слишком длинное");
-    }
+    if(text.length>4000) throw Error("Голосовое слишком длинное");
 
     clearVoiceProgress();
     transcribing=false;
+    activeRequestTask=null;
+    syncTaskCancelControls();
     await sendMessage(text,null,spokenVoice);
   }catch(e){
+    if(task.cancelled||activeRequestTask!==task) return;
     if(spokenVoice) $("voiceStatus").textContent=e.message;
     if(!spokenVoice){showWelcome=false;updateWelcome();}
     setVoiceProgress("Не удалось распознать запись: "+e.message,true);
     toast(e.message);
   }finally{
-    clearTimeout(timer);
-    transcribing=false;
-    orbVoiceActive=false;
-    $("voiceOrb").setAttribute("aria-label","Говорить с ANNIVEO AI");
-    $("chatStatus").textContent="";
-    updateControls();
+    clearTimeout(task.timer);
+    if(activeRequestTask===task){
+      activeRequestTask=null;
+      transcribing=false;
+      orbVoiceActive=false;
+      $("voiceOrb").setAttribute("aria-label","Говорить с ANNIVEO AI");
+      $("chatStatus").textContent="";
+      syncTaskCancelControls();
+      updateControls();
+    }
   }
 }
 
