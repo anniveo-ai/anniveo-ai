@@ -2987,15 +2987,17 @@ async function sendMessage(text,audioURL,spokenVoice=false){
   if($("messages").children.length===0) renderChat();
 
   const userBubble=addMessage(text,"user",audioURL).closest(".message");
-  const pending=addMessage(
-    spokenVoice?"ANNIVEO думает…":"ANNIVEO AI думает…","assistant"
-  );
+  const pending=addMessage("","assistant");
   const pendingBubble=pending.closest(".message");
   pendingBubble?.classList.add("sender-pending");
+  const thinkingStatus=document.createElement("span");
+  thinkingStatus.className="thinking-status";
+  thinkingStatus.textContent=spokenVoice?"ANNIVEO думает…":"ANNIVEO AI думает…";
+  pending.append(thinkingStatus);
 
   const task={
     kind:"answer",controller:new AbortController(),cancelled:false,
-    spokenVoice,text,userBubble,pendingBubble
+    spokenVoice,text,userBubble,pendingBubble,thinkingStatus,hasResponseText:false
   };
   activeRequestTask=task;
   pendingBubble?.append(createTaskCancelButton("Отменить запрос"));
@@ -3014,6 +3016,12 @@ async function sendMessage(text,audioURL,spokenVoice=false){
 
     const data=await api(payload,90000,token=>{
       if(task.cancelled||activeRequestTask!==task) return;
+      if(!task.hasResponseText){
+        task.hasResponseText=true;
+        task.thinkingStatus?.remove();
+        $("chatStatus").textContent="ANNIVEO отвечает…";
+        if(spokenVoice) setVoiceChatStatus("ANNIVEO отвечает…","thinking");
+      }
       pending.textContent+=token;
       pending.style.whiteSpace="pre-wrap";
     },task.controller);
