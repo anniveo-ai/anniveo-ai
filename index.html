@@ -1808,13 +1808,9 @@ function setupMicGestures(){
   const finishTrackDrag=event=>{
     if(!trackDrag||trackDrag.id!==event.pointerId) return;
     event.preventDefault();
-    const shouldCancel=trackDrag.progress<=.12;
     trackDrag=null;
-    if(shouldCancel){cancelMicRecording();return;}
-    swipeTrack?.classList.add("returning");
-    moveSwipeHint(lockDistance);
-    $("chatStatus").textContent="Запись закреплена · крестик отменит, микрофон или замок завершит";
-    setTimeout(()=>swipeTrack?.classList.remove("returning"),230);
+    // Любое отпускание до конца жеста отменяет запись, без возврата к замку.
+    cancelMicRecording();
   };
   swipeTrack?.addEventListener("pointerdown",startTrackDrag);
   swipeTrack?.addEventListener("pointermove",moveTrackDrag);
