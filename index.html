@@ -137,7 +137,7 @@ header{
 .support-button{
   position:fixed;z-index:60;top:54%;right:8px;left:auto;
   display:grid;place-items:center;width:64px;height:64px;padding:0;
-  border:0;border-radius:50%;color:#f7eaff;background:transparent;
+  border:0;border-radius:50%;color:#e3def1;background:transparent;
   transform:translateY(-50%);
   touch-action:none;overscroll-behavior:contain;
   user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
@@ -146,14 +146,14 @@ header{
 }
 .support-button svg{
   display:block;width:100%;height:100%;pointer-events:none;
-  filter:drop-shadow(0 0 8px rgba(194,127,255,.42));
+  filter:drop-shadow(0 0 3px rgba(108,96,158,.24));
 }
 .support-button:active{transform:translateY(-50%) scale(.96)}
 .support-button.dragging{
-  cursor:grabbing;transition:none;transform:translateY(-50%) scale(1.08);
+  cursor:grabbing;transition:none;transform:translateY(-50%) scale(1.05);
 }
-.support-button.snapping{transform:translateY(-50%) scale(.96)}
-.support-button:focus-visible{outline:2px solid #f4e8ff;outline-offset:2px}
+.support-button.snapping{transform:translateY(-50%) scale(.97)}
+.support-button:focus-visible{outline:2px solid #c4b4ed;outline-offset:2px}
 @media(prefers-reduced-motion:reduce){.support-button{transition:none}}
 
 .view{display:none;min-width:0}
@@ -1581,55 +1581,57 @@ select{
 </div>
 
 <button id="supportButton" class="support-button" type="button"
-  aria-label="Поддержка" title="Поддержка">
+  aria-label="Открыть поддержку @ISMAILCHIIK" title="Поддержка · @ISMAILCHIIK">
   <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
     <defs>
       <radialGradient id="supportOrbFill" cx="31%" cy="20%" r="82%">
-        <stop offset="0" stop-color="#fff5ff"/>
-        <stop offset=".12" stop-color="#efc2ff"/>
-        <stop offset=".37" stop-color="#a74bff"/>
-        <stop offset=".72" stop-color="#54228f"/>
-        <stop offset="1" stop-color="#211334"/>
+        <stop offset="0" stop-color="#8b84a6"/>
+        <stop offset=".2" stop-color="#55506f"/>
+        <stop offset=".62" stop-color="#29263a"/>
+        <stop offset="1" stop-color="#11111a"/>
       </radialGradient>
       <linearGradient id="supportOrbRim" x1="8" y1="8" x2="56" y2="58" gradientUnits="userSpaceOnUse">
-        <stop stop-color="#f8dcff"/>
-        <stop offset=".32" stop-color="#c16cff"/>
-        <stop offset=".68" stop-color="#8e43f3"/>
-        <stop offset="1" stop-color="#f2caff"/>
+        <stop stop-color="#6e83c1"/>
+        <stop offset=".42" stop-color="#574087"/>
+        <stop offset="1" stop-color="#78709b"/>
       </linearGradient>
       <linearGradient id="supportBand" x1="19" y1="20" x2="45" y2="34" gradientUnits="userSpaceOnUse">
-        <stop stop-color="#fae5ff"/>
-        <stop offset=".48" stop-color="#bd6cff"/>
-        <stop offset="1" stop-color="#f9d8ff"/>
+        <stop stop-color="#b7c3ed"/>
+        <stop offset=".5" stop-color="#8475ba"/>
+        <stop offset="1" stop-color="#b8a3d7"/>
       </linearGradient>
       <linearGradient id="supportCup" x1="15" y1="31" x2="23" y2="46" gradientUnits="userSpaceOnUse">
-        <stop stop-color="#fff5ff"/>
-        <stop offset=".42" stop-color="#d7a0ff"/>
-        <stop offset="1" stop-color="#873de0"/>
+        <stop stop-color="#aebbe4"/>
+        <stop offset=".5" stop-color="#746d9f"/>
+        <stop offset="1" stop-color="#403952"/>
       </linearGradient>
       <radialGradient id="supportBubble" cx="31%" cy="13%" r="91%">
-        <stop stop-color="#f6dfff"/>
-        <stop offset=".3" stop-color="#c58aff"/>
-        <stop offset=".72" stop-color="#7134ba"/>
-        <stop offset="1" stop-color="#3c1d68"/>
+        <stop stop-color="#a89bc5"/>
+        <stop offset=".35" stop-color="#645886"/>
+        <stop offset="1" stop-color="#302840"/>
       </radialGradient>
-      <filter id="supportGlow" x="-40%" y="-40%" width="180%" height="180%">
-        <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <pattern id="supportMesh" width="9" height="9" patternUnits="userSpaceOnUse">
+        <path d="M0 0H9V9" fill="none" stroke="#a4b4ed" stroke-opacity=".12" stroke-width=".55"/>
+        <circle cx="1" cy="1" r=".7" fill="#a4b4ed" fill-opacity=".22"/>
+      </pattern>
+      <filter id="supportGlow" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="1.1" result="blur"/>
         <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
       </filter>
     </defs>
-    <circle cx="32" cy="32" r="29.5" fill="url(#supportOrbFill)" stroke="url(#supportOrbRim)" stroke-width="1.7"/>
-    <circle cx="32" cy="32" r="26.4" stroke="#eed1ff" stroke-opacity=".32" stroke-width=".8"/>
-    <ellipse cx="23" cy="17" rx="13" ry="4.2" transform="rotate(-37 23 17)" fill="#fff" fill-opacity=".34"/>
-    <path d="M18 34v-3a14 14 0 0 1 28 0v3" stroke="url(#supportBand)" stroke-width="4" stroke-linecap="round" filter="url(#supportGlow)"/>
-    <rect x="15.5" y="30" width="8" height="16" rx="4" fill="url(#supportCup)" stroke="#f8e5ff" stroke-width="1.2"/>
-    <rect x="40.5" y="30" width="8" height="16" rx="4" fill="url(#supportCup)" stroke="#f8e5ff" stroke-width="1.2"/>
-    <path d="M25 27h14a7.5 7.5 0 0 1 7.5 7.5v5A7.5 7.5 0 0 1 39 47H29l-7 4 1.9-6.3A7.4 7.4 0 0 1 17.5 38v-3.5A7.5 7.5 0 0 1 25 27Z" fill="url(#supportBubble)" stroke="#f6dcff" stroke-width="1.2" filter="url(#supportGlow)"/>
-    <circle cx="27" cy="36.5" r="1.65" fill="#fff4ff"/>
-    <circle cx="32" cy="36.5" r="1.65" fill="#fff4ff"/>
-    <circle cx="37" cy="36.5" r="1.65" fill="#fff4ff"/>
-    <path d="M45 43c-.1 3.8-2.7 6.4-6.6 7.3" stroke="#e6baff" stroke-width="2.2" stroke-linecap="round"/>
-    <rect x="31.5" y="47.6" width="9.4" height="5.4" rx="2.7" transform="rotate(-9 31.5 47.6)" fill="url(#supportCup)" stroke="#f9e5ff" stroke-width="1"/>
+    <circle cx="32" cy="32" r="29.5" fill="url(#supportOrbFill)" stroke="url(#supportOrbRim)" stroke-width="1.4"/>
+    <circle cx="32" cy="32" r="27" fill="url(#supportMesh)" opacity=".62"/>
+    <circle cx="32" cy="32" r="26.4" stroke="#c5c4dc" stroke-opacity=".22" stroke-width=".8"/>
+    <ellipse cx="23" cy="17" rx="13" ry="4.2" transform="rotate(-37 23 17)" fill="#e2e5ff" fill-opacity=".15"/>
+    <path d="M18 34v-3a14 14 0 0 1 28 0v3" stroke="url(#supportBand)" stroke-width="3.6" stroke-linecap="round" filter="url(#supportGlow)"/>
+    <rect x="15.5" y="30" width="8" height="16" rx="4" fill="url(#supportCup)" stroke="#aeb4d8" stroke-width="1"/>
+    <rect x="40.5" y="30" width="8" height="16" rx="4" fill="url(#supportCup)" stroke="#aeb4d8" stroke-width="1"/>
+    <path d="M25 27h14a7.5 7.5 0 0 1 7.5 7.5v5A7.5 7.5 0 0 1 39 47H29l-7 4 1.9-6.3A7.4 7.4 0 0 1 17.5 38v-3.5A7.5 7.5 0 0 1 25 27Z" fill="url(#supportBubble)" stroke="#b5acd0" stroke-width="1" filter="url(#supportGlow)"/>
+    <circle cx="27" cy="36.5" r="1.55" fill="#eeeafa"/>
+    <circle cx="32" cy="36.5" r="1.55" fill="#eeeafa"/>
+    <circle cx="37" cy="36.5" r="1.55" fill="#eeeafa"/>
+    <path d="M45 43c-.1 3.8-2.7 6.4-6.6 7.3" stroke="#9d91ba" stroke-width="2" stroke-linecap="round"/>
+    <rect x="31.5" y="47.6" width="9.4" height="5.4" rx="2.7" transform="rotate(-9 31.5 47.6)" fill="url(#supportCup)" stroke="#aeb4d8" stroke-width=".9"/>
   </svg>
 </button>
 
@@ -3489,10 +3491,12 @@ function setupSupportButton(){
   if(!button||button.dataset.dragReady) return;
   button.dataset.dragReady="1";
   const gap=8;
+  const supportUrl="https://t.me/ISMAILCHIIK";
   let drag=null;
   let suppressClickUntil=0;
   let edge="right";
   let savedYRatio=.54;
+
   try{
     const savedEdge=localStorage.getItem("anniveo-support-edge");
     const savedY=Number(localStorage.getItem("anniveo-support-y"));
@@ -3500,6 +3504,14 @@ function setupSupportButton(){
     if(Number.isFinite(savedY)&&savedY>0&&savedY<1) savedYRatio=savedY;
   }catch(e){}
 
+  const openSupport=()=>{
+    try{
+      if(tg?.openTelegramLink) tg.openTelegramLink(supportUrl);
+      else window.open(supportUrl,"_blank","noopener,noreferrer");
+    }catch(e){
+      window.location.href=supportUrl;
+    }
+  };
   const clampCenterY=centerY=>{
     const height=button.getBoundingClientRect().height||64;
     const viewport=window.visualViewport;
@@ -3529,36 +3541,29 @@ function setupSupportButton(){
       }catch(e){}
     }
   };
-
-  placeAt(edge,window.innerHeight*savedYRatio,false);
-  button.addEventListener("pointerdown",event=>{
-    if(event.pointerType==="mouse"&&event.button!==0) return;
+  const beginDrag=(id,x,y)=>{
     const rect=button.getBoundingClientRect();
-    drag={
-      id:event.pointerId,startX:event.clientX,startY:event.clientY,
-      startLeft:rect.left,startCenterY:rect.top+rect.height/2,moved:false
-    };
+    drag={id,startX:x,startY:y,startLeft:rect.left,
+      startCenterY:rect.top+rect.height/2,moved:false};
     button.classList.remove("snapping");
     button.classList.add("dragging");
-    button.setPointerCapture?.(event.pointerId);
-  });
-  button.addEventListener("pointermove",event=>{
-    if(!drag||drag.id!==event.pointerId) return;
-    if(event.cancelable) event.preventDefault();
-    const dx=event.clientX-drag.startX;
-    const dy=event.clientY-drag.startY;
+  };
+  const moveDrag=(x,y)=>{
+    if(!drag) return;
+    const dx=x-drag.startX;
+    const dy=y-drag.startY;
     if(Math.abs(dx)>4||Math.abs(dy)>4) drag.moved=true;
     if(!drag.moved) return;
     const rect=button.getBoundingClientRect();
     const width=rect.width||64;
-    const x=Math.max(gap,Math.min(window.innerWidth-width-gap,drag.startLeft+dx));
+    const left=Math.max(gap,Math.min(window.innerWidth-width-gap,drag.startLeft+dx));
     const centerY=clampCenterY(drag.startCenterY+dy);
-    button.style.left=x+"px";
+    button.style.left=left+"px";
     button.style.right="auto";
     button.style.top=centerY+"px";
-  });
-  const finishDrag=event=>{
-    if(!drag||drag.id!==event.pointerId) return;
+  };
+  const finishDrag=()=>{
+    if(!drag) return false;
     const moved=drag.moved;
     const rect=button.getBoundingClientRect();
     const centerY=rect.top+rect.height/2;
@@ -3567,18 +3572,75 @@ function setupSupportButton(){
     button.classList.add("snapping");
     placeAt(nextEdge,centerY);
     drag=null;
-    if(moved) suppressClickUntil=Date.now()+450;
+    if(moved) suppressClickUntil=Date.now()+550;
     setTimeout(()=>button.classList.remove("snapping"),420);
+    return moved;
   };
-  button.addEventListener("pointerup",finishDrag);
-  button.addEventListener("pointercancel",finishDrag);
+
+  const hasTouch=("ontouchstart" in window)||navigator.maxTouchPoints>0;
+  if(hasTouch){
+    const findTouch=(list,id)=>Array.from(list).find(t=>t.identifier===id)||null;
+    button.addEventListener("touchstart",event=>{
+      if(event.touches.length!==1) return;
+      if(event.cancelable) event.preventDefault();
+      event.stopPropagation();
+      const touch=event.changedTouches[0];
+      beginDrag(touch.identifier,touch.clientX,touch.clientY);
+    },{passive:false});
+    document.addEventListener("touchmove",event=>{
+      if(!drag) return;
+      const touch=findTouch(event.touches,drag.id);
+      if(!touch) return;
+      if(event.cancelable) event.preventDefault();
+      event.stopPropagation();
+      moveDrag(touch.clientX,touch.clientY);
+    },{capture:true,passive:false});
+    const finishTouch=(event,cancelled=false)=>{
+      if(!drag) return;
+      const touch=findTouch(event.changedTouches,drag.id);
+      if(!touch) return;
+      if(event.cancelable) event.preventDefault();
+      event.stopPropagation();
+      const wasMoved=finishDrag();
+      if(!wasMoved&&!cancelled){
+        suppressClickUntil=Date.now()+550;
+        openSupport();
+      }
+    };
+    document.addEventListener("touchend",event=>finishTouch(event,false),{capture:true,passive:false});
+    document.addEventListener("touchcancel",event=>finishTouch(event,true),{capture:true,passive:false});
+  }else{
+    button.addEventListener("pointerdown",event=>{
+      if(event.button!==0) return;
+      beginDrag(event.pointerId,event.clientX,event.clientY);
+      button.setPointerCapture?.(event.pointerId);
+    });
+    button.addEventListener("pointermove",event=>{
+      if(!drag||drag.id!==event.pointerId) return;
+      if(event.cancelable) event.preventDefault();
+      moveDrag(event.clientX,event.clientY);
+    });
+    const finishPointer=event=>{
+      if(!drag||drag.id!==event.pointerId) return;
+      finishDrag();
+    };
+    button.addEventListener("pointerup",finishPointer);
+    button.addEventListener("pointercancel",finishPointer);
+  }
+
   button.addEventListener("click",event=>{
     if(Date.now()<suppressClickUntil){
       event.preventDefault();
       event.stopPropagation();
       return;
     }
-    toast("Контакт поддержки пока не подключён");
+    openSupport();
+  });
+  button.addEventListener("keydown",event=>{
+    if(event.key==="Enter"||event.key===" "){
+      event.preventDefault();
+      openSupport();
+    }
   });
   window.addEventListener("resize",()=>{
     placeAt(edge,window.innerHeight*savedYRatio,false);
