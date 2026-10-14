@@ -611,6 +611,36 @@ header{
   font-size:16px;
   line-height:20px;
 }
+.search-recording-display{
+  display:none;align-items:center;gap:9px;flex:1;min-width:0;
+  height:38px;overflow:hidden;color:#e9ddfb;
+}
+.composer.recording-mode #messageInput,
+.composer.recording-mode #send{display:none}
+.composer.recording-mode .search-recording-display{display:flex}
+.search-recording-time{
+  flex:none;min-width:34px;color:#e9ddfb;font-size:12px;
+  font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:.2px;
+}
+.search-voice-bars{
+  display:flex;align-items:center;justify-content:space-between;gap:2px;
+  flex:1;min-width:0;height:30px;overflow:hidden;
+}
+.search-voice-bar{
+  flex:1 1 2px;min-width:2px;max-width:4px;height:4px;
+  border-radius:99px;background:linear-gradient(to top,#a978e7,#ead1ff);
+  box-shadow:0 0 8px rgba(196,148,255,.58);
+  transform-origin:center;opacity:.82;
+  animation:searchWaveIdle .78s ease-in-out infinite alternate;
+  animation-delay:var(--wave-delay,0s);
+  transition:height .08s linear,opacity .08s linear;
+}
+.search-voice-bar:nth-child(5n + 2){background:linear-gradient(to top,#c47eff,#fff0ff)}
+@keyframes searchWaveIdle{
+  from{transform:scaleY(.42);opacity:.58}
+  to{transform:scaleY(1);opacity:1}
+}
+.dock.recording-mode .mic-swipe-hint{right:8px}
 .circle{
   border:0;
   border-radius:50%;
@@ -1379,6 +1409,10 @@ select{
     <textarea id="messageInput" rows="1"
       maxlength="4000"
       placeholder="Спроси ANNIVEO…"></textarea>
+    <div id="searchRecordingDisplay" class="search-recording-display" aria-hidden="true">
+      <span id="micElapsed" class="search-recording-time">0:00</span>
+      <div id="searchVoiceBars" class="search-voice-bars"></div>
+    </div>
     <button type="button" id="mic"
       class="circle" onclick="handleMicClick()" aria-label="Записать голосовое сообщение" title="Записать голосовое сообщение">
       <svg class="mic-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
@@ -1475,6 +1509,7 @@ let voiceSessionVersion=0;
 let voiceHeard=false;
 let voiceAnalyser=null,voiceAudioContext=null,voiceFrame=0;
 let voiceSourceNode=null;
+let micElapsedTimer=null,recordingStartedAt=0;
 let voiceUtterance=null;
 let micGesture=null;
 let ignoreMicClickUntil=0;
@@ -1523,9 +1558,55 @@ function resetCancelVisual(){
   glyph.style.color="";
   mic.classList.remove("cancel-armed");
 }
+function updateMicElapsed(){
+  if(!recordingStartedAt) return;
+  const seconds=Math.floor(Math.max(0,Date.now()-recordingStartedAt)/1000);
+  $("micElapsed").textContent=Math.floor(seconds/60)+":"+String(seconds%60).padStart(2,"0");
+}
+function paintSearchWave(level,now=performance.now()){
+  const bars=$("searchVoiceBars")?.children;
+  if(!bars?.length) return;
+  const activity=Math.max(.035,Math.min(1,Number(level)||0));
+  for(let i=0;i<bars.length;i++){
+    const contour=.18+.82*Math.abs(Math.sin((i+1)*.71+now*.005));
+    const height=3+activity*(5+contour*17);
+    bars[i].style.height=height.toFixed(1)+"px";
+    bars[i].style.opacity=(.62+activity*.38).toFixed(2);
+  }
+}
+function setComposerRecording(active){
+  $("chatForm").classList.toggle("recording-mode",active);
+  $("dock").classList.toggle("recording-mode",active);
+  clearInterval(micElapsedTimer);
+  micElapsedTimer=null;
+  const bars=$("searchVoiceBars");
+  if(active){
+    if(bars&&!bars.childElementCount){
+      const fragment=document.createDocumentFragment();
+      for(let i=0;i<26;i++){
+        const bar=document.createElement("span");
+        bar.className="search-voice-bar";
+        bar.style.setProperty("--wave-delay",(-((i%8)*.09))+"s");
+        fragment.append(bar);
+      }
+      bars.append(fragment);
+    }
+    recordingStartedAt=Date.now();
+    updateMicElapsed();
+    micElapsedTimer=setInterval(updateMicElapsed,250);
+  }else{
+    recordingStartedAt=0;
+    $("micElapsed").textContent="0:00";
+    bars?.querySelectorAll(".search-voice-bar").forEach(bar=>{
+      bar.style.removeProperty("height");
+      bar.style.removeProperty("opacity");
+    });
+  }
+}
 function cancelMicRecording(){
   $("micSwipeHint")?.classList.remove("visible","locked","compact");
   $("micSwipeHint")?.setAttribute("aria-hidden","true");
+  setComposerRecording(false);
   cancelMicStartRequested=true;
   clearTimeout(recordTimer);
   const activeRecorder=recorder;
@@ -2361,6 +2442,7 @@ function endVoiceSession(){
     recorder.onstop=null;recorder.stop();
   }
   recording=false;
+  setComposerRecording(false);
   stopVoiceMeter();stopSpokenReply();releaseMicrophone();
   $("mic").classList.remove("recording","locked");
   $("mic").setAttribute("aria-label","Записать голосовое сообщение");
@@ -2411,6 +2493,7 @@ function startVoiceMeter(){
       for(const sample of samples) energy+=sample*sample;
       const rms=Math.sqrt(energy/samples.length);
       level+=(Math.min(1,rms*12)-level)*.35;
+      paintSearchWave(level,now);
       $("planetResponse").style.setProperty("--voice-level",level.toFixed(3));
       $("mic").style.setProperty("--mic-scale",(1+level*.22).toFixed(3));
       $("mic").style.setProperty("--mic-lift",(-level*2.2).toFixed(2)+"px");
@@ -2519,6 +2602,7 @@ async function handleMic(){
     recorder.onerror=()=>{
       clearTimeout(recordTimer);
       recording=false;
+      setComposerRecording(false);
       orbVoiceActive=false;
       recorder.onstop=null;
       audioChunks=[];
@@ -2535,6 +2619,7 @@ async function handleMic(){
     };
     recorder.start();
     recording=true;
+    setComposerRecording(true);
     voiceHeard=false;
     startVoiceMeter();
     $("mic").setAttribute("aria-label","Остановить запись и отправить");
@@ -2577,6 +2662,7 @@ async function finishVoice(){
   $("mic").setAttribute("aria-label","Записать голосовое сообщение");
   $("mic").title="Записать голосовое сообщение";
   $("mic").classList.remove("recording");
+  setComposerRecording(false);
 
   // Микрофон остаётся открыт до завершения разговора.
 
