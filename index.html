@@ -645,11 +645,9 @@ header{
   box-shadow:0 0 0 2px rgba(255,152,188,.55),0 0 20px rgba(243,83,144,.45);
 }
 #mic.gesture-active{transform:scale(.94)}
-#attachButton{transition:transform .22s cubic-bezier(.2,.8,.2,1),color .2s}
-#attachGlyph{display:inline-block;transition:transform .22s cubic-bezier(.2,.8,.2,1)}
-#attachButton.cancel-armed #attachGlyph{
-  transform:rotate(45deg) scale(1.12);color:#ffd8e6;
-}
+#attachButton{transition:color .2s}
+#attachGlyph{display:inline-block;transform:rotate(0deg);transition:color .2s}
+#attachButton.cancel-armed #attachGlyph{color:#ffd8e6}
 .recording{background:#8e3f58}
 .status{
   font-size:11px;
@@ -1427,6 +1425,7 @@ function cancelMicRecording(){
   $("mic").setAttribute("aria-label","Записать голосовое сообщение");
   $("mic").title="Записать голосовое сообщение";
   $("attachButton").classList.remove("cancel-armed");
+  $("attachGlyph").style.transform="rotate(0deg)";
   $("chatStatus").textContent="Запись отменена";
   updateControls();
   setTimeout(()=>{
@@ -1448,6 +1447,9 @@ function setupMicGestures(){
   };
   const updateDirection=(state,x,y)=>{
     const dx=x-state.x,dy=state.y-y;
+    const turn=Math.max(0,Math.min(45,(-dx/cancelDistance)*45));
+    $("attachGlyph").style.transform="rotate("+turn.toFixed(1)+"deg)";
+    plus.classList.toggle("cancel-armed",turn>1);
     if(!state.started&&!state.held&&(dy>lockDistance||dx < -cancelDistance)){
       beginGestureRecording(state);
     }
@@ -1456,7 +1458,6 @@ function setupMicGestures(){
       state.locked=false;
       button.classList.remove("locked");
       button.classList.add("cancel-armed");
-      plus.classList.add("cancel-armed");
       $("chatStatus").textContent="Отпусти, чтобы отменить запись";
       return;
     }
@@ -1487,6 +1488,9 @@ function setupMicGestures(){
       cancelMicRecording();
       return;
     }
+    $("attachGlyph").style.transform="rotate(0deg)";
+    plus.classList.remove("cancel-armed");
+    button.classList.remove("cancel-armed");
     if(state.locked){
       suppressClick();
       micGesture=null;
