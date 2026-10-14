@@ -530,9 +530,9 @@ header{
   width:100%;
 }
 .message.assistant.sender-pending{
-  align-self:flex-end;width:auto;max-width:87%;margin-left:auto;margin-bottom:18px;
+  align-self:flex-start;width:auto;max-width:87%;margin-left:0;margin-right:auto;margin-bottom:18px;
   padding:11px 14px;border:1px solid #544365;
-  border-radius:17px 17px 5px 17px;
+  border-radius:17px 17px 17px 5px;
   background:linear-gradient(135deg,rgba(59,47,75,.94),rgba(43,37,57,.96));
   box-shadow:0 5px 18px rgba(0,0,0,.18),0 0 20px rgba(165,118,225,.08);
   color:#e4d8f2;
@@ -643,8 +643,8 @@ header{
   display:none;align-items:center;gap:9px;flex:1;min-width:0;
   height:38px;overflow:hidden;color:#e9ddfb;
 }
-.composer.recording-mode #messageInput,
-.composer.recording-mode #send{display:none}
+.composer.recording-mode #messageInput{display:none}
+.composer.recording-mode #send{display:grid}
 .composer.recording-mode .search-recording-display{display:flex}
 .search-recording-time{
   flex:none;min-width:34px;color:#e9ddfb;font-size:12px;
@@ -1476,7 +1476,7 @@ select{
         <rect x="6" y="6" width="12" height="12" rx="2"/>
       </svg>
     </button>
-    <button type="submit" id="send"
+    <button type="submit" id="send" aria-label="Отправить сообщение" title="Отправить распознанный текст"
       class="circle send">➤</button>
   </form>
   <div id="chatStatus" class="status"></div>
@@ -2418,7 +2418,7 @@ function toggleAnonymous(){
 /* КНОПКИ */
 function updateControls(){
   const locked=busy||recording||transcribing||openingMic;
-  $("send").disabled=locked;
+  $("send").disabled=busy||transcribing||openingMic;
   $("anonToggle").disabled=locked;
   $("mic").disabled=busy||transcribing||(openingMic&&!micGesture);
   $("messageInput").disabled=
@@ -2567,7 +2567,11 @@ async function sendMessage(text,audioURL,spokenVoice=false){
 /* ФОРМА */
 $("chatForm").onsubmit=e=>{
   e.preventDefault();
-  if(busy||recording||transcribing||openingMic) return;
+  if(recording){
+    if(recorder?.state==="recording") recorder.stop();
+    return;
+  }
+  if(busy||transcribing||openingMic) return;
   const text=$("messageInput").value.trim();
   if(!text) return;
   if(!initData||!user){
