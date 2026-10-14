@@ -96,7 +96,7 @@ header{
 .collapse-chat-button{
   position:fixed;
   z-index:90;
-  top:calc(env(safe-area-inset-top,0px) + 66px);
+  top:calc(env(safe-area-inset-top,0px) + 60px);
   left:16px;
   min-height:42px;
   display:inline-flex;
@@ -850,7 +850,7 @@ header{
 .status:empty{display:none}
 .mic-swipe-hint{
   position:absolute;left:0;right:auto;top:0;bottom:auto;z-index:46;
-  width:174px;height:142px;pointer-events:none;
+  width:174px;height:154px;pointer-events:none;
   opacity:0;visibility:hidden;transform:scale(.98);
   transition:opacity .28s ease,transform .34s cubic-bezier(.2,.75,.25,1),visibility .28s;
 }
@@ -1894,7 +1894,7 @@ function setupMicGestures(){
   const cancelDistance=72;
   const swipeHint=$("micSwipeHint"),swipeTrack=$("micSwipeTrack"),swipeShadow=$("micSwipeShadow"),lockButton=$("micLockButton");
   let lockDistance=(()=>{
-    const trackHeight=swipeTrack?.clientHeight||142;
+    const trackHeight=swipeTrack?.clientHeight||154;
     const shadowSize=swipeShadow?.offsetHeight||48;
     const bottomTop=trackHeight-shadowSize/2;
     const lockCenter=(lockButton?.offsetTop||8)+(lockButton?.offsetHeight||38)/2-(swipeTrack?.clientTop||1);
@@ -1902,7 +1902,7 @@ function setupMicGestures(){
   })();
   let hintTimer=0;
   let swipeTrackBottomY=0,swipeLockCenterY=0;
-  let swipeTrackHeight=swipeTrack?.clientHeight||swipeTrack?.offsetHeight||142;
+  let swipeTrackHeight=swipeTrack?.clientHeight||swipeTrack?.offsetHeight||154;
   let swipeShadowSize=swipeShadow?.offsetHeight||48;
   let swipeVisualFrame=0,queuedSwipeVisual=null;
   const lockCenterY=()=>swipeLockCenterY;
@@ -1942,7 +1942,7 @@ function setupMicGestures(){
     const micRect=button.getBoundingClientRect();
     const trackWidth=swipeTrack.offsetWidth||56;
     const hintWidth=swipeHint.offsetWidth||174;
-    const trackHeight=swipeTrack.clientHeight||swipeTrack.offsetHeight||142;
+    const trackHeight=swipeTrack.clientHeight||swipeTrack.offsetHeight||154;
     const trackTopInset=swipeTrack.clientTop||1;
     const left=micRect.left+micRect.width/2-dockRect.left-(hintWidth-trackWidth/2);
     // Нижний край дорожки крепится к верхней кромке микрофона,
@@ -1955,7 +1955,7 @@ function setupMicGestures(){
     swipeHint.style.bottom="auto";
     const trackRect=swipeTrack.getBoundingClientRect();
     swipeTrackBottomY=trackRect.bottom;
-    swipeTrackHeight=trackRect.height||swipeTrack.clientHeight||142;
+    swipeTrackHeight=trackRect.height||swipeTrack.clientHeight||154;
     swipeShadowSize=swipeShadow?.getBoundingClientRect().height||swipeShadowSize||48;
     const currentLock=lockButton?.getBoundingClientRect();
     if(currentLock){
@@ -1998,7 +1998,7 @@ function setupMicGestures(){
   const trackProgressAt=clientY=>{
     if(!swipeTrack||!swipeShadow) return 1;
     const rect=swipeTrack.getBoundingClientRect();
-    const trackHeight=swipeTrack.clientHeight||rect.height||142;
+    const trackHeight=swipeTrack.clientHeight||rect.height||154;
     const shadowSize=swipeShadow.offsetHeight||48;
     const bottomCenter=trackHeight;
     const lockCenter=(lockButton?.offsetTop||8)+(lockButton?.offsetHeight||38)/2-(swipeTrack?.clientTop||1);
