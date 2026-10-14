@@ -669,6 +669,130 @@ function makeStreamResponse(
   });
 }
 
+
+function mediaSize(ratio, image = false) {
+  const sizes = image
+    ? { "1:1":"1024x1024", "9:16":"1024x1792", "16:9":"1792x1024" }
+    : {};
+  return sizes[ratio] || "1024x1024";
+}
+
+function mediaErrorMessage(status) {
+  if (status === 402) return "Закончился баланс генерации Pollinations";
+  if (status === 401 || status === 403) return "Сервис генерации не принял ключ. Проверь подключение Pollinations";
+  if (status === 429) return "Слишком много запросов. Подожди немного и попробуй снова";
+  if (status >= 500) return "Сервис генерации временно недоступен. Попробуй ещё раз";
+  return "Не удалось выполнить запрос к сервису генерации";
+}
+
+async function uploadReferenceVideo(file, apiKey, signal) {
+  const upload = new FormData();
+  upload.append("file", file, file.name || "reference-video.mp4");
+  const response = await fetch("https://media.pollinations.ai/upload", {
+    method: "POST",
+    headers: { Authorization: "Bearer " + apiKey },
+    body: upload,
+    signal
+  });
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new Error("Не удалось загрузить исходное видео для обработки");
+  }
+  const data = await response.json();
+  if (typeof data.url !== "string" || !data.url.startsWith("https://media.pollinations.ai/")) {
+    throw new Error("Сервис не вернул ссылку на исходное видео");
+  }
+  return data.url;
+}
+
+async function proxyImageEdit(form, apiKey) {
+  const file = form.get("file");
+  const prompt = String(form.get("prompt") || "").trim();
+  const requestedModel = String(form.get("model") || "kontext");
+  const model = requestedModel === "flux" ? "kontext" : requestedModel;
+  const ratio = String(form.get("ratio") || "1:1");
+  if (!file || typeof file === "string" || !file.size || !file.type.startsWith("image/")) {
+    return { error: "Добавь фото в формате JPEG, PNG или WebP" };
+  }
+  if (file.size > 20 * 1024 * 1024) return { error: "Фото должно быть меньше 20 МБ" };
+  if (!prompt || prompt.length > 1200) return { error: "Напиши, что изменить на фото (до 1200 символов)" };
+  if (!["kontext", "gptimage", "seedream5"].includes(model)) {
+    return { error: "Выбери модель, которая поддерживает редактирование фото" };
+  }
+
+  const upload = new FormData();
+  upload.append("image", file, file.name || "photo.png");
+  upload.append("prompt", prompt);
+  upload.append("model", model);
+  upload.append("size", mediaSize(ratio, true));
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 150000);
+  try {
+    const response = await fetch("https://gen.pollinations.ai/v1/images/edits", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + apiKey },
+      body: upload,
+      signal: controller.signal
+    });
+    if (!response.ok) {
+      await response.body?.cancel();
+      return { status: response.status, error: mediaErrorMessage(response.status) };
+    }
+    return { response };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function proxyVideo(form, apiKey) {
+  const prompt = String(form.get("prompt") || "").trim();
+  const model = String(form.get("model") || "bytedance/seedance-2.5");
+  const ratio = String(form.get("ratio") || "16:9");
+  const duration = Number(form.get("duration") || 4);
+  const file = form.get("file");
+  const allowedModels = [
+    "bytedance/seedance-2.5",
+    "google/veo-3.1-fast",
+    "bytedance/seedance-2.0-fast",
+    "alibaba/wan-2.2-fast"
+  ];
+  if (!prompt || prompt.length > 1200) return { error: "Опиши видео (до 1200 символов)" };
+  if (!allowedModels.includes(model)) return { error: "Выбрана неизвестная модель видео" };
+  if (![4, 6, 8].includes(duration)) return { error: "Выбери длительность 4, 6 или 8 секунд" };
+  if (file && typeof file !== "string" && file.size) {
+    if (!file.type.startsWith("video/")) return { error: "Загрузи видеофайл" };
+    if (file.size > 25 * 1024 * 1024) return { error: "Видео должно быть меньше 25 МБ" };
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 295000);
+  try {
+    let referenceUrl = "";
+    if (file && typeof file !== "string" && file.size) {
+      referenceUrl = await uploadReferenceVideo(file, apiKey, controller.signal);
+    }
+    const params = new URLSearchParams({
+      model,
+      duration: String(duration),
+      aspectRatio: ratio
+    });
+    if (referenceUrl) params.set("reference_videos", referenceUrl);
+    const endpoint = "https://gen.pollinations.ai/video/" +
+      encodeURIComponent(prompt) + "?" + params.toString();
+    const response = await fetch(endpoint, {
+      headers: { Authorization: "Bearer " + apiKey },
+      signal: controller.signal
+    });
+    if (!response.ok) {
+      await response.body?.cancel();
+      return { status: response.status, error: mediaErrorMessage(response.status) };
+    }
+    return { response };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
     const headers = {
@@ -706,16 +830,33 @@ export default {
     try {
       if((request.headers.get("content-type")||"").includes("multipart/form-data")){
         const length=Number(request.headers.get("content-length")||0);
-        if(length>21*1024*1024) return json({error:"Голосовое слишком большое"},413,headers);
+        if(length>26*1024*1024) return json({error:"Файл слишком большой (максимум 25 МБ)"},413,headers);
         const form=await request.formData();
         const voiceUser=await verifyTelegram(String(form.get("initData")||""),env.TELEGRAM_BOT_TOKEN);
         if(!voiceUser) return json({error:"Открой ANNIVEO AI через Telegram"},401,headers);
-        if(form.get("action")!=="transcribe") return json({error:"Неизвестное действие"},400,headers);
+        const multipartAction=String(form.get("action")||"");
+        if(!env.POLLINATIONS_API_KEY) return json({error:"Ключ ИИ не настроен"},503,headers);
         const file=form.get("file");
+        if(multipartAction==="image-edit"||multipartAction==="video"){
+          const mediaUser=await verifyTelegram(String(form.get("initData")||""),env.TELEGRAM_BOT_TOKEN);
+          if(!mediaUser) return json({error:"Открой ANNIVEO AI через Telegram"},401,headers);
+          if(multipartAction==="image-edit"&&(!file||typeof file==="string"||!file.size)) return json({error:"Добавь фото для изменения"},400,headers);
+          const result=multipartAction==="image-edit"
+            ?await proxyImageEdit(form,env.POLLINATIONS_API_KEY)
+            :await proxyVideo(form,env.POLLINATIONS_API_KEY);
+          if(result.error) return json({error:result.error},result.status||400,headers);
+          const upstream=result.response;
+          const mediaHeaders=new Headers(headers);
+          mediaHeaders.set("Content-Type",multipartAction==="image-edit"
+            ?"application/json; charset=utf-8"
+            :(upstream.headers.get("content-type")||"video/mp4"));
+          mediaHeaders.set("Cache-Control","no-store");
+          return new Response(upstream.body,{status:upstream.status,headers:mediaHeaders});
+        }
+        if(multipartAction!=="transcribe") return json({error:"Неизвестное действие"},400,headers);
         if(!file||typeof file==="string"||!file.size||file.size>20*1024*1024){
           return json({error:"Запись пустая или слишком большая"},400,headers);
         }
-        if(!env.POLLINATIONS_API_KEY) return json({error:"Ключ ИИ не настроен"},503,headers);
         const upload=new FormData();
         upload.append("file",file,file.name||"voice.webm");
         upload.append("model","openai/whisper-large-v3");
@@ -763,6 +904,36 @@ export default {
           401,
           headers
         );
+      }
+
+      if (action === "image") {
+        if (!env.POLLINATIONS_API_KEY) return json({error:"Ключ ИИ не настроен"},503,headers);
+        const prompt=String(body.prompt||"").trim();
+        const model=String(body.model||"flux");
+        const ratio=String(body.ratio||"1:1");
+        if(!prompt||prompt.length>1200) return json({error:"Опиши изображение (до 1200 символов)"},400,headers);
+        if(!["flux","gptimage","seedream5","kontext"].includes(model)) return json({error:"Выбрана неизвестная модель изображения"},400,headers);
+        const response=await fetch("https://gen.pollinations.ai/v1/images/generations",{
+          method:"POST",
+          headers:{Authorization:"Bearer "+env.POLLINATIONS_API_KEY,"Content-Type":"application/json"},
+          body:JSON.stringify({model,prompt,size:mediaSize(ratio,true),response_format:"b64_json"})
+        });
+        if(!response.ok){
+          await response.body?.cancel();
+          return json({error:mediaErrorMessage(response.status)},response.status===402?402:502,headers);
+        }
+        return new Response(response.body,{status:200,headers:{...headers,"Content-Type":"application/json; charset=utf-8"}});
+      }
+
+      if (action === "video") {
+        if (!env.POLLINATIONS_API_KEY) return json({error:"Ключ ИИ не настроен"},503,headers);
+        const videoForm=new FormData();
+        for(const key of ["prompt","model","ratio","duration"]) videoForm.set(key,String(body[key]??""));
+        const result=await proxyVideo(videoForm,env.POLLINATIONS_API_KEY);
+        if(result.error) return json({error:result.error},result.status||400,headers);
+        const mediaHeaders=new Headers(headers);
+        mediaHeaders.set("Content-Type",result.response.headers.get("content-type")||"video/mp4");
+        return new Response(result.response.body,{status:result.response.status,headers:mediaHeaders});
       }
 
       if (action === "history") {
