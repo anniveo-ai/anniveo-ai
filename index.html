@@ -611,11 +611,18 @@ header{
 }
 .answer pre code{background:none;padding:0}
 .copy{
-  background:none;border:0;
-  color:#a9a2ba;
-  font-size:11px;
-  padding:5px 0;
+  display:inline-grid;place-items:center;
+  width:32px;height:30px;margin-top:5px;padding:0;
+  border:1px solid rgba(198,166,255,.2);border-radius:10px;
+  background:rgba(198,166,255,.07);color:#bdb2d1;
+  box-shadow:inset 0 1px rgba(255,255,255,.05);
+  transition:transform .16s ease,border-color .16s ease,background .16s ease,color .16s ease,box-shadow .16s ease;
+  -webkit-tap-highlight-color:transparent;
 }
+.copy svg{display:block;width:16px;height:16px}
+.copy:active{transform:scale(.9);background:rgba(174,128,230,.2);border-color:rgba(212,179,255,.56);color:#f1e2ff}
+.copy:focus-visible{outline:2px solid #d8baff;outline-offset:2px}
+.copy.copied{color:#e7d3ff;border-color:rgba(212,179,255,.5);background:rgba(174,128,230,.2);box-shadow:0 0 14px rgba(174,128,230,.2)}
 .message audio{max-width:100%;display:block}
 
 /* ПОЛЕ ВВОДА */
@@ -2335,12 +2342,28 @@ function addMessage(text,role,audioURL){
   if(role==="assistant"){
     const copy=document.createElement("button");
     copy.className="copy";
-    copy.textContent="Копировать";
+    copy.type="button";
+    copy.setAttribute("aria-label","Скопировать ответ");
+    copy.title="Скопировать ответ";
+    const copyIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/></svg>';
+    const copiedIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>';
+    copy.innerHTML=copyIcon;
     copy.onclick=async()=>{
       try{
         await navigator.clipboard.writeText(
           content.dataset.raw||text
         );
+        copy.classList.add("copied");
+        copy.setAttribute("aria-label","Ответ скопирован");
+        copy.title="Скопировано";
+        copy.innerHTML=copiedIcon;
+        clearTimeout(copy.resetTimer);
+        copy.resetTimer=setTimeout(()=>{
+          copy.classList.remove("copied");
+          copy.setAttribute("aria-label","Скопировать ответ");
+          copy.title="Скопировать ответ";
+          copy.innerHTML=copyIcon;
+        },1200);
         toast("Ответ скопирован");
       }catch(e){
         toast("Не удалось скопировать");
