@@ -185,8 +185,6 @@ header{
 
 /* КОСМИЧЕСКИЙ ШАР */
 .universe{position:relative;width:100%;height:278px;margin:10px auto 15px;display:grid;place-items:center;perspective:750px;transform-style:preserve-3d;isolation:isolate;overflow:visible}
-.planet-response:before{content:"";position:absolute;z-index:-1;left:50%;top:calc(100% + 13px);width:118%;height:26px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse,rgba(176,156,255,.62),rgba(118,105,215,.28) 40%,rgba(88,73,153,.08) 63%,transparent 78%);filter:blur(10px);pointer-events:none}
-.planet-response:after{content:"";position:absolute;z-index:-2;left:50%;top:calc(100% + 18px);width:76%;height:45px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse,rgba(119,145,255,.2),transparent 70%);filter:blur(16px);pointer-events:none}
 .planet-response{
   position:relative;z-index:3;
   transform:scale(calc(1 + var(--voice-level,0) * .18));
@@ -242,9 +240,35 @@ header{
 @keyframes voiceButtonBreath{0%,100%{filter:brightness(1);box-shadow:0 0 8px rgba(173,125,255,.42),0 0 23px rgba(134,78,230,.23),inset 0 1px rgba(255,255,255,.2)}50%{filter:brightness(1.12);box-shadow:0 0 13px rgba(205,165,255,.58),0 0 32px rgba(166,103,255,.34),inset 0 1px rgba(255,255,255,.24)}}
 @media(prefers-reduced-motion:reduce){.voice-assistant-button[data-phase="thinking"],.voice-assistant-button[data-phase="transcribing"]{animation:none}.end-voice{transition:none}}
 .planet:focus-visible{outline:2px solid #ffe0ff;outline-offset:8px}
-.planet{border:0;padding:0;cursor:pointer;position:relative;isolation:isolate;width:clamp(205px,64vw,252px);height:clamp(205px,64vw,252px);border-radius:50%;z-index:3;overflow:hidden;background:radial-gradient(ellipse 37% 24% at 22% 37%,rgba(255,225,202,.66),transparent 100%),radial-gradient(ellipse 52% 42% at 32% 23%,rgba(177,173,255,.42),transparent 68%),radial-gradient(ellipse 45% 38% at 76% 28%,rgba(157,151,255,.54),transparent 74%),radial-gradient(ellipse 58% 48% at 57% 73%,rgba(185,153,255,.34),transparent 72%),radial-gradient(circle at 50% 50%,#171626 0%,#151426 52%,#211d38 76%,#8b76c9 95%,#ddd0ff 100%);box-shadow:inset 0 0 0 1.5px rgba(240,226,255,.57),inset -18px -22px 36px rgba(13,13,31,.58),inset 15px 12px 27px rgba(255,240,255,.2),0 0 15px rgba(218,186,255,.49),0 0 34px rgba(159,126,255,.32),0 0 62px rgba(110,111,255,.2);animation:planetSpin 30s linear infinite}
-.planet:before{content:"";position:absolute;inset:3px;border-radius:50%;z-index:2;pointer-events:none;border:1px solid rgba(241,225,255,.48);background:radial-gradient(ellipse at 24% 17%,rgba(255,255,255,.43),transparent 25%),radial-gradient(ellipse at 5% 47%,rgba(255,204,180,.35),transparent 26%),linear-gradient(135deg,rgba(255,255,255,.08),transparent 35%,rgba(102,103,255,.08) 72%,rgba(255,255,255,.1));box-shadow:inset 0 0 12px rgba(239,222,255,.24),0 0 9px rgba(218,190,255,.32)}
-.planet:after{content:"";position:absolute;left:-12%;top:42%;width:124%;height:40%;z-index:1;border-radius:50%;pointer-events:none;transform:rotate(-12deg);background:radial-gradient(ellipse at 50% 0%,rgba(255,255,255,.58),transparent 12%),linear-gradient(176deg,transparent 5%,rgba(177,185,255,.36) 24%,rgba(202,193,255,.67) 43%,rgba(117,142,255,.45) 61%,rgba(233,184,255,.22) 80%,transparent 98%);border-top:1px solid rgba(250,235,255,.58);box-shadow:0 -2px 9px rgba(195,181,255,.28),0 6px 18px rgba(125,129,255,.12)}
+.planet{
+  border:0;padding:0;cursor:pointer;position:relative;isolation:isolate;
+  width:clamp(205px,64vw,252px);height:clamp(205px,64vw,252px);
+  border-radius:50%;z-index:3;overflow:hidden;
+  background:
+    radial-gradient(ellipse at 28% 18%,#ffffff 0%,#ffeaff 5%,#f8bdffcc 13%,transparent 31%),
+    radial-gradient(ellipse at 77% 30%,#ff5bdc 0%,#f12affbb 22%,transparent 48%),
+    radial-gradient(ellipse at 18% 73%,#94b6ff 0%,#7050ffdd 26%,transparent 53%),
+    radial-gradient(circle at 70% 86%,#eea0ff 0%,#c746ff77 22%,transparent 42%),
+    linear-gradient(140deg,#f0b2ff 0%,#be39ff 32%,#7420c9 62%,#d078ff 100%);
+  box-shadow:
+    inset -22px -30px 48px #270b58aa,
+    inset 12px 12px 30px #ffffff88,
+    inset 0 0 40px #f8c6ff99,
+    0 0 15px #eda6ffdd,
+    0 0 38px #cc55ffbb,
+    0 0 68px #a83cff88;
+  animation:planetSpin 14s linear infinite;
+}
+.planet:before{
+  content:"";position:absolute;inset:20% -12%;
+  border:1px solid #ffe1ffcc;border-radius:50%;
+  box-shadow:0 0 12px #e89aff99;transform:rotate(-26deg);pointer-events:none;
+}
+.planet:after{
+  content:"";position:absolute;left:13%;top:45%;width:80%;height:30%;
+  border-radius:50%;background:linear-gradient(#ffe5ffbb,#df91ff44,transparent);
+  transform:rotate(25deg);pointer-events:none;
+}
 .axis-ring{
   position:absolute;
   left:50%;top:50%;
@@ -1249,7 +1273,7 @@ select{
 
 @media(min-width:600px){
   .universe{height:280px}
-  .planet{width:145px;height:145px}
+  .planet{width:230px;height:230px}
   .tile{height:220px}
 }
 @media(max-width:390px){
@@ -1712,6 +1736,7 @@ let bargeInAnalyser=null,bargeInSourceNode=null,bargeInFrame=0;
 let micElapsedTimer=null,recordingStartedAt=0;
 let voiceProgressText="",voiceProgressError=false;
 let newestFirstChat=false;
+let returnToChatAvailable=false;
 let voiceStatusResetTimer=null;
 let voiceUtterance=null;
 let micGesture=null;
@@ -2375,7 +2400,7 @@ function updateWelcome(){
   const landingVisible=showWelcome&&!anonymous;
   $("welcome").classList.toggle("hidden",!landingVisible);
   $("collapseChatButton")?.classList.toggle("hidden",landingVisible||anonymous||currentView!=="chat");
-  $("returnToChatButton")?.classList.toggle("hidden",!landingVisible||!normalHistory.length||anonymous||currentView!=="chat");
+  $("returnToChatButton")?.classList.toggle("hidden",!landingVisible||!returnToChatAvailable||anonymous||currentView!=="chat");
   syncTaskCancelControls();
 }
 function collapseChat(){
@@ -2384,14 +2409,16 @@ function collapseChat(){
     return;
   }
   endVoiceSession();
-  showWelcome=true;newestFirstChat=false;
-  updateWelcome();
+  returnToChatAvailable=normalHistory.length>0;
+  showWelcome=true;newestFirstChat=true;
+  updateWelcome();renderChat();
   app.scrollTo({top:0,behavior:"smooth"});
   tg?.HapticFeedback?.impactOccurred("light");
 }
 function returnToChat(){
-  if(anonymous||!normalHistory.length)return;
-  showWelcome=false;newestFirstChat=true;
+  if(anonymous||!returnToChatAvailable||!normalHistory.length)return;
+  returnToChatAvailable=false;
+  showWelcome=false;newestFirstChat=false;
   updateWelcome();renderChat();
   app.scrollTo({top:0,behavior:"smooth"});
   tg?.HapticFeedback?.impactOccurred("light");
@@ -2649,7 +2676,7 @@ function cancelActiveRequest(event){
 function renderChat(){
   updateWelcome();
   $("messages").replaceChildren();
-  if(showWelcome&&!anonymous){
+  if(showWelcome&&!anonymous&&!returnToChatAvailable){
     renderVoiceProgress();
     return;
   }
@@ -2979,21 +3006,19 @@ async function sendMessage(text,audioURL,spokenVoice=false){
 
   clearVoiceProgress();
   const isAnonymous=anonymous;
+  const reorderForChat=newestFirstChat;
+  returnToChatAvailable=false;newestFirstChat=false;
   const voiceReplySession=voiceSessionVersion;
   const context=cleanHistory(anonymousHistory).slice(-12);
 
   showWelcome=spokenVoice&&!isAnonymous;
   updateWelcome();
-  if($("messages").children.length===0) renderChat();
+  if($("messages").children.length===0||reorderForChat) renderChat();
 
   const userBubble=addMessage(text,"user",audioURL).closest(".message");
   const pending=addMessage("","assistant");
   const pendingBubble=pending.closest(".message");
   pendingBubble?.classList.add("sender-pending");
-  if(newestFirstChat&&!isAnonymous){
-    $("messages").prepend(pendingBubble);
-    $("messages").prepend(userBubble);
-  }
   const thinkingStatus=document.createElement("span");
   thinkingStatus.className="thinking-status";
   thinkingStatus.textContent=spokenVoice?"ANNIVEO думает…":"ANNIVEO AI думает…";
@@ -3049,7 +3074,6 @@ async function sendMessage(text,audioURL,spokenVoice=false){
     }else{
       normalHistory=cleanHistory([...normalHistory,...pair]);
       historyLoaded=true;saveCache();updateWelcome();
-      if(newestFirstChat&&!showWelcome) renderChat();
     }
     if(spokenVoice&&orbVoiceActive&&voiceReplySession===voiceSessionVersion) speakReply(data.reply);
   }catch(e){
