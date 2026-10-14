@@ -3009,8 +3009,8 @@ async function sendMessage(text,audioURL,spokenVoice=false){
 
   try{
     const payload=isAnonymous
-      ?{action:"anonymous",message:text,messages:context}
-      :{action:"chat",message:text,requestId:crypto.randomUUID()};
+      ?{action:"anonymous",message:text,messages:context,voice:spokenVoice}
+      :{action:"chat",message:text,requestId:crypto.randomUUID(),voice:spokenVoice};
 
     const data=await api(payload,90000,token=>{
       if(task.cancelled||activeRequestTask!==task) return;
