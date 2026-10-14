@@ -201,54 +201,39 @@ header{
   transform:scale(calc(1 + var(--voice-level,0) * .18));
   transition:transform .06s linear;
 }
-.quick-prompts{
-  display:flex;
-  justify-content:center;
-  gap:8px;
-  max-width:100%;
-  margin:-3px auto 17px;
-  padding:2px 1px 7px;
-  overflow-x:auto;
-  overscroll-behavior-x:contain;
-  scrollbar-width:none;
-  -webkit-overflow-scrolling:touch;
-}
-.quick-prompts::-webkit-scrollbar{display:none}
-.quick-prompt{
-  flex:none;
-  min-height:36px;
-  padding:8px 12px;
-  border:1px solid rgba(195,164,238,.24);
-  border-radius:999px;
-  background:rgba(36,32,49,.62);
-  color:#d7c9eb;
-  font-size:11px;
-  line-height:1.2;
-  white-space:nowrap;
-  -webkit-backdrop-filter:blur(12px);
-  backdrop-filter:blur(12px);
-  transition:transform .18s,border-color .18s,background .18s;
-}
-.quick-prompt:active{
-  transform:scale(.96);
-  border-color:rgba(198,166,255,.62);
-  background:rgba(105,76,139,.42);
-}
 .voice-status-row{
-  display:flex;align-items:center;justify-content:center;gap:6px;
-  width:fit-content;max-width:100%;margin:-2px auto 13px;
+  position:relative;display:flex;align-items:center;justify-content:center;
+  width:min(100%,390px);max-width:100%;margin:10px auto 17px;
 }
-.voice-status{
-  display:block;flex:0 1 auto;min-width:0;max-width:100%;
-  margin:0;padding:8px 15px;
-  border:1px solid rgba(198,166,255,.28);
-  border-radius:999px;
-  background:linear-gradient(110deg,rgba(139,91,190,.16),rgba(198,166,255,.09));
-  box-shadow:0 0 22px rgba(166,103,255,.12),inset 0 1px rgba(255,255,255,.07);
-  color:#d9c1ff;font-size:12px;font-weight:550;
-  letter-spacing:.15px;line-height:1.45;text-align:center;
-  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+.voice-assistant-button{
+  position:relative;isolation:isolate;overflow:visible;
+  display:flex;align-items:center;gap:13px;width:100%;min-height:66px;
+  padding:11px 19px;border:1px solid rgba(198,166,255,.58);
+  border-radius:999px;color:#f0e5ff;text-align:left;
+  background:linear-gradient(110deg,rgba(64,43,113,.94),rgba(81,58,139,.9) 58%,rgba(58,43,103,.96));
+  box-shadow:0 0 8px rgba(173,125,255,.42),0 0 23px rgba(134,78,230,.23),
+    inset 0 1px rgba(255,255,255,.2),inset 0 -8px 22px rgba(18,14,39,.25);
+  -webkit-backdrop-filter:blur(16px) saturate(140%);backdrop-filter:blur(16px) saturate(140%);
+  transition:filter .18s ease,transform .18s ease,box-shadow .2s ease;
+  -webkit-tap-highlight-color:transparent;
 }
+.voice-assistant-button:before{
+  content:"";position:absolute;inset:-5px;z-index:-1;border-radius:inherit;
+  background:radial-gradient(ellipse,rgba(147,100,255,.34),transparent 72%);
+  filter:blur(10px);opacity:.78;pointer-events:none;
+}
+.voice-assistant-button:active{transform:scale(.98);filter:brightness(1.13)}
+.voice-assistant-button:focus-visible{outline:2px solid #f4e8ff;outline-offset:3px}
+.voice-assistant-mic{
+  display:grid;place-items:center;flex:none;width:34px;height:38px;
+  color:#ead4ff;filter:drop-shadow(0 0 7px rgba(221,183,255,.78));
+}
+.voice-assistant-mic svg{display:block;width:29px;height:29px}
+.voice-status{flex:1;min-width:0;color:#f0e5ff;font-size:15px;font-weight:600;line-height:1.35;letter-spacing:.08px}
+.voice-assistant-wave{display:none;align-items:center;justify-content:center;gap:3px;flex:none;width:58px;height:34px;overflow:hidden}
+.voice-assistant-button[data-phase="listening"] .voice-assistant-wave{display:flex}
+.voice-assistant-bar{flex:1 1 2px;min-width:2px;max-width:4px;height:4px;border-radius:99px;background:linear-gradient(to top,#b77dff,#f4dfff);box-shadow:0 0 8px rgba(204,163,255,.8);transition:height .08s linear,opacity .08s linear}
+.voice-assistant-cancel{display:grid;place-items:center;flex:none;width:23px;height:23px;border-radius:50%;border:1px solid rgba(245,224,255,.42);background:rgba(36,25,57,.42);color:#fff;font-size:17px;line-height:1;}
 .task-cancel{
   display:grid;place-items:center;flex:none;
   width:25px;height:25px;padding:0;
@@ -272,21 +257,12 @@ header{
   -webkit-tap-highlight-color:transparent;
 }
 .end-voice:active{transform:scale(.96);filter:brightness(1.12)}
-.voice-status-row.voice-chat-active .voice-status{
-  border-color:rgba(213,175,255,.48);
-  box-shadow:0 0 25px rgba(166,103,255,.2),inset 0 1px rgba(255,255,255,.09);
-}
-.voice-status[data-phase="listening"]{animation:voiceStatusBreath 2.2s ease-in-out infinite}
-.voice-status[data-phase="speaking"]{border-color:rgba(255,137,232,.46)}
+.voice-status-row.voice-chat-active .voice-assistant-button{border-color:rgba(224,195,255,.78);box-shadow:0 0 13px rgba(193,145,255,.52),0 0 32px rgba(166,103,255,.32),inset 0 1px rgba(255,255,255,.26),inset 0 -8px 22px rgba(18,14,39,.2)}
+.voice-assistant-button[data-phase="speaking"]{border-color:rgba(255,160,239,.58)}
+.voice-assistant-button[data-phase="thinking"],.voice-assistant-button[data-phase="transcribing"]{animation:voiceButtonBreath 1.8s ease-in-out infinite}
 .planet.voice-chat-active{filter:drop-shadow(0 0 15px rgba(202,119,255,.34))}
-@keyframes voiceStatusBreath{
-  0%,100%{box-shadow:0 0 17px rgba(166,103,255,.14),inset 0 1px rgba(255,255,255,.07)}
-  50%{box-shadow:0 0 28px rgba(166,103,255,.3),inset 0 1px rgba(255,255,255,.1)}
-}
-@media(prefers-reduced-motion:reduce){
-  .voice-status[data-phase="listening"]{animation:none}
-  .end-voice{transition:none}
-}
+@keyframes voiceButtonBreath{0%,100%{filter:brightness(1);box-shadow:0 0 8px rgba(173,125,255,.42),0 0 23px rgba(134,78,230,.23),inset 0 1px rgba(255,255,255,.2)}50%{filter:brightness(1.12);box-shadow:0 0 13px rgba(205,165,255,.58),0 0 32px rgba(166,103,255,.34),inset 0 1px rgba(255,255,255,.24)}}
+@media(prefers-reduced-motion:reduce){.voice-assistant-button[data-phase="thinking"],.voice-assistant-button[data-phase="transcribing"]{animation:none}.end-voice{transition:none}}
 .planet:focus-visible{outline:2px solid #ffe0ff;outline-offset:8px}
 .planet{
   border:0;padding:0;cursor:pointer;
@@ -1424,22 +1400,22 @@ select{
   </div>
 
   <div class="voice-status-row">
-    <div id="voiceStatus" class="voice-status" role="status">Нажми на шар, чтобы поговорить</div>
-    <button id="voiceStatusCancel" class="task-cancel voice-status-cancel hidden"
-      type="button" aria-label="Отменить запрос" title="Отменить запрос"
-      onclick="cancelActiveRequest(event)">×</button>
-  </div>
-  <div class="quick-prompts" role="group" aria-label="Примеры запросов">
-    <button class="quick-prompt" type="button" onclick="sendQuickPrompt('Помоги придумать интересную идею')">✨ Идея</button>
-    <button class="quick-prompt" type="button" onclick="sendQuickPrompt('Объясни эту тему простыми словами')">💡 Объясни</button>
-    <button class="quick-prompt" type="button" onclick="sendQuickPrompt('Помоги написать текст')">✍️ Текст</button>
+    <button id="voiceAssistantButton" class="voice-assistant-button" type="button" data-phase="idle"
+      onclick="handleVoiceAssistantButton(event)" aria-label="Нажми и скажи, что нужно" title="Нажми и скажи, что нужно">
+      <span class="voice-assistant-mic" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="2" width="6" height="12" rx="3"/>
+          <path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/>
+        </svg>
+      </span>
+      <span id="voiceStatus" class="voice-status" role="status">Нажми и скажи, что нужно</span>
+      <span id="voiceAssistantWave" class="voice-assistant-wave" aria-hidden="true"></span>
+      <span id="voiceStatusCancel" class="voice-assistant-cancel hidden" aria-hidden="true">×</span>
+    </button>
   </div>
   <button id="endVoice" type="button" class="end-voice hidden" onclick="endVoiceSession()" aria-label="Завершить голосовой чат">Завершить голосовой чат</button>
 
-  <p>
-    Я твой <span class="fox-highlight">AI-ассистент</span> —
-    помогу найти ответы и воплотить идеи.
-  </p>
+
 
   <div class="heading">
     <h2>Создать</h2>
@@ -2706,8 +2682,10 @@ function syncTaskCancelControls(){
   const homeStatusVisible=Boolean(task?.spokenVoice&&showWelcome&&!anonymous);
   const statusButton=$("voiceStatusCancel");
   statusButton?.classList.toggle("hidden",!homeStatusVisible);
-  statusButton?.setAttribute("aria-label",task?.kind==="transcription"
-    ?"Отменить распознавание":"Отменить запрос");
+  const assistantButton=$("voiceAssistantButton");
+  assistantButton?.setAttribute("title",homeStatusVisible
+    ?(task?.kind==="transcription"?"Нажми, чтобы отменить распознавание":"Нажми, чтобы отменить запрос")
+    :"Нажми и скажи, что нужно");
   const bubbleButton=task?.pendingBubble?.querySelector(".task-cancel");
   bubbleButton?.classList.toggle("hidden",!task||homeStatusVisible);
   const progressButton=$("voiceProgressMessage")?.querySelector(".task-cancel");
@@ -2742,9 +2720,9 @@ function cancelActiveRequest(event){
     orbVoiceActive=false;
     stopSpokenReply();
     $("voiceOrb").setAttribute("aria-label","Говорить с ANNIVEO AI");
-    $("voiceStatus").textContent=task.kind==="transcription"
-      ?"Распознавание отменено. Нажми на шар, чтобы сказать заново"
-      :"Запрос отменён. Измени текст или начни новый разговор";
+    setVoiceChatStatus(task.kind==="transcription"
+      ?"Распознавание отменено. Нажми и скажи заново"
+      :"Запрос отменён. Скажи новый запрос","idle");
   }
   syncTaskCancelControls();
   updateControls();
@@ -2834,7 +2812,7 @@ async function api(payload,timeout=90000,onToken=null,requestController=null){
       signal:controller.signal,
       body:JSON.stringify({...payload,...(onToken?{stream:true}:{}),initData})
     },message=>{
-      if(orbVoiceActive) $("voiceStatus").textContent=message;
+      if(orbVoiceActive) setVoiceChatStatus(message,"thinking");
     });
     if(!response.ok){
       throw Error(data.error||"Ошибка сервера ANNIVEO");
@@ -3298,6 +3276,8 @@ function releaseMicrophone(){
 function setVoiceChatStatus(text,phase="idle"){
   $("voiceStatus").textContent=text;
   $("voiceStatus").dataset.phase=phase;
+  $("voiceAssistantButton").dataset.phase=phase;
+  $("voiceAssistantButton").setAttribute("aria-label",text);
   $("voiceStatus").closest(".voice-status-row")?.classList.toggle("voice-chat-active",orbVoiceActive);
   $("voiceOrb").classList.toggle("voice-chat-active",orbVoiceActive);
 }
@@ -3310,6 +3290,7 @@ function endVoiceSession(){
   }
   recording=false;
   setComposerRecording(false);
+  setVoiceAssistantRecording(false);
   stopVoiceMeter();stopSpokenReply();releaseMicrophone();
   $("mic").classList.remove("recording","locked");
   $("mic").setAttribute("aria-label","Записать голосовое сообщение");
@@ -3319,6 +3300,13 @@ function endVoiceSession(){
   setVoiceChatStatus("Голосовой чат завершён. Нажми на шар, чтобы начать снова","idle");
   $("chatStatus").textContent="";
   updateControls();
+}
+function handleVoiceAssistantButton(event){
+  if(activeRequestTask?.spokenVoice){
+    cancelActiveRequest(event);
+    return;
+  }
+  void handleOrbVoice();
 }
 async function handleOrbVoice(){
   if(recording){recorder?.stop();return;}
@@ -3338,10 +3326,46 @@ async function handleOrbVoice(){
   await handleMic();
   if(!recording&&!openingMic&&orbVoiceActive){orbVoiceActive=false;$("voiceOrb").setAttribute("aria-label","Говорить с ANNIVEO AI");$("endVoice").classList.add("hidden");setVoiceChatStatus("Не удалось включить микрофон. Нажми на шар и попробуй ещё раз","idle");}
 }
+function paintVoiceAssistantWave(level,now=performance.now()){
+  const bars=$("voiceAssistantWave")?.children;
+  if(!bars?.length) return;
+  const activity=Math.max(.035,Math.min(1,Number(level)||0));
+  for(let i=0;i<bars.length;i++){
+    const contour=.2+.8*Math.abs(Math.sin((i+1)*.77+now*.006));
+    bars[i].style.height=(3+activity*(5+contour*22)).toFixed(1)+"px";
+    bars[i].style.opacity=(.62+activity*.38).toFixed(2);
+  }
+}
+function ensureVoiceAssistantBars(){
+  const wave=$("voiceAssistantWave");
+  if(!wave||wave.childElementCount) return;
+  const fragment=document.createDocumentFragment();
+  for(let i=0;i<12;i++){
+    const bar=document.createElement("span");
+    bar.className="voice-assistant-bar";
+    fragment.append(bar);
+  }
+  wave.append(fragment);
+}
+function setVoiceAssistantRecording(active){
+  const button=$("voiceAssistantButton");
+  if(!button) return;
+  button.classList.toggle("recording",active);
+  if(active){
+    ensureVoiceAssistantBars();
+    button.dataset.phase="listening";
+    button.title="Говори — нажми, чтобы завершить";
+  }else{
+    button.querySelectorAll(".voice-assistant-bar").forEach(bar=>{
+      bar.style.removeProperty("height");
+      bar.style.removeProperty("opacity");
+    });
+  }
+}
 function startVoiceMeter(){
   if(!voiceAudioContext||!microphoneStream){
     voiceHeard=true;
-    $("voiceStatus").textContent="Говори. Нажми на шар ещё раз для отправки";
+    setVoiceChatStatus("Говори. Нажми, чтобы отправить","listening");
     return;
   }
   try{
@@ -3358,10 +3382,13 @@ function startVoiceMeter(){
       for(const sample of samples) energy+=sample*sample;
       const rms=Math.sqrt(energy/samples.length);
       level+=(Math.min(1,rms*12)-level)*.35;
-      paintSearchWave(level,now);
+      if(orbVoiceActive) paintVoiceAssistantWave(level,now);
+      else{
+        paintSearchWave(level,now);
+        $("mic").style.setProperty("--mic-scale",(1+level*.22).toFixed(3));
+        $("mic").style.setProperty("--mic-lift",(-level*2.2).toFixed(2)+"px");
+      }
       $("planetResponse").style.setProperty("--voice-level",level.toFixed(3));
-      $("mic").style.setProperty("--mic-scale",(1+level*.22).toFixed(3));
-      $("mic").style.setProperty("--mic-lift",(-level*2.2).toFixed(2)+"px");
       if(orbVoiceActive&&rms>.018){voiceHeard=true;lastSpeech=now;}
       if(orbVoiceActive&&((voiceHeard&&now-lastSpeech>1800)||(!voiceHeard&&now-began>12000))){
         if(recorder?.state==="recording") recorder.stop();
@@ -3372,7 +3399,7 @@ function startVoiceMeter(){
     voiceFrame=requestAnimationFrame(tick);
   }catch(e){
     voiceHeard=true;
-    $("voiceStatus").textContent="Говори. Нажми на шар ещё раз для отправки";
+    setVoiceChatStatus("Говори. Нажми, чтобы отправить","listening");
   }
 }
 function continueVoiceAfterReply(session){
@@ -3487,6 +3514,7 @@ async function handleMic(){
       clearTimeout(recordTimer);
       recording=false;
       setComposerRecording(false);
+      setVoiceAssistantRecording(false);
       orbVoiceActive=false;
       recorder.onstop=null;
       audioChunks=[];
@@ -3497,20 +3525,25 @@ async function handleMic(){
       $("mic").title="Записать голосовое сообщение";
       const message="Запись прервалась. Проверь доступ к микрофону и попробуй ещё раз.";
       $("chatStatus").textContent=message;
-      $("voiceStatus").textContent=message;
+      setVoiceChatStatus(message,"idle");
       toast(message);
       updateControls();
     };
     recorder.start();
     recording=true;
-    setComposerRecording(true);
+    setComposerRecording(!orbVoiceActive);
+    setVoiceAssistantRecording(orbVoiceActive);
     clearVoiceProgress();
     voiceHeard=false;
     startVoiceMeter();
-    $("mic").setAttribute("aria-label","Остановить запись и отправить");
-    $("mic").title="Запись: нажми для отправки, потяни вверх или нажми на замок";
-    $("mic").classList.add("recording");
-    $("chatStatus").textContent="Запись… потяни микрофон вверх, чтобы закрепить";
+    if(!orbVoiceActive){
+      $("mic").setAttribute("aria-label","Остановить запись и отправить");
+      $("mic").title="Запись: нажми для отправки, потяни вверх или нажми на замок";
+      $("mic").classList.add("recording");
+      $("chatStatus").textContent="Запись… потяни микрофон вверх, чтобы закрепить";
+    }else{
+      $("chatStatus").textContent="";
+    }
 
     recordTimer=setTimeout(()=>{
       if(recorder?.state==="recording"){
@@ -3532,7 +3565,7 @@ async function handleMic(){
       :missing
         ?"Не нашёл микрофон на устройстве."
         :"Не удалось включить микрофон. Проверь разрешение и попробуй ещё раз.";
-    $("voiceStatus").textContent=message;
+    setVoiceChatStatus(message,"idle");
     $("chatStatus").textContent=message;
     toast(message);
   }finally{
@@ -3552,8 +3585,9 @@ async function finishVoice(){
   $("mic").title="Записать голосовое сообщение";
   $("mic").classList.remove("recording");
   setComposerRecording(false);
+  setVoiceAssistantRecording(false);
 
-  // Микрофон остаётся открыт до завершения разговора.
+  // Микрофон остаётся открытым до завершения разговора.
   const blob=new Blob(audioChunks,{type:recorder.mimeType||"audio/webm"});
 
   if(!blob.size||blob.size>20*1024*1024){
@@ -3564,7 +3598,7 @@ async function finishVoice(){
       setVoiceChatStatus("Запись не получилась. Нажми на шар и попробуй ещё раз","idle");
     }
     if(!spokenVoice){showWelcome=false;updateWelcome();}
-    setVoiceProgress("Пустая или слишком длинная запись. Попробуй записать ещё раз.",true);
+    if(!spokenVoice) setVoiceProgress("Пустая или слишком длинная запись. Попробуй записать ещё раз.",true);
     toast("Запись слишком длинная или пустая");
     $("chatStatus").textContent="";
     updateControls();
@@ -3574,7 +3608,7 @@ async function finishVoice(){
   if(spokenVoice&&!voiceHeard){
     orbVoiceActive=false;
     $("endVoice").classList.add("hidden");
-    setVoiceChatStatus("Не услышал речь. Нажми на шар и попробуй ещё раз","idle");
+    setVoiceChatStatus("Не услышал речь. Нажми и скажи ещё раз","idle");
     $("chatStatus").textContent="";
     updateControls();
     return;
@@ -3582,8 +3616,8 @@ async function finishVoice(){
 
   transcribing=true;
   if(!spokenVoice){showWelcome=false;updateWelcome();}
-  setVoiceProgress("ANNIVEO распознаёт запись… текст появится здесь");
-  if(spokenVoice) $("voiceStatus").textContent="ANNIVEO распознаёт твою речь…";
+  if(spokenVoice) setVoiceChatStatus("ANNIVEO распознаёт твою речь…","transcribing");
+  else setVoiceProgress("ANNIVEO распознаёт запись… текст появится здесь");
   $("chatStatus").textContent="Распознаю голосовое сообщение…";
 
   const task={
@@ -3607,7 +3641,7 @@ async function finishVoice(){
       if(task.cancelled||activeRequestTask!==task) return;
       if(spokenVoice) setVoiceChatStatus(message,"transcribing");
       $("chatStatus").textContent=message;
-      setVoiceProgress(message==="Ответ ещё готовится…"
+      if(!spokenVoice) setVoiceProgress(message==="Ответ ещё готовится…"
         ?"ANNIVEO распознаёт… сервер обрабатывает запись"
         :"ANNIVEO распознаёт: "+message);
     },"Распознавание речи задержалось. Попробуй записать короче.");
@@ -3630,10 +3664,10 @@ async function finishVoice(){
     if(spokenVoice){
       orbVoiceActive=false;
       $("endVoice").classList.add("hidden");
-      setVoiceChatStatus("Не получилось распознать. Нажми на шар и попробуй ещё раз","idle");
+      setVoiceChatStatus("Не получилось распознать. Нажми и скажи ещё раз","idle");
     }
     if(!spokenVoice){showWelcome=false;updateWelcome();}
-    setVoiceProgress("Не удалось распознать запись: "+e.message,true);
+    if(!spokenVoice) setVoiceProgress("Не удалось распознать запись: "+e.message,true);
     toast(e.message);
   }finally{
     clearTimeout(task.timer);
