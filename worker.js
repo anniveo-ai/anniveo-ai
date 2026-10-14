@@ -746,10 +746,12 @@ async function proxyImageEdit(form, apiKey) {
 
 async function proxyVideo(form, apiKey) {
   const prompt = String(form.get("prompt") || "").trim();
-  const model = String(form.get("model") || "bytedance/seedance-2.5");
+  const requestedModel = String(form.get("model") || "bytedance/seedance-2.5");
   const ratio = String(form.get("ratio") || "16:9");
   const duration = Number(form.get("duration") || 4);
   const file = form.get("file");
+  const hasReferenceVideo = file && typeof file !== "string" && file.size > 0;
+  const model = hasReferenceVideo ? "bytedance/seedance-2.5" : requestedModel;
   const allowedModels = [
     "bytedance/seedance-2.5",
     "google/veo-3.1-fast",
