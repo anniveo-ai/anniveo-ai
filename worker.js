@@ -175,6 +175,80 @@ function isRetryable(error) {
   );
 }
 
+// При нехватке средств временно не повторяем заведомо неудачные запросы.
+let openAICooldownUntil = 0;
+const OPENAI_MODEL = "gpt-5";
+function openAIAvailable(env) {
+  return !!env.OPENAI_API_KEY && Date.now() >= openAICooldownUntil;
+}
+async function fetchOpenAI(messages, env, streaming, controller) {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    signal: controller.signal,
+    headers: {
+      Authorization: "Bearer " + env.OPENAI_API_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      messages,
+      stream: streaming
+    })
+  });
+  if (!response.ok) {
+    const status = response.status;
+    await response.body?.cancel();
+    if ([401, 402, 403, 429].includes(status)) {
+      openAICooldownUntil = Date.now() + 5 * 60 * 1000;
+    }
+    throw new Error("OpenAI HTTP " + status);
+  }
+  return response;
+}
+async function askPreferredAI(messages, env, mode) {
+  if (openAIAvailable(env)) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    try {
+      const response = await fetchOpenAI(messages, env, false, controller);
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content;
+      if (typeof content !== "string" || !content.trim()) {
+        throw new Error("OpenAI returned empty answer");
+      }
+      return content.trim();
+    } catch (error) {
+      console.warn("OpenAI unavailable; using fallback", error.message);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  if (!env.POLLINATIONS_API_KEY) throw new Error("No fallback AI key");
+  return askAI(messages, env.POLLINATIONS_API_KEY, mode);
+}
+async function openPreferredAIStream(messages, env, mode) {
+  if (openAIAvailable(env)) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    try {
+      const started = Date.now();
+      const response = await fetchOpenAI(messages, env, true, controller);
+      if (!response.body || !(response.headers.get("content-type") || "").includes("text/event-stream")) {
+        throw new Error("OpenAI streaming unavailable");
+      }
+      clearTimeout(timer);
+      return { response, controller, attempt: 1, started };
+    } catch (error) {
+      controller.abort();
+      console.warn("OpenAI stream unavailable; using fallback", error.message);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  if (!env.POLLINATIONS_API_KEY) throw new Error("No fallback AI key");
+  return openAIStream(messages, env.POLLINATIONS_API_KEY, mode);
+}
+
 async function fetchAI(
   messages,
   apiKey,
@@ -984,7 +1058,7 @@ export default {
         );
       }
 
-      if (!env.POLLINATIONS_API_KEY) {
+      if (!env.POLLINATIONS_API_KEY && !env.OPENAI_API_KEY) {
         return json(
           { error: "Ключ ИИ не настроен" },
           503,
@@ -1114,9 +1188,9 @@ export default {
 
       // Новый потоковый режим.
       if (streaming) {
-        const aiStream = await openAIStream(
+        const aiStream = await openPreferredAIStream(
           messages,
-          env.POLLINATIONS_API_KEY,
+          env,
           anonymous ? "anonymous" : "normal"
         );
 
@@ -1139,9 +1213,9 @@ export default {
       // для совместимости с текущим index.html.
       const aiStarted = Date.now();
 
-      const answer = await askAI(
+      const answer = await askPreferredAI(
         messages,
-        env.POLLINATIONS_API_KEY,
+        env,
         anonymous ? "anonymous" : "normal"
       );
 
