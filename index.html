@@ -1887,6 +1887,7 @@ let voiceUtterance=null;
 let micGesture=null;
 let ignoreMicClickUntil=0;
 let cancelMicStartRequested=false;
+let microphoneStartVersion=0;
 
 const cacheKey = user?.id
   ? "anniveo_chat_cache_v3_" + user.id
@@ -2016,6 +2017,8 @@ function cancelMicRecording({animateSwipeReturn=false}={}){
   }
   setComposerRecording(false);
   cancelMicStartRequested=true;
+  microphoneStartVersion++;
+  openingMic=false;
   clearTimeout(recordTimer);
   const activeRecorder=recorder;
   if(activeRecorder?.state==="recording"){
@@ -2511,11 +2514,17 @@ function scrollAppToBottom(){
 
 /* РАЗДЕЛЫ */
 function openView(name){
-  if(recording||transcribing||openingMic){
+  const returnToTyping=name==="chat"&&(
+    orbVoiceActive||recording||transcribing||openingMic
+  );
+  if(returnToTyping){
+    interruptVoiceInput();
+    showWelcome=false;
+  }else if(recording||transcribing||openingMic){
     toast("Сначала заверши голосовое сообщение");
     return;
   }
-  endVoiceSession();
+  if(!returnToTyping) endVoiceSession();
   $("messageInput").blur();
   currentView = name;
   updateWelcome();
@@ -2538,6 +2547,10 @@ function openView(name){
   if(name==="chat") renderChat();
 
   app.scrollTop = 0;
+  if(returnToTyping){
+    $("messageInput").focus({preventScroll:true});
+    scrollAppToBottom();
+  }
   requestAnimationFrame(moveGlider);
 }
 
@@ -3050,8 +3063,9 @@ function syncChatOrbUI(){
   if(voiceMode){
     send.setAttribute("aria-pressed",String(voiceActive));
     send.setAttribute("aria-label",voiceActive
-      ?(recording?"Остановить запись и отправить фразу":"Говорить с ANNIVEO AI")
+      ?"Выключить голосовой режим"
       :"Говорить с ANNIVEO AI");
+    send.title=voiceActive?"Выключить голосовой режим":"Нажми на шар и скажи, что нужно";
   }else send.removeAttribute("aria-pressed");
 }
 function syncOrbAppearance(){
@@ -3097,7 +3111,7 @@ function updateControls(){
   send.classList.toggle("planet",!hasText);
   send.setAttribute("aria-label",hasText?"Отправить сообщение":"Говорить с ANNIVEO AI");
   send.title=hasText?"Отправить сообщение":"Нажми на шар и скажи, что нужно";
-  send.disabled=busy||transcribing||openingMic;
+  send.disabled=(busy||transcribing||openingMic)&&!orbVoiceActive;
   $("anonToggle").disabled=locked;
   $("mic").disabled=busy||transcribing||(openingMic&&!micGesture);
   $("messageInput").disabled=
@@ -3351,6 +3365,10 @@ async function sendMessage(text,audioURL,spokenVoice=false){
 /* ФОРМА */
 $("chatForm").onsubmit=e=>{
   e.preventDefault();
+  if(orbVoiceActive&&!$("messageInput").value.trim()){
+    interruptVoiceInput();
+    return;
+  }
   if(recording){
     if(recorder?.state==="recording") recorder.stop();
     return;
@@ -3481,19 +3499,39 @@ function setVoiceChatStatus(text,phase="idle"){
     },3200);
   }
 }
+function interruptVoiceInput(){
+  const task=activeRequestTask;
+  const input=$("messageInput");
+  const draft=input.value;
+  if(task&&(task.kind==="transcription"||task.spokenVoice)){
+    cancelActiveRequest();
+    input.value=draft;
+    input.style.height=draft?Math.min(input.scrollHeight,95)+"px":"";
+  }
+  endVoiceSession();
+  clearVoiceProgress();
+  updateControls();
+}
 function endVoiceSession(){
   voiceSessionVersion++;
+  microphoneStartVersion++;
+  cancelMicStartRequested=true;
+  openingMic=false;
   orbVoiceActive=false;
   orbVoiceStayInChat=false;
   clearTimeout(recordTimer);
   if(recorder?.state==="recording"){
-    recorder.onstop=null;recorder.stop();
+    recorder.onstop=null;recorder.ondataavailable=null;recorder.onerror=null;
+    recorder.stop();
   }
   recording=false;
+  audioChunks=[];
+  if(micGesture){clearTimeout(micGesture.timer);micGesture=null;}
   setComposerRecording(false);
   setVoiceAssistantRecording(false);
   stopVoiceMeter();stopSpokenReply();releaseMicrophone();
-  $("mic").classList.remove("recording","locked");
+  $("mic").classList.remove("recording","locked","cancel-armed","gesture-active");
+  resetCancelVisual();
   $("mic").setAttribute("aria-label","Записать голосовое сообщение");
   $("mic").title="Записать голосовое сообщение";
   $("voiceStatus").closest(".voice-status-row")?.classList.remove("voice-chat-active");
@@ -3503,10 +3541,8 @@ function endVoiceSession(){
   updateControls();
 }
 async function handleOrbVoice(){
+  if(orbVoiceActive){interruptVoiceInput();return;}
   if(recording){recorder?.stop();return;}
-  if(orbVoiceActive&&(voiceAudioSource||ttsRequestController||window.speechSynthesis?.speaking)){
-    stopSpokenReply();setVoiceChatStatus("Твой ход — слушаю","listening");void handleMic();return;
-  }
   if(busy||transcribing||openingMic){toast("Подожди, ANNIVEO готовит ответ");return;}
   if(!initData||!user){toast("Открой приложение через Telegram");return;}
   // Голосовой диалог из строки ввода остаётся внутри открытого чата.
@@ -3515,12 +3551,14 @@ async function handleOrbVoice(){
   const AudioContextClass=window.AudioContext||window.webkitAudioContext;
   if(!AudioContextClass){toast("Голосовой чат недоступен в этом браузере");return;}
   if(!voiceAudioContext)voiceAudioContext=new AudioContextClass();
-  try{if(voiceAudioContext.state==="suspended")await voiceAudioContext.resume();}catch{}
-  voiceSessionVersion++;orbVoiceActive=true;voiceHeard=false;
+  const session=++voiceSessionVersion;
+  orbVoiceActive=true;voiceHeard=false;
   setVoiceChatStatus("Слушаю тебя — говори в своём темпе","listening");
-  $("voiceOrb").setAttribute("aria-label","Остановить запись и отправить фразу");
+  $("voiceOrb").setAttribute("aria-label","Выключить голосовой режим");
+  try{if(voiceAudioContext.state==="suspended")await voiceAudioContext.resume();}catch{}
+  if(session!==voiceSessionVersion||!orbVoiceActive) return;
   await handleMic();
-  if(!recording&&!openingMic&&orbVoiceActive){orbVoiceActive=false;$("voiceOrb").setAttribute("aria-label","Говорить с ANNIVEO AI");$("endVoice").classList.add("hidden");setVoiceChatStatus("Не удалось включить микрофон. Нажми на шар и попробуй ещё раз","idle");}
+  if(session===voiceSessionVersion&&!recording&&!openingMic&&orbVoiceActive){orbVoiceActive=false;$("voiceOrb").setAttribute("aria-label","Говорить с ANNIVEO AI");$("endVoice").classList.add("hidden");setVoiceChatStatus("Не удалось включить микрофон. Нажми на шар и попробуй ещё раз","idle");}
 }
 function paintVoiceAssistantWave(level,now=performance.now()){
   const bars=$("voiceAssistantWave")?.children;
@@ -3668,6 +3706,7 @@ async function handleMic(){
   }
 
   openingMic=true;
+  const startVersion=++microphoneStartVersion;
   cancelMicStartRequested=false;
   updateControls();
 
@@ -3675,21 +3714,24 @@ async function handleMic(){
     const liveStream=microphoneStream?.getAudioTracks().some(track=>track.readyState==="live");
     if(!liveStream){
       releaseMicrophone();
-      microphoneStream=await navigator.mediaDevices.getUserMedia({
+      const stream=await navigator.mediaDevices.getUserMedia({
         audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}
       });
+      if(startVersion!==microphoneStartVersion||cancelMicStartRequested){
+        stream.getTracks().forEach(track=>track.stop());
+        return;
+      }
+      microphoneStream=stream;
     }
-    if(cancelMicStartRequested){
-      releaseMicrophone();
-      audioChunks=[];
+    if(startVersion!==microphoneStartVersion||cancelMicStartRequested){
+      if(startVersion===microphoneStartVersion){releaseMicrophone();audioChunks=[];}
       return;
     }
     const AudioContextClass=window.AudioContext||window.webkitAudioContext;
     if(!voiceAudioContext&&AudioContextClass) voiceAudioContext=new AudioContextClass();
     if(voiceAudioContext?.state==="suspended") await voiceAudioContext.resume().catch(()=>{});
-    if(cancelMicStartRequested){
-      releaseMicrophone();
-      audioChunks=[];
+    if(startVersion!==microphoneStartVersion||cancelMicStartRequested){
+      if(startVersion===microphoneStartVersion){releaseMicrophone();audioChunks=[];}
       return;
     }
     if(orbVoiceActive) $("endVoice").classList.remove("hidden");
@@ -3755,6 +3797,7 @@ async function handleMic(){
       }
     },120000);
   }catch(e){
+    if(startVersion!==microphoneStartVersion) return;
     $("micSwipeHint")?.classList.remove("visible","locked","compact");
     $("micSwipeHint")?.setAttribute("aria-hidden","true");
     setComposerRecording(false);
@@ -3774,8 +3817,10 @@ async function handleMic(){
     $("chatStatus").textContent=wasOrbVoice?"":message;
     toast(message);
   }finally{
-    openingMic=false;
-    updateControls();
+    if(startVersion===microphoneStartVersion){
+      openingMic=false;
+      updateControls();
+    }
   }
 }
 
