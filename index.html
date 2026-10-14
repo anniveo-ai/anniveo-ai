@@ -616,7 +616,8 @@ header{
 .message.assistant.sender-pending .assistant-name,
 .message.assistant.sender-pending .copy{display:none}
 .message.assistant.sender-pending .task-cancel{
-  position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  position:absolute;right:0;bottom:0;top:auto;transform:none;
+  width:21px;height:21px;font-size:15px;
 }
 .assistant-name{
   color:var(--purple);
@@ -741,6 +742,23 @@ header{
 .composer.recording-mode #send{display:grid}
 .composer.recording-mode .search-recording-display{
   flex-grow:1;opacity:1;transform:translateY(0);pointer-events:auto;
+}
+/* During the upward mic gesture, the composer opens toward the mic in step with the finger. */
+.dock.swipe-preview .composer #messageInput{
+  flex-grow:var(--swipe-input-grow,1);
+  opacity:var(--swipe-input-opacity,1);
+  transform:translateY(var(--swipe-input-shift,0px));
+  transition:none;
+}
+.dock.swipe-preview .composer .search-recording-display{
+  flex-grow:var(--swipe-wave-grow,0);
+  opacity:var(--swipe-wave-opacity,0);
+  transform:translateY(0);
+  transition:none;
+}
+.dock.swipe-settling .composer #messageInput,
+.dock.swipe-settling .composer .search-recording-display{
+  transition:flex-grow .42s cubic-bezier(.16,1,.3,1),opacity .34s ease,transform .42s cubic-bezier(.16,1,.3,1);
 }
 .search-recording-time{
   flex:none;min-width:34px;color:#e9ddfb;font-size:12px;
@@ -890,8 +908,8 @@ header{
 .mic-guide-lock:focus-visible{outline:2px solid #f2dcff;outline-offset:4px}
   .mic-guide-lock svg{width:17px;height:17px;filter:drop-shadow(0 0 6px rgba(234,211,255,.7))}
 .mic-swipe-shadow{
-  position:absolute;left:50%;right:auto;top:auto;bottom:-24px;z-index:1;
-  width:48px;height:48px;border-radius:50%;pointer-events:none;
+  position:absolute;left:50%;right:auto;top:auto;bottom:-48px;z-index:1;
+  width:56px;height:56px;border-radius:50%;pointer-events:none;
   background:radial-gradient(ellipse at 50% 55%,rgba(250,237,255,.58) 0%,rgba(211,176,255,.38) 27%,rgba(182,129,255,.23) 50%,rgba(156,108,221,.1) 68%,transparent 82%);
   filter:blur(7px);opacity:.52;transform:translate3d(-50%,0,0) scale(.94);
   box-shadow:0 0 31px rgba(174,119,255,.28);
@@ -918,7 +936,9 @@ header{
     .mic-swipe-copy{width:91px;padding-right:7px}
 }
 @media(prefers-reduced-motion:reduce){
-  .mic-swipe-hint,.mic-swipe-shadow,.mic-guide-lock,.mic-swipe-copy,.mic-swipe-track{transition:none}
+  .mic-swipe-hint,.mic-swipe-shadow,.mic-guide-lock,.mic-swipe-copy,.mic-swipe-track,
+  .dock.swipe-settling .composer #messageInput,
+  .dock.swipe-settling .composer .search-recording-display{transition:none}
 }
 
 /* НИЖНЕЕ МЕНЮ */
@@ -1812,24 +1832,31 @@ function paintSearchWave(level,now=performance.now()){
     bars[i].style.opacity=(.62+activity*.38).toFixed(2);
   }
 }
+function ensureSearchVoiceBars(){
+  const bars=$("searchVoiceBars");
+  if(!bars||bars.childElementCount) return;
+  const fragment=document.createDocumentFragment();
+  for(let i=0;i<26;i++){
+    const bar=document.createElement("span");
+    bar.className="search-voice-bar";
+    bar.style.setProperty("--wave-delay",(-((i%8)*.09))+"s");
+    fragment.append(bar);
+  }
+  bars.append(fragment);
+}
 function setComposerRecording(active){
   if(!active) resetCancelVisual();
+  const dock=$("dock");
+  dock.classList.remove("swipe-preview","swipe-settling");
+  ["--swipe-progress","--swipe-input-grow","--swipe-wave-grow","--swipe-input-opacity","--swipe-wave-opacity","--swipe-input-shift"].forEach(name=>dock.style.removeProperty(name));
+  $("searchRecordingDisplay").setAttribute("aria-hidden",String(!active));
   $("chatForm").classList.toggle("recording-mode",active);
-  $("dock").classList.toggle("recording-mode",active);
+  dock.classList.toggle("recording-mode",active);
   clearInterval(micElapsedTimer);
   micElapsedTimer=null;
   const bars=$("searchVoiceBars");
   if(active){
-    if(bars&&!bars.childElementCount){
-      const fragment=document.createDocumentFragment();
-      for(let i=0;i<26;i++){
-        const bar=document.createElement("span");
-        bar.className="search-voice-bar";
-        bar.style.setProperty("--wave-delay",(-((i%8)*.09))+"s");
-        fragment.append(bar);
-      }
-      bars.append(fragment);
-    }
+    ensureSearchVoiceBars();
     recordingStartedAt=Date.now();
     updateMicElapsed();
     micElapsedTimer=setInterval(updateMicElapsed,250);
@@ -1884,6 +1911,7 @@ function finishMicFromLock(event){
     cancelMicStartRequested=true;
     $("micSwipeHint")?.classList.remove("visible","locked","compact");
     $("micSwipeHint")?.setAttribute("aria-hidden","true");
+    setComposerRecording(false);
     $("chatStatus").textContent="Запуск микрофона отменён";
   }
 }
@@ -1901,7 +1929,40 @@ function setupMicGestures(){
     return Math.max(52,Math.round(bottomTop-Math.max(0,lockCenter-shadowSize/2)));
   })();
   let hintTimer=0;
+  let searchPreviewFrame=0,queuedSearchProgress=null,searchPreviewTimer=0;
   let swipeTrackBottomY=0,swipeLockCenterY=0;
+  const queueSearchPreview=progress=>{
+    queuedSearchProgress=Math.max(0,Math.min(1,Number(progress)||0));
+    if(searchPreviewFrame) return;
+    searchPreviewFrame=requestAnimationFrame(()=>{
+      searchPreviewFrame=0;
+      const value=queuedSearchProgress??0;
+      queuedSearchProgress=null;
+      const dock=$("dock"),display=$("searchRecordingDisplay");
+      clearTimeout(searchPreviewTimer);
+      if(value>.005){
+        ensureSearchVoiceBars();
+        dock.classList.remove("swipe-settling");
+        dock.classList.add("swipe-preview");
+        dock.style.setProperty("--swipe-progress",value.toFixed(3));
+        dock.style.setProperty("--swipe-input-grow",(1-.68*value).toFixed(3));
+        dock.style.setProperty("--swipe-wave-grow",(.68*value).toFixed(3));
+        dock.style.setProperty("--swipe-input-opacity",(1-.58*value).toFixed(3));
+        dock.style.setProperty("--swipe-wave-opacity",(.96*value).toFixed(3));
+        dock.style.setProperty("--swipe-input-shift",(-2*value).toFixed(1)+"px");
+        display?.setAttribute("aria-hidden","false");
+      }else if(dock.classList.contains("swipe-preview")){
+        dock.classList.remove("swipe-preview");
+        dock.classList.add("swipe-settling");
+        searchPreviewTimer=setTimeout(()=>{
+          if(dock.classList.contains("recording-mode")) return;
+          dock.classList.remove("swipe-settling");
+          ["--swipe-progress","--swipe-input-grow","--swipe-wave-grow","--swipe-input-opacity","--swipe-wave-opacity","--swipe-input-shift"].forEach(name=>dock.style.removeProperty(name));
+          display?.setAttribute("aria-hidden","true");
+        },440);
+      }
+    });
+  };
   let swipeTrackHeight=swipeTrack?.clientHeight||swipeTrack?.offsetHeight||154;
   let swipeShadowSize=swipeShadow?.offsetHeight||48;
   let swipeVisualFrame=0,queuedSwipeVisual=null;
@@ -1947,7 +2008,7 @@ function setupMicGestures(){
     const left=micRect.left+micRect.width/2-dockRect.left-(hintWidth-trackWidth/2);
     // Нижний край дорожки крепится к верхней кромке микрофона,
     // а не проходит через его центр.
-    const trackBottom=micRect.top+6;
+    const trackBottom=micRect.top-14;
     const top=trackBottom-dockRect.top-trackHeight-trackTopInset;
     swipeHint.style.left=left.toFixed(1)+"px";
     swipeHint.style.top=top.toFixed(1)+"px";
@@ -2053,6 +2114,7 @@ function setupMicGestures(){
     moveSwipeHint(dy,state.y,requiredLift);
     const progress=Math.max(0,Math.min(1,(-dx)/(cancelDistance*1.25)));
     const liftProgress=Math.max(0,Math.min(1,dy/requiredLift));
+    queueSearchPreview(dy>3&&dy>=Math.abs(dx)*.45?liftProgress:0);
     const feedbackProgress=Math.max(progress,liftProgress*.48);
     const turn=Math.max(progress,liftProgress)*45;
     const scale=1+progress*.48+liftProgress*.1;
@@ -2107,6 +2169,7 @@ function setupMicGestures(){
   const finishGesture=state=>{
     clearTimeout(state.timer);
     state.released=true;
+    if(!state.locked) queueSearchPreview(0);
     if(!state.locked) hintTimer=setTimeout(()=>{
       if(!recording&&!openingMic) hideSwipeHint();
     },220);
@@ -3213,6 +3276,7 @@ async function handleMic(){
   }catch(e){
     $("micSwipeHint")?.classList.remove("visible","locked","compact");
     $("micSwipeHint")?.setAttribute("aria-hidden","true");
+    setComposerRecording(false);
     resetCancelVisual();
     releaseMicrophone();
     stopVoiceMeter();
