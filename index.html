@@ -1727,7 +1727,7 @@ function setupMicGestures(){
   button.dataset.gesturesReady="1";
   const cancelDistance=72;
   const swipeHint=$("micSwipeHint"),swipeTrack=$("micSwipeTrack"),swipeShadow=$("micSwipeShadow"),lockButton=$("micLockButton");
-  const lockDistance=(()=>{
+  let lockDistance=(()=>{
     const trackHeight=swipeTrack?.clientHeight||164;
     const shadowSize=swipeShadow?.offsetHeight||54;
     const bottomTop=trackHeight-shadowSize/2;
@@ -1735,8 +1735,13 @@ function setupMicGestures(){
     return Math.max(52,Math.round(bottomTop-Math.max(0,lockCenter-shadowSize/2)));
   })();
   let hintTimer=0;
-  const moveSwipeHint=distance=>{
-    const progress=Math.max(0,Math.min(1,distance/lockDistance));
+  const lockCenterY=()=>{
+    const rect=lockButton?.getBoundingClientRect();
+    return rect?rect.top+rect.height/2:0;
+  };
+  const distanceToLock=startY=>Math.max(52,Math.round(startY-lockCenterY()));
+  const moveSwipeHint=(distance,startY=null,travelDistance=lockDistance)=>{
+    const progress=Math.max(0,Math.min(1,distance/Math.max(1,travelDistance)));
     if(swipeShadow&&swipeTrack){
       const trackHeight=swipeTrack.clientHeight||164;
       const shadowSize=swipeShadow.offsetHeight||54;
@@ -1744,8 +1749,14 @@ function setupMicGestures(){
       const lockCenter=(lockButton?.offsetTop||9)+(lockButton?.offsetHeight||42)/2-(swipeTrack?.clientTop||1);
       const topTop=Math.max(0,lockCenter-shadowSize/2);
       const travel=Math.max(0,bottomTop-topTop);
+      let offsetY=-travel*progress;
+      if(Number.isFinite(startY)){
+        const trackRect=swipeTrack.getBoundingClientRect();
+        const targetY=Math.max(lockCenterY(),startY-Math.max(0,distance));
+        offsetY=targetY-trackRect.bottom;
+      }
       swipeShadow.style.opacity=(.52+.48*progress).toFixed(2);
-      swipeShadow.style.transform="translate3d(-50%,"+(-travel*progress).toFixed(1)+"px,0) scale("+(.94+.08*progress).toFixed(3)+")";
+      swipeShadow.style.transform="translate3d(-50%,"+offsetY.toFixed(1)+"px,0) scale("+(.94+.08*progress).toFixed(3)+")";
     }
     swipeTrack?.classList.toggle("dragging",progress>.015);
   };
@@ -1758,23 +1769,34 @@ function setupMicGestures(){
     const trackHeight=swipeTrack.clientHeight||swipeTrack.offsetHeight||164;
     const trackTopInset=swipeTrack.clientTop||1;
     const left=micRect.left+micRect.width/2-dockRect.left-(hintWidth-trackWidth/2);
-    const top=micRect.top+micRect.height/2-dockRect.top-trackHeight-trackTopInset;
+    // Нижний край дорожки крепится к верхней кромке микрофона,
+    // а не проходит через его центр.
+    const trackBottom=micRect.top+6;
+    const top=trackBottom-dockRect.top-trackHeight-trackTopInset;
     swipeHint.style.left=left.toFixed(1)+"px";
     swipeHint.style.top=top.toFixed(1)+"px";
     swipeHint.style.right="auto";
     swipeHint.style.bottom="auto";
+    const currentLock=lockButton?.getBoundingClientRect();
+    if(currentLock){
+      lockDistance=Math.max(52,Math.round(
+        micRect.top+micRect.height/2-(currentLock.top+currentLock.height/2)
+      ));
+    }
   };
   window.addEventListener("resize",positionSwipeHint,{passive:true});
   window.visualViewport?.addEventListener("resize",positionSwipeHint,{passive:true});
-  const showSwipeHint=()=>{
+  const showSwipeHint=startY=>{
     clearTimeout(hintTimer);
     positionSwipeHint();
     swipeHint?.classList.remove("locked","compact");
-    moveSwipeHint(0);
+    const travel=Number.isFinite(startY)?distanceToLock(startY):lockDistance;
+    moveSwipeHint(0,Number.isFinite(startY)?startY:null,travel);
     $("micSwipeTitle").textContent="Вверх —";
     $("micSwipeSubtitle").textContent="проведи, чтобы закрепить";
     swipeHint?.classList.add("visible");
     swipeHint?.setAttribute("aria-hidden","false");
+    return travel;
   };
   const hideSwipeHint=()=>{
     clearTimeout(hintTimer);
@@ -1847,9 +1869,10 @@ function setupMicGestures(){
     const dx=x-state.x,dy=state.y-y;
     if(dy>10) state.swipeAttempted=true;
     positionSwipeHint();
-    moveSwipeHint(dy);
+    const requiredLift=state.lockDistance||lockDistance;
+    moveSwipeHint(dy,state.y,requiredLift);
     const progress=Math.max(0,Math.min(1,(-dx)/(cancelDistance*1.25)));
-    const liftProgress=Math.max(0,Math.min(1,dy/lockDistance));
+    const liftProgress=Math.max(0,Math.min(1,dy/requiredLift));
     const feedbackProgress=Math.max(progress,liftProgress*.48);
     const turn=Math.max(progress,liftProgress)*45;
     const scale=1+progress*.48+liftProgress*.1;
@@ -1871,7 +1894,7 @@ function setupMicGestures(){
       plus.style.transform="scale("+(1+feedbackProgress*.2).toFixed(3)+")";
     }
     plus.classList.toggle("cancel-armed",progress>.08);
-    if(!state.started&&!state.held&&(dy>lockDistance||dx < -cancelDistance)){
+    if(!state.started&&!state.held&&(dy>requiredLift||dx < -cancelDistance)){
       beginGestureRecording(state);
     }
     if(dx < -cancelDistance&&Math.abs(dx)>dy*1.1){
@@ -1882,7 +1905,7 @@ function setupMicGestures(){
       $("chatStatus").textContent="Отпусти, чтобы отменить запись";
       return;
     }
-    if(dy>lockDistance&&dy>=Math.abs(dx)){
+    if(dy>requiredLift&&dy>=Math.abs(dx)){
       state.locked=true;
       state.cancelArmed=false;
       lockSwipeHint();
@@ -1959,7 +1982,7 @@ function setupMicGestures(){
       event.preventDefault();
       const state={id:touch.identifier,x:touch.clientX,y:touch.clientY,started:recording,held:false,locked:false,cancelArmed:false,released:false,timer:null};
       micGesture=state;
-      showSwipeHint();
+      state.lockDistance=showSwipeHint(state.y);
       button.classList.add("gesture-active");
       if(!state.started) state.timer=setTimeout(()=>void startHeldRecording(state),220);
     },{passive:false});
@@ -1984,7 +2007,7 @@ function setupMicGestures(){
     if(button.disabled||busy||transcribing||openingMic) return;
     const state={id:event.pointerId,x:event.clientX,y:event.clientY,started:recording,held:false,locked:false,cancelArmed:false,released:false,timer:null};
     micGesture=state;
-    showSwipeHint();
+    state.lockDistance=showSwipeHint(state.y);
     button.setPointerCapture?.(event.pointerId);
     button.classList.add("gesture-active");
     if(!state.started) state.timer=setTimeout(()=>void startHeldRecording(state),220);
