@@ -978,6 +978,7 @@ select{
   margin-top:16px;
   font-weight:600;
 }
+.media-upload{display:block;width:100%;max-width:100%;margin-top:6px;padding:10px;background:#14151e;border:1px solid #403d4c;border-radius:10px;color:#d8d1e2;font-size:13px}
 .result img,.result video{
   width:100%;
   max-height:60vh;
@@ -1320,6 +1321,12 @@ select{
     <textarea id="imagePrompt" class="prompt"
       maxlength="1200"
       placeholder="Портрет в кинематографичном стиле, мягкий свет..."></textarea>
+    <div style="margin-top:14px">
+      <label for="imageFile">Фото для изменения (можно пропустить)</label>
+      <input id="imageFile" class="media-upload" type="file"
+        accept="image/jpeg,image/png,image/webp">
+      <p class="note">Добавь фото и напиши, что изменить. Без фото ANNIVEO создаст новое изображение.</p>
+    </div>
     <div class="fields">
       <div>
         <label for="imageModel">Модель</label>
@@ -1327,6 +1334,7 @@ select{
           <option value="flux">Flux</option>
           <option value="gptimage">GPT Image</option>
           <option value="seedream5">Seedream</option>
+          <option value="kontext">Flux Kontext (правка фото)</option>
         </select>
       </div>
       <div>
@@ -1340,7 +1348,7 @@ select{
     </div>
     <button id="makeImage" class="primary"
       onclick="generateMedia('image')">
-      ✦ Создать изображение
+      ✦ Создать / изменить фото
     </button>
     <div id="imageStatus" class="status"></div>
     <div id="imageResult" class="result"></div>
@@ -1356,13 +1364,20 @@ select{
     <textarea id="videoPrompt" class="prompt"
       maxlength="1200"
       placeholder="Ночной город, неон, плавное движение камеры..."></textarea>
+    <div style="margin-top:14px">
+      <label for="videoFile">Исходное видео для изменения (необязательно)</label>
+      <input id="videoFile" class="media-upload" type="file"
+        accept="video/mp4,video/quicktime,video/webm">
+      <p class="note">Добавь ролик и опиши желаемые изменения. Видео используется как референс, из него создаётся новая версия.</p>
+    </div>
     <div class="fields">
       <div>
         <label for="videoModel">Модель</label>
         <select id="videoModel">
-          <option value="veo">Veo</option>
-          <option value="seedance-2.0">Seedance</option>
-          <option value="wan-fast">Wan Fast</option>
+          <option value="bytedance/seedance-2.5">Seedance 2.5 (референс-видео)</option>
+          <option value="google/veo-3.1-fast">Veo 3.1 Fast</option>
+          <option value="bytedance/seedance-2.0-fast">Seedance 2.0 Fast</option>
+          <option value="alibaba/wan-2.2-fast">Wan Fast</option>
         </select>
       </div>
       <div>
@@ -3016,7 +3031,21 @@ async function generateMedia(kind){
 
   const prompt=$(kind+"Prompt").value.trim();
   if(!prompt){
-    toast("Сначала опиши свою идею");
+    toast(kind==="image"?"Опиши, какое фото создать или изменить":"Опиши, как создать или изменить видео");
+    return;
+  }
+
+  const file=$(kind==="image"?"imageFile":"videoFile").files?.[0]||null;
+  if(kind==="image"&&file&&!file.type.startsWith("image/")){
+    toast("Выбери изображение");
+    return;
+  }
+  if(kind==="video"&&file&&!file.type.startsWith("video/")){
+    toast("Выбери видео");
+    return;
+  }
+  if(file&&file.size>(kind==="image"?20:25)*1024*1024){
+    toast(kind==="image"?"Фото должно быть меньше 20 МБ":"Видео должно быть меньше 25 МБ");
     return;
   }
 
@@ -3027,13 +3056,15 @@ async function generateMedia(kind){
   const result=$(kind+"Result");
 
   button.disabled=true;
-  status.textContent="Создаю…";
+  status.textContent=file
+    ?(kind==="image"?"Изменяю фото…":"Анализирую исходное видео…")
+    :"Создаю…";
   result.replaceChildren();
 
   const controller=new AbortController();
   const timer=setTimeout(
     ()=>controller.abort(),
-    kind==="video"?240000:120000
+    kind==="video"?300000:180000
   );
 
   try{
@@ -3048,12 +3079,27 @@ async function generateMedia(kind){
       payload.duration=Number($("duration").value);
     }
 
-    const response=await fetch(API_URL,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(payload),
-      signal:controller.signal
-    });
+    let response;
+    if(kind==="image"&&file||kind==="video"){
+      const form=new FormData();
+      Object.entries(payload).forEach(([key,value])=>
+        form.append(key,String(value))
+      );
+      if(file) form.append("file",file,file.name);
+      if(kind==="image"&&file) form.set("action","image-edit");
+      response=await fetch(API_URL,{
+        method:"POST",
+        body:form,
+        signal:controller.signal
+      });
+    }else{
+      response=await fetch(API_URL,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(payload),
+        signal:controller.signal
+      });
+    }
 
     if(!response.ok){
       let error="Ошибка генерации";
@@ -3064,47 +3110,53 @@ async function generateMedia(kind){
       throw Error(error);
     }
 
-    const type=
-      response.headers.get("content-type")||"";
-
-    if(type.includes("application/json")){
+    const type=(response.headers.get("content-type")||"").toLowerCase();
+    let blob;
+    if(kind==="image"&&type.includes("application/json")){
       const data=await response.json();
       if(data.error) throw Error(data.error);
-      throw Error(
-        "Сервер вернул JSON вместо готового файла. "+
-        "Нужно согласовать формат ответа Worker."
-      );
-    }
-    if(kind==="image"&&!type.startsWith("image/")){
-      throw Error("Сервер не вернул изображение");
-    }
-    if(kind==="video"&&!type.startsWith("video/")){
-      throw Error("Сервер не вернул видео");
+      const image=data.data?.[0];
+      if(image?.b64_json){
+        const bytes=Uint8Array.from(atob(image.b64_json),c=>c.charCodeAt(0));
+        blob=new Blob([bytes],{type:image.media_type||"image/png"});
+      }else if(image?.url){
+        const imageResponse=await fetch(image.url,{signal:controller.signal});
+        if(!imageResponse.ok) throw Error("Не удалось загрузить готовое фото");
+        blob=await imageResponse.blob();
+      }else{
+        throw Error("Сервис не вернул готовое изображение");
+      }
+    }else{
+      if(kind==="image"&&!type.startsWith("image/")){
+        throw Error("Сервер не вернул изображение");
+      }
+      if(kind==="video"&&!type.startsWith("video/")){
+        throw Error("Сервер не вернул видео");
+      }
+      blob=await response.blob();
     }
 
-    const blob=await response.blob();
     const url=URL.createObjectURL(blob);
-    const media=document.createElement(
-      kind==="image"?"img":"video"
-    );
+    const media=document.createElement(kind==="image"?"img":"video");
     media.src=url;
-
     if(kind==="video"){
       media.controls=true;
       media.playsInline=true;
     }else{
-      media.alt="Созданное изображение";
+      media.alt=file?"Изменённое изображение":"Созданное изображение";
     }
-
     const link=document.createElement("a");
     link.href=url;
-    link.download=kind==="image"
-      ?"anniveo-image":"anniveo-video.mp4";
+    link.download=kind==="image"?"anniveo-image.png":"anniveo-video.mp4";
     link.textContent="Скачать результат";
     result.append(media,link);
-    status.textContent="Готово!";
+    status.textContent=file
+      ?(kind==="image"?"Фото изменено":"Новая версия видео готова")
+      :"Готово!";
   }catch(e){
-    status.textContent=e.message;
+    status.textContent=e.name==="AbortError"
+      ?"Генерация заняла слишком много времени. Попробуй ещё раз."
+      :e.message;
   }finally{
     clearTimeout(timer);
     button.disabled=false;
