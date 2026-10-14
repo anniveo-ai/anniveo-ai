@@ -136,23 +136,24 @@ header{
 /* ПЛАВАЮЩАЯ КНОПКА ПОДДЕРЖКИ: ДВИЖЕНИЕ ТОЛЬКО ВЛЕВО/ВПРАВО */
 .support-button{
   position:fixed;z-index:60;top:54%;right:8px;left:auto;
-  display:grid;place-items:center;width:48px;height:48px;padding:0;
-  border:1px solid rgba(225,205,255,.48);border-radius:50%;
-  color:#f2e8ff;
-  background:linear-gradient(145deg,rgba(120,91,158,.78),rgba(47,39,67,.84));
-  -webkit-backdrop-filter:blur(18px) saturate(145%);backdrop-filter:blur(18px) saturate(145%);
-  box-shadow:0 0 12px rgba(199,158,255,.34),0 0 28px rgba(162,108,230,.22),inset 0 1px rgba(255,255,255,.22);
+  display:grid;place-items:center;width:64px;height:64px;padding:0;
+  border:0;border-radius:50%;color:#f7eaff;background:transparent;
   transform:translateY(-50%);
-  touch-action:none;user-select:none;-webkit-user-select:none;
-  -webkit-tap-highlight-color:transparent;
-  cursor:grab;will-change:left;
-  transition:left .34s cubic-bezier(.2,.85,.25,1),transform .18s ease,box-shadow .18s ease,background .18s ease;
+  touch-action:none;overscroll-behavior:contain;
+  user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
+  cursor:grab;will-change:left,top;
+  transition:left .38s cubic-bezier(.2,.9,.25,1),top .18s ease,transform .2s ease;
 }
-.support-button svg{display:block;width:22px;height:22px;pointer-events:none;filter:drop-shadow(0 0 5px rgba(221,193,255,.58))}
-.support-button:active{box-shadow:0 0 18px rgba(199,158,255,.55),0 0 34px rgba(162,108,230,.34),inset 0 1px rgba(255,255,255,.28)}
-.support-button.dragging{cursor:grabbing;transition:none;transform:translateY(-50%) scale(1.08);box-shadow:0 0 20px rgba(211,174,255,.66),0 0 42px rgba(162,108,230,.36)}
-.support-button.snapping{transform:translateY(-50%) scale(.94)}
-.support-button:focus-visible{outline:2px solid #f4e8ff;outline-offset:4px}
+.support-button svg{
+  display:block;width:100%;height:100%;pointer-events:none;
+  filter:drop-shadow(0 0 8px rgba(194,127,255,.42));
+}
+.support-button:active{transform:translateY(-50%) scale(.96)}
+.support-button.dragging{
+  cursor:grabbing;transition:none;transform:translateY(-50%) scale(1.08);
+}
+.support-button.snapping{transform:translateY(-50%) scale(.96)}
+.support-button:focus-visible{outline:2px solid #f4e8ff;outline-offset:2px}
 @media(prefers-reduced-motion:reduce){.support-button{transition:none}}
 
 .view{display:none;min-width:0}
@@ -1581,11 +1582,54 @@ select{
 
 <button id="supportButton" class="support-button" type="button"
   aria-label="Поддержка" title="Поддержка">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <path d="M4 13v-1a8 8 0 0 1 16 0v1"/>
-    <path d="M4 13h2.2A1.8 1.8 0 0 1 8 14.8v2.4A1.8 1.8 0 0 1 6.2 19H6a2 2 0 0 1-2-2v-4Z"/>
-    <path d="M20 13h-2.2a1.8 1.8 0 0 0-1.8 1.8v2.4a1.8 1.8 0 0 0 1.8 1.8h.2a2 2 0 0 0 2-2v-4Z"/>
-    <path d="M16 20a4 4 0 0 1-3 1h-1"/>
+  <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+    <defs>
+      <radialGradient id="supportOrbFill" cx="31%" cy="20%" r="82%">
+        <stop offset="0" stop-color="#fff5ff"/>
+        <stop offset=".12" stop-color="#efc2ff"/>
+        <stop offset=".37" stop-color="#a74bff"/>
+        <stop offset=".72" stop-color="#54228f"/>
+        <stop offset="1" stop-color="#211334"/>
+      </radialGradient>
+      <linearGradient id="supportOrbRim" x1="8" y1="8" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#f8dcff"/>
+        <stop offset=".32" stop-color="#c16cff"/>
+        <stop offset=".68" stop-color="#8e43f3"/>
+        <stop offset="1" stop-color="#f2caff"/>
+      </linearGradient>
+      <linearGradient id="supportBand" x1="19" y1="20" x2="45" y2="34" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#fae5ff"/>
+        <stop offset=".48" stop-color="#bd6cff"/>
+        <stop offset="1" stop-color="#f9d8ff"/>
+      </linearGradient>
+      <linearGradient id="supportCup" x1="15" y1="31" x2="23" y2="46" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#fff5ff"/>
+        <stop offset=".42" stop-color="#d7a0ff"/>
+        <stop offset="1" stop-color="#873de0"/>
+      </linearGradient>
+      <radialGradient id="supportBubble" cx="31%" cy="13%" r="91%">
+        <stop stop-color="#f6dfff"/>
+        <stop offset=".3" stop-color="#c58aff"/>
+        <stop offset=".72" stop-color="#7134ba"/>
+        <stop offset="1" stop-color="#3c1d68"/>
+      </radialGradient>
+      <filter id="supportGlow" x="-40%" y="-40%" width="180%" height="180%">
+        <feGaussianBlur stdDeviation="2.5" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <circle cx="32" cy="32" r="29.5" fill="url(#supportOrbFill)" stroke="url(#supportOrbRim)" stroke-width="1.7"/>
+    <circle cx="32" cy="32" r="26.4" stroke="#eed1ff" stroke-opacity=".32" stroke-width=".8"/>
+    <ellipse cx="23" cy="17" rx="13" ry="4.2" transform="rotate(-37 23 17)" fill="#fff" fill-opacity=".34"/>
+    <path d="M18 34v-3a14 14 0 0 1 28 0v3" stroke="url(#supportBand)" stroke-width="4" stroke-linecap="round" filter="url(#supportGlow)"/>
+    <rect x="15.5" y="30" width="8" height="16" rx="4" fill="url(#supportCup)" stroke="#f8e5ff" stroke-width="1.2"/>
+    <rect x="40.5" y="30" width="8" height="16" rx="4" fill="url(#supportCup)" stroke="#f8e5ff" stroke-width="1.2"/>
+    <path d="M25 27h14a7.5 7.5 0 0 1 7.5 7.5v5A7.5 7.5 0 0 1 39 47H29l-7 4 1.9-6.3A7.4 7.4 0 0 1 17.5 38v-3.5A7.5 7.5 0 0 1 25 27Z" fill="url(#supportBubble)" stroke="#f6dcff" stroke-width="1.2" filter="url(#supportGlow)"/>
+    <circle cx="27" cy="36.5" r="1.65" fill="#fff4ff"/>
+    <circle cx="32" cy="36.5" r="1.65" fill="#fff4ff"/>
+    <circle cx="37" cy="36.5" r="1.65" fill="#fff4ff"/>
+    <path d="M45 43c-.1 3.8-2.7 6.4-6.6 7.3" stroke="#e6baff" stroke-width="2.2" stroke-linecap="round"/>
+    <rect x="31.5" y="47.6" width="9.4" height="5.4" rx="2.7" transform="rotate(-9 31.5 47.6)" fill="url(#supportCup)" stroke="#f9e5ff" stroke-width="1"/>
   </svg>
 </button>
 
@@ -3448,52 +3492,83 @@ function setupSupportButton(){
   let drag=null;
   let suppressClickUntil=0;
   let edge="right";
+  let savedYRatio=.54;
   try{
-    const saved=localStorage.getItem("anniveo-support-edge");
-    if(saved==="left"||saved==="right") edge=saved;
+    const savedEdge=localStorage.getItem("anniveo-support-edge");
+    const savedY=Number(localStorage.getItem("anniveo-support-y"));
+    if(savedEdge==="left"||savedEdge==="right") edge=savedEdge;
+    if(Number.isFinite(savedY)&&savedY>0&&savedY<1) savedYRatio=savedY;
   }catch(e){}
 
-  const placeOnEdge=(nextEdge,save=true)=>{
+  const clampCenterY=centerY=>{
+    const height=button.getBoundingClientRect().height||64;
+    const viewport=window.visualViewport;
+    const visibleTop=viewport?viewport.offsetTop:0;
+    const visibleBottom=viewport
+      ?Math.min(window.innerHeight,viewport.offsetTop+viewport.height)
+      :window.innerHeight;
+    const min=visibleTop+height/2+8;
+    const max=Math.max(min,visibleBottom-height/2-8);
+    return Math.max(min,Math.min(max,centerY));
+  };
+  const placeAt=(nextEdge,centerY,save=true)=>{
     edge=nextEdge==="left"?"left":"right";
-    const width=button.getBoundingClientRect().width||48;
+    const rect=button.getBoundingClientRect();
+    const width=rect.width||64;
+    const safeCenterY=clampCenterY(centerY);
     const x=edge==="left"?gap:Math.max(gap,window.innerWidth-width-gap);
     button.style.left=x+"px";
     button.style.right="auto";
+    button.style.top=safeCenterY+"px";
     button.dataset.edge=edge;
+    savedYRatio=safeCenterY/Math.max(1,window.innerHeight);
     if(save){
-      try{localStorage.setItem("anniveo-support-edge",edge)}catch(e){}
+      try{
+        localStorage.setItem("anniveo-support-edge",edge);
+        localStorage.setItem("anniveo-support-y",String(savedYRatio));
+      }catch(e){}
     }
   };
 
-  placeOnEdge(edge,false);
+  placeAt(edge,window.innerHeight*savedYRatio,false);
   button.addEventListener("pointerdown",event=>{
     if(event.pointerType==="mouse"&&event.button!==0) return;
     const rect=button.getBoundingClientRect();
-    drag={id:event.pointerId,startX:event.clientX,startLeft:rect.left,moved:false};
+    drag={
+      id:event.pointerId,startX:event.clientX,startY:event.clientY,
+      startLeft:rect.left,startCenterY:rect.top+rect.height/2,moved:false
+    };
     button.classList.remove("snapping");
     button.classList.add("dragging");
     button.setPointerCapture?.(event.pointerId);
   });
   button.addEventListener("pointermove",event=>{
     if(!drag||drag.id!==event.pointerId) return;
+    if(event.cancelable) event.preventDefault();
     const dx=event.clientX-drag.startX;
-    if(Math.abs(dx)>4) drag.moved=true;
+    const dy=event.clientY-drag.startY;
+    if(Math.abs(dx)>4||Math.abs(dy)>4) drag.moved=true;
     if(!drag.moved) return;
-    const width=button.getBoundingClientRect().width||48;
+    const rect=button.getBoundingClientRect();
+    const width=rect.width||64;
     const x=Math.max(gap,Math.min(window.innerWidth-width-gap,drag.startLeft+dx));
+    const centerY=clampCenterY(drag.startCenterY+dy);
     button.style.left=x+"px";
     button.style.right="auto";
+    button.style.top=centerY+"px";
   });
   const finishDrag=event=>{
     if(!drag||drag.id!==event.pointerId) return;
     const moved=drag.moved;
     const rect=button.getBoundingClientRect();
+    const centerY=rect.top+rect.height/2;
+    const nextEdge=rect.left+rect.width/2<window.innerWidth/2?"left":"right";
     button.classList.remove("dragging");
     button.classList.add("snapping");
-    placeOnEdge(rect.left+rect.width/2<window.innerWidth/2?"left":"right");
+    placeAt(nextEdge,centerY);
     drag=null;
     if(moved) suppressClickUntil=Date.now()+450;
-    setTimeout(()=>button.classList.remove("snapping"),380);
+    setTimeout(()=>button.classList.remove("snapping"),420);
   };
   button.addEventListener("pointerup",finishDrag);
   button.addEventListener("pointercancel",finishDrag);
@@ -3505,7 +3580,12 @@ function setupSupportButton(){
     }
     toast("Контакт поддержки пока не подключён");
   });
-  window.addEventListener("resize",()=>placeOnEdge(edge,false),{passive:true});
+  window.addEventListener("resize",()=>{
+    placeAt(edge,window.innerHeight*savedYRatio,false);
+  },{passive:true});
+  window.visualViewport?.addEventListener("resize",()=>{
+    placeAt(edge,window.innerHeight*savedYRatio,false);
+  },{passive:true});
 }
 
 /* СТАРТ */
