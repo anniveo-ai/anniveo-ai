@@ -681,6 +681,11 @@ header{
   background:linear-gradient(130deg,#d7bbff,#a67cdb);
   color:#241833;
 }
+#send{
+  display:grid;flex:none;width:37px;height:37px;min-width:37px;
+  opacity:1;transition:none;
+}
+#send:disabled{opacity:1}
 #mic{
   display:grid;place-items:center;padding:0;position:relative;
   touch-action:none;user-select:none;-webkit-user-select:none;
@@ -749,16 +754,15 @@ header{
 .status:empty{display:none}
 .mic-swipe-hint{
   position:absolute;right:31px;bottom:calc(100% + 5px);z-index:46;
-  width:190px;height:218px;pointer-events:none;
+  width:190px;height:109px;pointer-events:none;
   opacity:0;visibility:hidden;transform:translateY(9px) scale(.98);
   transition:opacity .2s ease,transform .2s ease,visibility .2s;
 }
-.dock.recording-mode .mic-swipe-hint{right:-8px}
 .mic-swipe-hint.visible{opacity:1;visibility:visible;transform:translateY(0) scale(1)}
 .mic-swipe-track{
-  position:absolute;right:0;top:0;bottom:0;z-index:0;width:82px;
+  position:absolute;right:0;top:0;bottom:0;z-index:0;width:41px;
   pointer-events:auto;touch-action:none;
-  border:1px solid rgba(204,177,245,.34);border-radius:44px;
+  border:1px solid rgba(204,177,245,.34);border-radius:23px;
   background:linear-gradient(180deg,rgba(44,37,61,.78),rgba(27,25,40,.58));
   -webkit-backdrop-filter:blur(18px) saturate(135%);backdrop-filter:blur(18px) saturate(135%);
   box-shadow:0 0 18px rgba(173,126,235,.2),0 0 42px rgba(153,104,220,.12),inset 0 1px rgba(255,255,255,.12);
@@ -777,7 +781,7 @@ header{
 .mic-swipe-copy strong{display:block;color:#f6edff;font-size:12px;font-weight:650;line-height:1.35}
 .mic-swipe-copy span{display:block;margin-top:3px;color:#c9bddb;font-size:11px;line-height:1.35}
 .mic-guide-lock{
-  position:absolute;left:121px;top:9px;z-index:3;width:56px;height:56px;padding:0;
+  position:absolute;left:156px;top:5px;z-index:3;width:28px;height:28px;padding:0;
   display:grid;place-items:center;border-radius:50%;appearance:none;
   color:#f2e6ff;border:1.5px solid rgba(218,190,255,.82);
   background:radial-gradient(circle at 50% 35%,rgba(193,145,255,.42),rgba(93,62,132,.3) 72%);
@@ -788,12 +792,12 @@ header{
 }
 .mic-guide-lock:active{transform:scale(.9)}
 .mic-guide-lock:focus-visible{outline:2px solid #f2dcff;outline-offset:4px}
-.mic-guide-lock svg{width:23px;height:23px;filter:drop-shadow(0 0 6px rgba(234,211,255,.7))}
+ .mic-guide-lock svg{width:12px;height:12px;filter:drop-shadow(0 0 6px rgba(234,211,255,.7))}
 .mic-swipe-shadow{
   position:absolute;left:50%;right:auto;top:auto;bottom:8px;z-index:1;
-  width:72px;height:72px;border-radius:50%;pointer-events:none;
+  width:36px;height:36px;border-radius:50%;pointer-events:none;
   background:radial-gradient(ellipse at 50% 55%,rgba(250,237,255,.58) 0%,rgba(211,176,255,.38) 27%,rgba(182,129,255,.23) 50%,rgba(156,108,221,.1) 68%,transparent 82%);
-  filter:blur(9px);opacity:.52;transform:translate3d(-50%,0,0) scale(.94);
+  filter:blur(5px);opacity:.52;transform:translate3d(-50%,0,0) scale(.94);
   box-shadow:0 0 31px rgba(174,119,255,.28);
   transition:opacity .08s linear,filter .08s linear;
   will-change:transform,opacity;
@@ -816,8 +820,7 @@ header{
 .mic-swipe-hint.compact .mic-swipe-copy{opacity:0;transform:translateX(-7px)}
 @media(max-width:380px){
   .mic-swipe-hint{right:27px}
-  .dock.recording-mode .mic-swipe-hint{right:-8px}
-  .mic-swipe-copy{width:96px;padding-right:7px}
+    .mic-swipe-copy{width:96px;padding-right:7px}
 }
 @media(prefers-reduced-motion:reduce){
   .mic-swipe-hint,.mic-swipe-shadow,.mic-guide-lock,.mic-swipe-copy,.mic-swipe-track{transition:none}
@@ -1711,20 +1714,20 @@ function setupMicGestures(){
   const cancelDistance=72;
   const swipeHint=$("micSwipeHint"),swipeTrack=$("micSwipeTrack"),swipeShadow=$("micSwipeShadow"),lockButton=$("micLockButton");
   const lockDistance=(()=>{
-    const trackHeight=swipeTrack?.clientHeight||216;
-    const shadowSize=swipeShadow?.offsetHeight||72;
+    const trackHeight=swipeTrack?.clientHeight||109;
+    const shadowSize=swipeShadow?.offsetHeight||36;
     const bottomTop=Math.max(0,trackHeight-shadowSize-8);
-    const lockCenter=(lockButton?.offsetTop||9)+(lockButton?.offsetHeight||56)/2;
+    const lockCenter=(lockButton?.offsetTop||5)+(lockButton?.offsetHeight||28)/2;
     return Math.max(52,Math.round(bottomTop-Math.max(0,lockCenter-shadowSize/2)));
   })();
   let hintTimer=0;
   const moveSwipeHint=distance=>{
     const progress=Math.max(0,Math.min(1,distance/lockDistance));
     if(swipeShadow&&swipeTrack){
-      const trackHeight=swipeTrack.clientHeight||218;
-      const shadowSize=swipeShadow.offsetHeight||72;
+      const trackHeight=swipeTrack.clientHeight||109;
+      const shadowSize=swipeShadow.offsetHeight||36;
       const bottomTop=Math.max(0,trackHeight-shadowSize-8);
-      const lockCenter=(lockButton?.offsetTop||9)+(lockButton?.offsetHeight||56)/2;
+      const lockCenter=(lockButton?.offsetTop||5)+(lockButton?.offsetHeight||28)/2;
       const topTop=Math.max(0,lockCenter-shadowSize/2);
       const travel=Math.max(0,bottomTop-topTop);
       swipeShadow.style.opacity=(.52+.48*progress).toFixed(2);
@@ -1761,9 +1764,9 @@ function setupMicGestures(){
     if(!swipeTrack||!swipeShadow) return 1;
     const rect=swipeTrack.getBoundingClientRect();
     const trackHeight=swipeTrack.clientHeight||rect.height||216;
-    const shadowSize=swipeShadow.offsetHeight||72;
+    const shadowSize=swipeShadow.offsetHeight||36;
     const bottomCenter=trackHeight-8-shadowSize/2;
-    const lockCenter=(lockButton?.offsetTop||9)+(lockButton?.offsetHeight||56)/2;
+    const lockCenter=(lockButton?.offsetTop||5)+(lockButton?.offsetHeight||28)/2;
     const travel=Math.max(1,bottomCenter-lockCenter);
     const localY=clientY-rect.top-swipeTrack.clientTop;
     return Math.max(0,Math.min(1,(bottomCenter-localY)/travel));
