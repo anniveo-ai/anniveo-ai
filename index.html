@@ -485,10 +485,10 @@ header{
 
 /* СООБЩЕНИЯ */
 .voice-progress{
-  align-self:flex-start;display:flex;align-items:center;gap:9px;
+  align-self:flex-end;margin-left:auto;display:flex;align-items:center;gap:9px;
   max-width:calc(100% - 18px);padding:10px 13px;
-  border:1px solid rgba(198,166,255,.25);border-radius:16px 16px 16px 5px;
-  background:linear-gradient(125deg,rgba(41,37,54,.94),rgba(29,29,41,.88));
+  border:1px solid rgba(198,166,255,.25);border-radius:16px 16px 5px 16px;
+  background:linear-gradient(125deg,rgba(69,55,88,.9),rgba(43,37,57,.94));
   box-shadow:0 5px 18px rgba(0,0,0,.18),0 0 20px rgba(165,118,225,.08);
   color:#d9cce9;font-size:13px;line-height:1.45;overflow-wrap:anywhere;
   animation:voiceProgressIn .18s ease-out;
@@ -529,6 +529,16 @@ header{
   align-self:stretch;
   width:100%;
 }
+.message.assistant.sender-pending{
+  align-self:flex-end;width:auto;max-width:87%;margin-left:auto;
+  padding:11px 14px;border:1px solid #544365;
+  border-radius:17px 17px 5px 17px;
+  background:linear-gradient(135deg,rgba(59,47,75,.94),rgba(43,37,57,.96));
+  box-shadow:0 5px 18px rgba(0,0,0,.18),0 0 20px rgba(165,118,225,.08);
+  color:#e4d8f2;
+}
+.message.assistant.sender-pending .assistant-name,
+.message.assistant.sender-pending .copy{display:none}
 .assistant-name{
   color:var(--purple);
   font-size:11px;
@@ -729,7 +739,6 @@ header{
   width:190px;height:218px;pointer-events:none;
   opacity:0;visibility:hidden;transform:translateY(9px) scale(.98);
   transition:opacity .2s ease,transform .2s ease,visibility .2s;
-  --swipe-progress:0;
 }
 .dock.recording-mode .mic-swipe-hint{right:-8px}
 .mic-swipe-hint.visible{opacity:1;visibility:visible;transform:translateY(0) scale(1)}
@@ -766,33 +775,18 @@ header{
 .mic-guide-lock:active{transform:scale(.9)}
 .mic-guide-lock:focus-visible{outline:2px solid #f2dcff;outline-offset:4px}
 .mic-guide-lock svg{width:23px;height:23px;filter:drop-shadow(0 0 6px rgba(234,211,255,.7))}
-.mic-swipe-path{
-  position:absolute;left:136px;top:76px;bottom:12px;z-index:2;width:26px;
-  display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+.mic-swipe-shadow{
+  position:absolute;left:50%;top:144px;z-index:1;
+  width:68px;height:68px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(ellipse at center,rgba(233,213,255,.4) 0%,rgba(197,153,255,.24) 38%,rgba(156,108,221,.12) 64%,transparent 77%);
+  filter:blur(7px);opacity:.38;transform:translateX(-50%) scale(.9);
+  box-shadow:0 0 27px rgba(174,119,255,.2);
+  transition:top .12s cubic-bezier(.2,.7,.2,1),opacity .14s,transform .12s,filter .14s;
+  will-change:top,opacity,transform;
 }
-.mic-swipe-path:before{
-  content:"";position:absolute;left:12px;top:2px;bottom:2px;width:2px;border-radius:2px;
-  background:repeating-linear-gradient(to top,rgba(193,152,245,.34) 0 2px,transparent 2px 8px);
-  filter:drop-shadow(0 0 4px rgba(179,128,239,.5));
+.mic-swipe-track.dragging .mic-swipe-shadow{
+  filter:blur(6px);opacity:.9;box-shadow:0 0 32px rgba(183,126,255,.38);
 }
-.mic-swipe-fill{
-  position:absolute;left:10px;bottom:2px;width:4px;height:0;border-radius:4px;
-  background:linear-gradient(to top,#a879e7,#efd7ff);
-  box-shadow:0 0 10px rgba(220,187,255,.88);transition:height .07s linear;
-}
-.mic-swipe-arrow{
-  position:relative;z-index:1;color:#bd96ee;font-size:18px;line-height:12px;
-  opacity:.34;text-shadow:0 0 8px rgba(194,143,255,.48);transform:translateY(1px);
-  transition:opacity .12s,color .12s,text-shadow .12s,transform .12s;
-}
-.mic-swipe-arrow:first-child{animation:micArrowFloat 1.2s ease-in-out infinite}
-.mic-swipe-arrow:nth-child(2){animation:micArrowFloat 1.2s ease-in-out .16s infinite}
-.mic-swipe-arrow:nth-child(3){animation:micArrowFloat 1.2s ease-in-out .32s infinite}
-@keyframes micArrowFloat{
-  0%,100%{opacity:.3;transform:translateY(2px)}
-  50%{opacity:.9;transform:translateY(-2px)}
-}
-.mic-swipe-arrow.lit{opacity:1;color:#f0dfff;text-shadow:0 0 10px #bc83ff;transform:translateY(-2px)}
 .mic-swipe-hint.locked .mic-guide-lock{
   opacity:1;transform:scale(1.04);border-color:#f0deff;
   box-shadow:0 0 14px rgba(221,185,255,.9),0 0 34px rgba(171,112,255,.52),inset 0 0 15px rgba(238,212,255,.24);
@@ -801,7 +795,7 @@ header{
   border-color:rgba(224,196,255,.58);
   box-shadow:0 0 22px rgba(190,144,255,.3),0 0 52px rgba(153,104,220,.2),inset 0 1px rgba(255,255,255,.16);
 }
-.mic-swipe-hint.locked .mic-swipe-arrow{opacity:1;color:#f0dfff;text-shadow:0 0 10px #bc83ff}
+.mic-swipe-hint.locked .mic-swipe-shadow{opacity:1;filter:blur(6px);box-shadow:0 0 36px rgba(198,157,255,.58)}
 .mic-swipe-hint.compact .mic-swipe-copy{opacity:0;transform:translateX(-7px)}
 @media(max-width:380px){
   .mic-swipe-hint{right:27px}
@@ -809,8 +803,7 @@ header{
   .mic-swipe-copy{width:96px;padding-right:7px}
 }
 @media(prefers-reduced-motion:reduce){
-  .mic-swipe-hint,.mic-swipe-fill,.mic-swipe-arrow,.mic-guide-lock,.mic-swipe-copy,.mic-swipe-track{transition:none}
-  .mic-swipe-arrow{animation:none}
+  .mic-swipe-hint,.mic-swipe-shadow,.mic-guide-lock,.mic-swipe-copy,.mic-swipe-track{transition:none}
 }
 
 /* НИЖНЕЕ МЕНЮ */
@@ -1430,7 +1423,9 @@ select{
   <input id="attachmentVideo" class="attachment-input" type="file" accept="video/*" onchange="attachmentPicked(this)">
 
   <div id="micSwipeHint" class="mic-swipe-hint" aria-hidden="true">
-    <div class="mic-swipe-track" aria-hidden="true"></div>
+    <div id="micSwipeTrack" class="mic-swipe-track" aria-hidden="true">
+      <div id="micSwipeShadow" class="mic-swipe-shadow"></div>
+    </div>
     <button type="button" id="micLockButton" class="mic-guide-lock"
       aria-label="Завершить запись и отправить текст"
       title="Нажми, чтобы завершить запись и отправить текст"
@@ -1440,12 +1435,6 @@ select{
         <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
       </svg>
     </button>
-    <div class="mic-swipe-path" aria-hidden="true">
-      <span class="mic-swipe-arrow">⌃</span>
-      <span class="mic-swipe-arrow">⌃</span>
-      <span class="mic-swipe-arrow">⌃</span>
-      <i id="micSwipeFill" class="mic-swipe-fill"></i>
-    </div>
     <div class="mic-swipe-copy">
       <strong id="micSwipeTitle">Вверх —</strong>
       <span id="micSwipeSubtitle">проведи, чтобы закрепить</span>
@@ -1701,38 +1690,39 @@ function setupMicGestures(){
   if(!button||button.dataset.gesturesReady) return;
   button.dataset.gesturesReady="1";
   const lockDistance=52,cancelDistance=72;
-  const swipeHint=$("micSwipeHint"),swipeFill=$("micSwipeFill");
+  const swipeHint=$("micSwipeHint"),swipeTrack=$("micSwipeTrack"),swipeShadow=$("micSwipeShadow");
   let hintTimer=0;
+  const moveSwipeHint=distance=>{
+    const progress=Math.max(0,Math.min(1,distance/lockDistance));
+    if(swipeShadow&&swipeTrack){
+      const trackHeight=swipeTrack.clientHeight||218;
+      const shadowSize=swipeShadow.offsetHeight||68;
+      const bottomTop=Math.max(0,trackHeight-shadowSize-8);
+      const topTop=Math.min(bottomTop,68);
+      const top=bottomTop-(bottomTop-topTop)*progress;
+      swipeShadow.style.top=top.toFixed(1)+"px";
+      swipeShadow.style.opacity=(.38+.62*progress).toFixed(2);
+      swipeShadow.style.transform="translateX(-50%) scale("+(.9+.12*progress).toFixed(3)+")";
+    }
+    swipeTrack?.classList.toggle("dragging",progress>.015);
+  };
   const showSwipeHint=()=>{
     clearTimeout(hintTimer);
     swipeHint?.classList.remove("locked","compact");
-    swipeHint?.style.setProperty("--swipe-progress","0");
-    if(swipeFill) swipeFill.style.height="0px";
-    swipeHint?.querySelectorAll(".mic-swipe-arrow").forEach(arrow=>arrow.classList.remove("lit"));
+    moveSwipeHint(0);
     $("micSwipeTitle").textContent="Вверх —";
     $("micSwipeSubtitle").textContent="проведи, чтобы закрепить";
     swipeHint?.classList.add("visible");
     swipeHint?.setAttribute("aria-hidden","false");
   };
-  const moveSwipeHint=distance=>{
-    const progress=Math.max(0,Math.min(1,distance/lockDistance));
-    swipeHint?.style.setProperty("--swipe-progress",progress.toFixed(3));
-    if(swipeFill) swipeFill.style.height=(progress*84).toFixed(1)+"px";
-    const arrows=swipeHint?.querySelectorAll(".mic-swipe-arrow")||[];
-    arrows.forEach((arrow,index)=>{
-      arrow.classList.toggle("lit",progress>(arrows.length-index-1)*.2+.04);
-    });
-  };
   const hideSwipeHint=()=>{
     clearTimeout(hintTimer);
     swipeHint?.classList.remove("visible","locked","compact");
     swipeHint?.setAttribute("aria-hidden","true");
-    swipeHint?.style.setProperty("--swipe-progress","0");
+    moveSwipeHint(0);
   };
   const lockSwipeHint=()=>{
-    if(swipeFill) swipeFill.style.height="84px";
-    swipeHint?.style.setProperty("--swipe-progress","1");
-    swipeHint?.querySelectorAll(".mic-swipe-arrow").forEach(arrow=>arrow.classList.add("lit"));
+    moveSwipeHint(lockDistance);
     $("micSwipeTitle").textContent="Запись закреплена";
     $("micSwipeSubtitle").textContent="говори — я слушаю";
     swipeHint?.classList.add("locked");
@@ -2412,6 +2402,7 @@ async function sendMessage(text,audioURL,spokenVoice=false){
   const pending=addMessage(
     "ANNIVEO AI думает…","assistant"
   );
+  pending.closest(".message")?.classList.add("sender-pending");
 
   $("chatStatus").textContent="Готовлю ответ…";
   busy=true;
@@ -2441,6 +2432,7 @@ async function sendMessage(text,audioURL,spokenVoice=false){
       throw Error("Нейросеть вернула пустой ответ");
     }
 
+    pending.closest(".message")?.classList.remove("sender-pending");
     formatAnswer(pending,data.reply);
     pending.dataset.raw=data.reply;
 
@@ -2463,6 +2455,7 @@ async function sendMessage(text,audioURL,spokenVoice=false){
     if(spokenVoice&&voiceReplySession===voiceSessionVersion) speakReply(data.reply);
   }catch(e){
     if(spokenVoice) $("voiceStatus").textContent=e.message;
+    pending.closest(".message")?.classList.remove("sender-pending");
     formatAnswer(pending,e.message);
     pending.dataset.raw=e.message;
   }finally{
