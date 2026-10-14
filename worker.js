@@ -268,14 +268,22 @@ async function primeAIStream(response, controller, timeoutMs) {
     if (!lines.length) return false;
     const raw = lines.join("\n").trim();
     if (!raw || raw === "[DONE]") return false;
+    let data;
     try {
-      const data = JSON.parse(raw);
-      const token = data.choices?.[0]?.delta?.content;
-      return (typeof token === "string" && token.length > 0) ||
-        (Array.isArray(token) && token.some(part => part?.type === "text" && part.text));
+      data = JSON.parse(raw);
     } catch {
       return false;
     }
+    if (data.error || data.choices?.[0]?.finish_reason === "error") {
+      const error = data.error;
+      throw new Error(
+        (typeof error === "string" ? error : error?.message) ||
+        "Провайдер завершил поток с ошибкой"
+      );
+    }
+    const token = data.choices?.[0]?.delta?.content;
+    return (typeof token === "string" && token.length > 0) ||
+      (Array.isArray(token) && token.some(part => part?.type === "text" && part.text));
   };
 
   try {
@@ -1108,6 +1116,44 @@ export default {
           401,
           headers
         );
+      }
+
+      if (action === "speak") {
+        if (!env.POLLINATIONS_API_KEY) {
+          return json({ error: "Голосовой сервис не подключён" }, 503, headers);
+        }
+        const text = String(body.text || "").trim();
+        if (!text || text.length > 3000) {
+          return json({ error: "Текст для озвучки должен быть от 1 до 3000 символов" }, 400, headers);
+        }
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 30000);
+        try {
+          const response = await fetch("https://gen.pollinations.ai/v1/audio/speech", {
+            method: "POST",
+            headers: {
+              Authorization: "Bearer " + env.POLLINATIONS_API_KEY,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              model: "tts-1",
+              input: text,
+              voice: "shimmer",
+              response_format: "mp3"
+            }),
+            signal: controller.signal
+          });
+          if (!response.ok) {
+            await response.body?.cancel();
+            console.error("ANNIVEO speech failed", { providerStatus: response.status });
+            return json({ error: "Не удалось озвучить ответ" }, 502, headers);
+          }
+          const audioHeaders = new Headers(headers);
+          audioHeaders.set("Content-Type", response.headers.get("content-type") || "audio/mpeg");
+          return new Response(response.body, { status: 200, headers: audioHeaders });
+        } finally {
+          clearTimeout(timer);
+        }
       }
 
       if (action === "image") {
