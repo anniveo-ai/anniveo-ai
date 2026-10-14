@@ -1440,11 +1440,11 @@ function setupMicGestures(){
   const lockDistance=52,cancelDistance=72;
   const suppressClick=()=>{ignoreMicClickUntil=Date.now()+700;};
   const beginGestureRecording=state=>{
-    if(state.started||state.held) return;
+    if(state.started||state.held) return Promise.resolve();
     state.held=true;
     clearTimeout(state.timer);
     button.classList.remove("gesture-active");
-    void handleMic();
+    return handleMic();
   };
   const updateDirection=(state,x,y)=>{
     const dx=x-state.x,dy=state.y-y;
@@ -1507,12 +1507,11 @@ function setupMicGestures(){
     };
     const startHeldRecording=async state=>{
       if(micGesture!==state) return;
-      beginGestureRecording(state);
-      await Promise.resolve();
+      await beginGestureRecording(state);
       if(micGesture!==state) return;
       if(state.released&&!state.locked&&!state.cancelArmed&&recording){
         micGesture=null;
-        void handleMic();
+        await handleMic();
       }
     };
     button.addEventListener("touchstart",event=>{
