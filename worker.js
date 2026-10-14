@@ -176,23 +176,37 @@ function isRetryable(error) {
 }
 
 // При нехватке средств временно не повторяем заведомо неудачные запросы.
+// Per-isolate safety throttle; global enforcement requires shared storage.
+const rateWindows = new Map();
+function isRateLimited(userId) {
+  const now = Date.now();
+  if (rateWindows.size > 1500) {
+    for (const [key, v] of rateWindows) if (now - v.since > 120000) rateWindows.delete(key);
+  }
+  const old = rateWindows.get(userId);
+  const state = !old || now - old.since >= 60000 ? {since: now, count: 0} : old;
+  state.count++;
+  rateWindows.set(userId, state);
+  return state.count > 6;
+}
 let openAICooldownUntil = 0;
-const OPENAI_MODEL = "gpt-5";
+const OPENAI_MODEL = "openai/gpt-4o";
 function openAIAvailable(env) {
-  return !!env.OPENAI_API_KEY && Date.now() >= openAICooldownUntil;
+  return !!env.POLZA_API_KEY && Date.now() >= openAICooldownUntil;
 }
 async function fetchOpenAI(messages, env, streaming, controller) {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const response = await fetch("https://polza.ai/api/v1/chat/completions", {
     method: "POST",
     signal: controller.signal,
     headers: {
-      Authorization: "Bearer " + env.OPENAI_API_KEY,
+      Authorization: "Bearer " + env.POLZA_API_KEY,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
       model: OPENAI_MODEL,
       messages,
-      stream: streaming
+      stream: streaming,
+      max_tokens: 900
     })
   });
   if (!response.ok) {
@@ -208,7 +222,7 @@ async function fetchOpenAI(messages, env, streaming, controller) {
 async function askPreferredAI(messages, env, mode) {
   if (openAIAvailable(env)) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 30000);
+    const timer = setTimeout(() => controller.abort(), 18000);
     try {
       const response = await fetchOpenAI(messages, env, false, controller);
       const data = await response.json();
@@ -1058,7 +1072,7 @@ export default {
         );
       }
 
-      if (!env.POLLINATIONS_API_KEY && !env.OPENAI_API_KEY) {
+      if (!env.POLLINATIONS_API_KEY && !env.POLZA_API_KEY) {
         return json(
           { error: "Ключ ИИ не настроен" },
           503,
@@ -1079,6 +1093,10 @@ export default {
           400,
           headers
         );
+      }
+
+      if (isRateLimited(userId)) {
+        return json({error:"Слишком много сообщений. Подожди минуту."},429,headers);
       }
 
       // Потоковый режим включается только
