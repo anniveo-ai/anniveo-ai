@@ -3182,7 +3182,7 @@ async function handleOrbVoice(){
   setVoiceChatStatus("Слушаю тебя — говори в своём темпе","listening");
   $("voiceOrb").setAttribute("aria-label","Остановить запись и отправить фразу");
   await handleMic();
-  if(!recording&&!openingMic){
+  if(!recording&&!openingMic&&orbVoiceActive){
     orbVoiceActive=false;
     $("voiceOrb").setAttribute("aria-label","Говорить с ANNIVEO AI");
     $("endVoice").classList.add("hidden");
