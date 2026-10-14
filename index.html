@@ -1875,9 +1875,34 @@ function setComposerRecording(active){
     });
   }
 }
-function cancelMicRecording(){
-  $("micSwipeHint")?.classList.remove("visible","locked","compact");
-  $("micSwipeHint")?.setAttribute("aria-hidden","true");
+let micSwipeReturnTimer=0;
+function animateMicSwipeReturn(){
+  const hint=$("micSwipeHint"),track=$("micSwipeTrack"),shadow=$("micSwipeShadow");
+  if(micSwipeReturnTimer){clearTimeout(micSwipeReturnTimer);micSwipeReturnTimer=0;}
+  if(!hint?.classList.contains("visible")||!track||!shadow) return false;
+  hint.classList.remove("locked","compact");
+  hint.setAttribute("aria-hidden","false");
+  track.classList.remove("dragging");
+  track.classList.add("returning");
+  requestAnimationFrame(()=>{
+    if(!track.classList.contains("returning")) return;
+    shadow.style.opacity=".52";
+    shadow.style.transform="translate3d(-50%,0px,0) scale(.94)";
+  });
+  micSwipeReturnTimer=setTimeout(()=>{
+    micSwipeReturnTimer=0;
+    track.classList.remove("returning");
+    hint.classList.remove("visible","locked","compact");
+    hint.setAttribute("aria-hidden","true");
+  },240);
+  return true;
+}
+function cancelMicRecording({animateSwipeReturn=false}={}){
+  const returning=animateSwipeReturn&&animateMicSwipeReturn();
+  if(!returning){
+    $("micSwipeHint")?.classList.remove("visible","locked","compact");
+    $("micSwipeHint")?.setAttribute("aria-hidden","true");
+  }
   setComposerRecording(false);
   cancelMicStartRequested=true;
   clearTimeout(recordTimer);
@@ -2035,6 +2060,8 @@ function setupMicGestures(){
   window.visualViewport?.addEventListener("resize",positionSwipeHint,{passive:true});
   const showSwipeHint=startY=>{
     clearTimeout(hintTimer);
+    if(micSwipeReturnTimer){clearTimeout(micSwipeReturnTimer);micSwipeReturnTimer=0;}
+    swipeTrack?.classList.remove("returning");
     positionSwipeHint();
     swipeHint?.classList.remove("locked","compact");
     const travel=Number.isFinite(startY)?distanceToLock(startY):lockDistance;
@@ -2091,15 +2118,15 @@ function setupMicGestures(){
     moveSwipeHint(trackDrag.progress*lockDistance);
     if(trackDrag.progress<=.035){
       trackDrag=null;
-      cancelMicRecording();
+      cancelMicRecording({animateSwipeReturn:true});
     }
   };
   const finishTrackDrag=event=>{
     if(!trackDrag||trackDrag.id!==event.pointerId) return;
     event.preventDefault();
     trackDrag=null;
-    // Любое отпускание до конца жеста отменяет запись, без возврата к замку.
-    cancelMicRecording();
+    // Отпускание до замка отменяет запись и возвращает свечение к микрофону.
+    cancelMicRecording({animateSwipeReturn:true});
   };
   swipeTrack?.addEventListener("pointerdown",startTrackDrag);
   swipeTrack?.addEventListener("pointermove",moveTrackDrag);
@@ -2175,7 +2202,7 @@ function setupMicGestures(){
     clearTimeout(state.timer);
     state.released=true;
     if(!state.locked) queueSearchPreview(0);
-    if(!state.locked) hintTimer=setTimeout(()=>{
+    if(!state.locked&&!state.swipeAttempted) hintTimer=setTimeout(()=>{
       if(!recording&&!openingMic) hideSwipeHint();
     },220);
     button.classList.remove("gesture-active");
@@ -2188,8 +2215,8 @@ function setupMicGestures(){
     if(state.swipeAttempted&&!state.locked){
       suppressClick();
       micGesture=null;
-      if(recording||openingMic) cancelMicRecording();
-      else{hideSwipeHint();resetCancelVisual();}
+      if(recording||openingMic) cancelMicRecording({animateSwipeReturn:true});
+      else{if(!animateMicSwipeReturn()) hideSwipeHint();resetCancelVisual();}
       return;
     }
     resetCancelVisual();
