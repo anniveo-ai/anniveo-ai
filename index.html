@@ -133,6 +133,28 @@ header{
 .collapse-chat-button.pressed svg{transform:translateY(1px)}
 .collapse-chat-button:focus-visible{outline:2px solid #f4e8ff;outline-offset:3px}
 
+/* ПЛАВАЮЩАЯ КНОПКА ПОДДЕРЖКИ: ДВИЖЕНИЕ ТОЛЬКО ВЛЕВО/ВПРАВО */
+.support-button{
+  position:fixed;z-index:60;top:54%;right:8px;left:auto;
+  display:grid;place-items:center;width:48px;height:48px;padding:0;
+  border:1px solid rgba(225,205,255,.48);border-radius:50%;
+  color:#f2e8ff;
+  background:linear-gradient(145deg,rgba(120,91,158,.78),rgba(47,39,67,.84));
+  -webkit-backdrop-filter:blur(18px) saturate(145%);backdrop-filter:blur(18px) saturate(145%);
+  box-shadow:0 0 12px rgba(199,158,255,.34),0 0 28px rgba(162,108,230,.22),inset 0 1px rgba(255,255,255,.22);
+  transform:translateY(-50%);
+  touch-action:none;user-select:none;-webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  cursor:grab;will-change:left;
+  transition:left .34s cubic-bezier(.2,.85,.25,1),transform .18s ease,box-shadow .18s ease,background .18s ease;
+}
+.support-button svg{display:block;width:22px;height:22px;pointer-events:none;filter:drop-shadow(0 0 5px rgba(221,193,255,.58))}
+.support-button:active{box-shadow:0 0 18px rgba(199,158,255,.55),0 0 34px rgba(162,108,230,.34),inset 0 1px rgba(255,255,255,.28)}
+.support-button.dragging{cursor:grabbing;transition:none;transform:translateY(-50%) scale(1.08);box-shadow:0 0 20px rgba(211,174,255,.66),0 0 42px rgba(162,108,230,.36)}
+.support-button.snapping{transform:translateY(-50%) scale(.94)}
+.support-button:focus-visible{outline:2px solid #f4e8ff;outline-offset:4px}
+@media(prefers-reduced-motion:reduce){.support-button{transition:none}}
+
 .view{display:none;min-width:0}
 .view.active{display:block}
 
@@ -1556,6 +1578,16 @@ select{
   </form>
   <div id="chatStatus" class="status"></div>
 </div>
+
+<button id="supportButton" class="support-button" type="button"
+  aria-label="Поддержка" title="Поддержка">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M4 13v-1a8 8 0 0 1 16 0v1"/>
+    <path d="M4 13h2.2A1.8 1.8 0 0 1 8 14.8v2.4A1.8 1.8 0 0 1 6.2 19H6a2 2 0 0 1-2-2v-4Z"/>
+    <path d="M20 13h-2.2a1.8 1.8 0 0 0-1.8 1.8v2.4a1.8 1.8 0 0 0 1.8 1.8h.2a2 2 0 0 0 2-2v-4Z"/>
+    <path d="M16 20a4 4 0 0 1-3 1h-1"/>
+  </svg>
+</button>
 
 <!-- НАВИГАЦИЯ -->
 <nav id="bottomNav">
@@ -3408,7 +3440,76 @@ window.addEventListener("pagehide",()=>{
   audioURLs.forEach(url=>URL.revokeObjectURL(url));
 });
 
+function setupSupportButton(){
+  const button=$("supportButton");
+  if(!button||button.dataset.dragReady) return;
+  button.dataset.dragReady="1";
+  const gap=8;
+  let drag=null;
+  let suppressClickUntil=0;
+  let edge="right";
+  try{
+    const saved=localStorage.getItem("anniveo-support-edge");
+    if(saved==="left"||saved==="right") edge=saved;
+  }catch(e){}
+
+  const placeOnEdge=(nextEdge,save=true)=>{
+    edge=nextEdge==="left"?"left":"right";
+    const width=button.getBoundingClientRect().width||48;
+    const x=edge==="left"?gap:Math.max(gap,window.innerWidth-width-gap);
+    button.style.left=x+"px";
+    button.style.right="auto";
+    button.dataset.edge=edge;
+    if(save){
+      try{localStorage.setItem("anniveo-support-edge",edge)}catch(e){}
+    }
+  };
+
+  placeOnEdge(edge,false);
+  button.addEventListener("pointerdown",event=>{
+    if(event.pointerType==="mouse"&&event.button!==0) return;
+    const rect=button.getBoundingClientRect();
+    drag={id:event.pointerId,startX:event.clientX,startLeft:rect.left,moved:false};
+    button.classList.remove("snapping");
+    button.classList.add("dragging");
+    button.setPointerCapture?.(event.pointerId);
+  });
+  button.addEventListener("pointermove",event=>{
+    if(!drag||drag.id!==event.pointerId) return;
+    const dx=event.clientX-drag.startX;
+    if(Math.abs(dx)>4) drag.moved=true;
+    if(!drag.moved) return;
+    const width=button.getBoundingClientRect().width||48;
+    const x=Math.max(gap,Math.min(window.innerWidth-width-gap,drag.startLeft+dx));
+    button.style.left=x+"px";
+    button.style.right="auto";
+  });
+  const finishDrag=event=>{
+    if(!drag||drag.id!==event.pointerId) return;
+    const moved=drag.moved;
+    const rect=button.getBoundingClientRect();
+    button.classList.remove("dragging");
+    button.classList.add("snapping");
+    placeOnEdge(rect.left+rect.width/2<window.innerWidth/2?"left":"right");
+    drag=null;
+    if(moved) suppressClickUntil=Date.now()+450;
+    setTimeout(()=>button.classList.remove("snapping"),380);
+  };
+  button.addEventListener("pointerup",finishDrag);
+  button.addEventListener("pointercancel",finishDrag);
+  button.addEventListener("click",event=>{
+    if(Date.now()<suppressClickUntil){
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    toast("Контакт поддержки пока не подключён");
+  });
+  window.addEventListener("resize",()=>placeOnEdge(edge,false),{passive:true});
+}
+
 /* СТАРТ */
+setupSupportButton();
 showWelcome=true;
 renderChat();
 loadHistory();
