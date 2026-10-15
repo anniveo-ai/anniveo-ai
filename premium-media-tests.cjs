@@ -1,5 +1,5 @@
 const {DatabaseSync}=require('node:sqlite'),vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict');
-const raw=new DatabaseSync(':memory:');raw.exec(fs.readFileSync('media-jobs.sql','utf8'));raw.exec('CREATE TABLE usage_events(id TEXT PRIMARY KEY,user_id TEXT,kind TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP)');
+const raw=new DatabaseSync(':memory:');raw.exec(fs.readFileSync('media-jobs.sql','utf8'));raw.exec('CREATE TABLE chat_messages(id INTEGER PRIMARY KEY,user_id TEXT,role TEXT,content TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);CREATE TABLE usage_events(id TEXT PRIMARY KEY,user_id TEXT,kind TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP)');raw.exec(fs.readFileSync('stability-migration.sql','utf8'));
 const db={prepare(sql){return {bind(...p){return {first:async()=>raw.prepare(sql).get(...p)||null,all:async()=>({results:raw.prepare(sql).all(...p)}),run:async()=>({meta:{changes:Number(raw.prepare(sql).run(...p).changes)}})};}};}};
 const calls=[];let responseStatus=200,providerState='pending';
 const context=vm.createContext({URL,Uint8Array,AbortController,setTimeout,clearTimeout,Response,console,btoa,
