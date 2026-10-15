@@ -1573,6 +1573,42 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
 .usage-media-metrics{margin:0 0 10px}.usage-media-metrics>div{padding:15px 10px;border:1px solid #a485c32b;border-radius:17px;background:#32293e44}
 .usage-daily{margin-top:16px}.usage-daily-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #ffffff09;font-size:12px;color:#af9fbe}.usage-daily-row:last-child{border:0}.usage-daily-row strong{font-weight:500;color:#d2c3df}
 
+.photo-studio{max-width:520px;margin:0 auto;padding-bottom:15px}
+.studio-heading{display:flex;align-items:flex-start;gap:14px;justify-content:space-between}.studio-heading .page-title{font-size:27px;margin:10px 0 6px}.studio-heading .subtitle{font-size:12px;margin-bottom:0;line-height:1.5;color:#b5a8c9}
+.studio-video-link{display:flex;align-items:center;gap:5px;flex:none;margin-top:13px;border:1px solid #a483cb3b;border-radius:13px;background:#33294255;padding:8px 10px;color:#cbb7e1;font-size:11px}.studio-video-link svg{width:16px;height:16px}
+.studio-upload-stage{position:relative;display:grid;place-items:center;height:244px;margin:4px auto 13px;max-width:420px;isolation:isolate}
+.studio-upload-stage:before{content:"";position:absolute;inset:9% 3% -3%;background:radial-gradient(ellipse,#963ef433,transparent 68%);filter:blur(15px);z-index:-1;pointer-events:none}
+.studio-upload-decor{position:absolute;inset:0;pointer-events:none;transition:opacity .2s}
+.studio-backplate{position:absolute;inset:23% 3% 10%;border:1px solid #a36adbaa;border-radius:25px;background:linear-gradient(130deg,#35204499,#12111e 60%,#4a206955);box-shadow:inset 0 0 24px #a44df21a,0 0 15px #a853ec24}
+.studio-sample-card{display:block;position:absolute;top:21%;width:31%;height:64%;padding:3px;border:1px solid #c597ef99;border-radius:13px;background:linear-gradient(135deg,#b68add,#352246);box-shadow:0 0 18px #963aee44;overflow:hidden}
+.studio-sample-card img{display:block;width:100%;height:100%;object-fit:cover;border-radius:9px;opacity:.7;filter:saturate(.65) contrast(1.07)}
+.sample-one{left:12%;transform:rotate(-21deg) translateY(-13px)}.sample-two{right:10%;transform:rotate(20deg) translateY(4px);filter:hue-rotate(12deg)}
+.studio-upload-spark{position:absolute;width:4px;height:4px;border-radius:50%;background:#c78bff;box-shadow:0 0 10px #c56fff}.spark-one{left:13%;top:15%}.spark-two{right:13%;bottom:10%;width:3px;height:3px}
+.studio-upload-square{position:relative;display:grid;place-items:center;width:195px;height:185px;padding:20px 7px;transform:rotate(6deg) translateY(10px);border:1.5px solid #c58df4;border-radius:26px;background:linear-gradient(137deg,#8b53b74d,#20152df5 35%,#1b112be8 70%,#7744a377);box-shadow:inset 0 0 0 1px #f0d9ff22,inset 2px 2px 16px #d7a5ff2e,0 0 7px #c67cff77,0 10px 25px #08040f80,0 0 34px #9237ec30;color:#f5ecff;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.studio-upload-square:active{transform:rotate(4deg) translateY(10px) scale(.97)}
+.studio-upload-content{display:flex;flex-direction:column;align-items:center;gap:10px;transform:rotate(-6deg);position:relative;z-index:1;max-width:100%}
+.studio-upload-plus{display:grid;place-items:center;width:43px;height:43px;border-radius:15px;border:1.5px solid #c992ed;box-shadow:0 0 10px #aa62e24d,inset 0 0 10px #aa62e233;color:#d6a9ff;margin-bottom:3px}.studio-upload-plus svg{width:29px;height:29px}
+.studio-upload-content strong{font-size:17px;font-weight:600;text-shadow:0 1px 5px #0009}.studio-upload-content small{font-size:9px;color:#c2add7;line-height:1.4;max-width:160px;overflow-wrap:anywhere}
+.studio-upload-square:focus-visible,.studio-tools button:focus-visible,.studio-create-button:focus-visible{outline:2px solid #edc6ff;outline-offset:5px}
+.studio-photo-preview{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#15121d}
+.studio-upload-stage.has-photo .studio-upload-decor{opacity:0}.studio-upload-stage.has-photo .studio-upload-square{width:min(100%,370px);height:226px;transform:none;border-radius:22px;padding:0;background:#17131e;box-shadow:0 0 20px #a34bdf25}
+.studio-upload-stage.has-photo .studio-upload-content{align-self:end;width:100%;padding:20px 10px 12px;background:linear-gradient(transparent,#0c0716dd);transform:none;gap:3px}.studio-upload-stage.has-photo .studio-upload-plus{display:none}.studio-upload-stage.has-photo .studio-upload-content strong{font-size:12px}.studio-upload-stage.has-photo .studio-upload-content small{font-size:9px}
+.studio-remove-photo{position:absolute;z-index:3;top:15px;right:max(5px,calc((100% - 370px)/2 + 10px));display:grid;place-items:center;width:29px;height:29px;border:1px solid #d2b3ec66;border-radius:50%;background:#1b1429dd;color:#f4e8ff;font-size:23px;line-height:1}
+.studio-remove-photo[hidden],.studio-photo-preview[hidden]{display:none}
+.studio-upload-stage.drag-over .studio-upload-square{box-shadow:0 0 0 3px #edc8ff88,0 0 32px #b46bff99;transform:scale(1.02)}
+.studio-prompt-box{border:1px solid #ae90d14f;border-radius:20px;background:linear-gradient(130deg,#29233566,#15141f);box-shadow:inset 0 1px #ffffff09;padding:15px 14px 9px}
+.studio-prompt-box label{font-size:13px;color:#e1d2f0;font-weight:500;margin-bottom:8px}.studio-prompt-box textarea{display:block;width:100%;min-height:61px;max-height:220px;resize:vertical;border:0;background:none;padding:0;outline:none;font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f4ebfc}.studio-prompt-box textarea::placeholder{font-size:12px;color:#887b9a}
+.studio-prompt-box:focus-within{border-color:#c08ceaa1;box-shadow:0 0 0 2px #a56be711}
+.studio-tools{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:10px 0 0}
+.studio-tools button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-width:0;min-height:75px;padding:10px 3px;border:1px solid #a187c539;border-radius:15px;background:linear-gradient(145deg,#30283e66,#191722);color:#cbb9de;transition:transform .18s,border-color .18s,box-shadow .18s}.studio-tools button svg{width:23px;height:23px}.studio-tools button span{font-size:10px;font-weight:500}.studio-tools button:active{transform:scale(.95)}.studio-tools button[aria-pressed="true"]{color:#efd9ff;border-color:#ba80edaa;background:linear-gradient(145deg,#673e8b66,#2b1c3b);box-shadow:0 0 15px #a04de726,inset 0 1px #ffffff13}
+.studio-tool-hint{font-size:10px;line-height:1.45;color:#9d8caf;min-height:15px;margin:9px 2px 11px}
+.studio-fields{margin-top:0;gap:11px}.studio-fields label{font-size:11px;margin-bottom:7px;color:#c2b2d3}.studio-fields select{border-color:#ae8cce42;border-radius:14px;padding:12px 10px;background:#1a1623;font-size:14px;color:#ede2f7;box-shadow:inset 0 1px #fff1}.studio-fields select:disabled{opacity:.7}
+.studio-create-button{position:relative;display:flex;align-items:center;justify-content:center;gap:9px;width:100%;min-height:57px;padding:16px;margin:18px 0 0;border:1.5px solid #e7b0ffbd;border-radius:20px;background:linear-gradient(116deg,#bc51ed,#8b3be2 40%,#7840da 75%,#bd5beb);box-shadow:inset 0 1px 2px #fff8,inset 0 0 12px #edbbff65,0 0 0 2px #9635df24,0 0 19px #ae4cec52,0 5px 23px #7d25ba33;color:#fff;font-size:17px;font-weight:650;text-shadow:0 1px 4px #47107066;transition:transform .18s,filter .18s}
+.studio-create-button svg{width:19px;height:19px}.studio-create-button:active{transform:scale(.975);filter:brightness(1.12)}.studio-create-button:disabled{opacity:.65;cursor:wait}
+.studio-result-status{font-size:12px;color:#c4b1d8;line-height:1.5;margin-top:14px}.studio-result-status:empty{margin-top:0}.studio-result{margin-top:0}.studio-result:not(:empty){border-top:1px solid #a189ba26;padding-top:12px;margin-top:12px}.studio-result a{display:block;padding:12px;border:1px solid #b48cd052;border-radius:13px;background:#77489a33;text-align:center}
+@media(max-width:350px){.studio-heading .page-title{font-size:24px}.studio-heading .subtitle{font-size:11px}.studio-video-link{padding:7px 8px}.studio-upload-stage{height:222px}.studio-upload-square{width:180px;height:174px}.studio-upload-stage.has-photo .studio-upload-square{height:208px}.studio-tools{gap:6px}.studio-tools button{min-height:70px}.studio-create-button{font-size:16px;min-height:54px}}
+@media(prefers-reduced-motion:reduce){.studio-upload-square,.studio-tools button,.studio-create-button{transition:none}}
+
 </style>
 </head>
 
@@ -1686,63 +1722,28 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
 </section>
 
 <!-- СТУДИЯ -->
-<section id="view-studio" class="view">
-  <h1 class="page-title">Студия</h1>
-  <p class="subtitle">Создавай изображения и видео с ANIS AI.</p>
-  <div class="tiles" id="studioTiles"></div>
-  <div class="panel">
-    <b>Воплоти свою идею</b>
-    <p class="note">
-      Опиши сюжет, стиль, свет и детали,
-      чтобы получить лучший результат.
-    </p>
-    <button class="primary" onclick="openView('chat')">
-      Обсудить идею
+<section id="view-studio" class="view photo-studio">
+  <div class="studio-heading"><div><h1 class="page-title">Создай фото</h1><p class="subtitle">Загрузи фото и опиши, что изменить.</p></div><button class="studio-video-link" type="button" onclick="openView('video')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="5" width="12" height="14" rx="3"/><path d="m15 10 6-4v12l-6-4Z"/></svg>Видео</button></div>
+  <div class="studio-upload-stage" id="studioUploadStage" ondragover="studioDragOver(event)" ondragleave="studioDragLeave(event)" ondrop="studioDropPhoto(event)">
+    <div class="studio-upload-decor" aria-hidden="true"><span class="studio-backplate"></span><span class="studio-sample-card sample-one"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=240&q=80" alt="" decoding="async" loading="lazy"></span><span class="studio-sample-card sample-two"><img src="https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=240&q=80" alt="" decoding="async" loading="lazy"></span><span class="studio-upload-spark spark-one"></span><span class="studio-upload-spark spark-two"></span></div>
+    <button id="studioUploadButton" class="studio-upload-square" type="button" onclick="pickStudioPhoto()" aria-label="Добавить фото">
+      <img id="studioPhotoPreview" class="studio-photo-preview" alt="Выбранное фото" hidden>
+      <span class="studio-upload-content"><span class="studio-upload-plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><strong id="studioUploadLabel">Добавить фото</strong><small id="studioUploadCaption">Нажми или перетащи сюда</small></span>
     </button>
+    <button class="studio-remove-photo" id="studioRemovePhoto" type="button" onclick="clearStudioPhoto()" aria-label="Убрать выбранное фото" hidden>×</button>
+    <input id="imageFile" type="file" accept="image/jpeg,image/png,image/webp" onchange="studioPhotoPicked(this)" hidden>
   </div>
-</section>
-
-<!-- ФОТО -->
-<section id="view-image" class="view">
-  <h1 class="page-title">Редактор фото</h1>
-  <p class="subtitle">Создай изображение с нуля или измени своё фото.</p>
-  <div class="panel">
-    <label for="imagePrompt">Описание изображения</label>
-    <textarea id="imagePrompt" class="prompt"
-      maxlength="1200"
-      placeholder="Портрет в кинематографичном стиле, мягкий свет..."></textarea>
-    <div style="margin-top:14px">
-      <label for="imageFile">Фото для изменения (можно пропустить)</label>
-      <input id="imageFile" class="media-upload" type="file"
-        accept="image/jpeg,image/png,image/webp">
-      <p class="note">Добавь фото и напиши, что изменить. Без фото ANIS AI создаст новое изображение.</p>
-    </div>
-    <div class="fields">
-      <div>
-        <label for="imageModel">Модель</label>
-        <select id="imageModel">
-          <option value="flux">Flux</option>
-          <option value="gptimage">GPT Image</option>
-          <option value="seedream5">Seedream</option>
-          <option value="kontext">Flux Kontext (правка фото)</option>
-        </select>
-      </div>
-      <div>
-        <label for="imageRatio">Формат</label>
-        <select id="imageRatio">
-          <option value="1:1">1:1</option>
-          <option value="9:16">9:16</option>
-          <option value="16:9">16:9</option>
-        </select>
-      </div>
-    </div>
-    <button id="makeImage" class="primary"
-      onclick="generateMedia('image')">
-      ✦ Создать / изменить фото
-    </button>
-    <div id="imageStatus" class="status"></div>
-    <div id="imageResult" class="result"></div>
+  <div class="studio-prompt-box"><label for="imagePrompt">Напиши, что хочешь сделать</label><textarea id="imagePrompt" maxlength="1200" placeholder="Например: сделай свет мягче, замени фон на закат…"></textarea></div>
+  <div class="studio-tools" role="group" aria-label="Действие с фото">
+    <button type="button" data-studio-tool="improve" aria-pressed="false" onclick="selectStudioTool('improve')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 20 11-11 3 3L7 23ZM14 4l1-3 1 3 3 1-3 1-1 3-1-3-3-1ZM5 8l1-3 1 3 3 1-3 1-1 3-1-3-3-1M20 17l1-2 1 2 2 1-2 1-1 2-1-2-2-1"/></svg><span>Улучшить</span></button>
+    <button type="button" data-studio-tool="background" aria-pressed="false" onclick="selectStudioTool('background')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" stroke-dasharray="3 3"/><path d="m4 17 5-5 4 4 3-3 4 5"/><circle cx="15" cy="8" r="2"/></svg><span>Фон</span></button>
+    <button type="button" data-studio-tool="style" aria-pressed="false" onclick="selectStudioTool('style')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h2a2 2 0 0 0 0-4h-1a2 2 0 0 1 0-4h4a4 4 0 0 0 4-4c0-3-4-6-9-6Z"/><path d="M7 9h.01M10 6h.01M15 7h.01M6 13h.01"/></svg><span>Стиль</span></button>
+    <button type="button" data-studio-tool="details" aria-pressed="false" onclick="selectStudioTool('details')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M21 15v4a2 2 0 0 1-2 2h-4M9 21H5a2 2 0 0 1-2-2v-4"/><circle cx="12" cy="12" r="4"/><path d="M12 10v4M10 12h4"/></svg><span>Детали</span></button>
   </div>
+  <p id="studioToolHint" class="studio-tool-hint" role="status">Без фото можно создать изображение по описанию.</p>
+  <div class="fields studio-fields"><div><label for="imageModel">Модель</label><select id="imageModel"><option value="flux">Flux</option><option value="gptimage">GPT Image</option><option value="seedream5">Seedream</option><option value="kontext">Flux Kontext · правка фото</option></select></div><div><label for="imageRatio">Формат</label><select id="imageRatio"><option value="1:1">1:1</option><option value="9:16">9:16</option><option value="16:9">16:9</option></select></div></div>
+  <button id="makeImage" class="studio-create-button" type="button" onclick="generateMedia('image')"><span id="studioCreateLabel">Создать фото</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"/></svg></button>
+  <div id="imageStatus" class="status studio-result-status" role="status" aria-live="polite"></div><div id="imageResult" class="result studio-result"></div>
 </section>
 
 <!-- ВИДЕО -->
@@ -2708,7 +2709,7 @@ const tilesHTML = `
   </span>
 </button>`;
 $("homeTiles").innerHTML = tilesHTML;
-$("studioTiles").innerHTML = tilesHTML;
+
 
 /* АНИМАЦИЯ МЕНЮ */
 function moveGlider(){
@@ -2734,6 +2735,7 @@ function scrollAppToBottom(){
 
 /* РАЗДЕЛЫ */
 function openView(name){
+  if(name==="image")name="studio";
   closeAttachmentMenu();
   const returnToTyping=name==="chat"&&(
     orbVoiceActive||recording||transcribing||openingMic
@@ -4554,19 +4556,93 @@ async function showHistory(){
 }
 
 /* ФОТО И ВИДЕО */
+let studioImageFile=null;
+let studioPreviewUrl=null;
+let studioPreviousModel='flux';
+let selectedStudioTool=null;
+const STUDIO_TOOLS=Object.freeze({
+  improve:{label:'Улучшить',prompt:'Улучши качество и чёткость фото, аккуратно скорректируй свет и цвета. Сохрани внешность, пропорции и естественную текстуру.'},
+  background:{label:'Фон',prompt:'Замени фон фотографии. Если другой фон не указан, используй минималистичную студию с мягким светом. Сохрани главный объект без изменений.'},
+  style:{label:'Стиль',prompt:'Примени художественный стиль к изображению. Если стиль не указан, используй кинематографичный свет и глубокие естественные цвета. Сохрани основные черты и композицию.'},
+  details:{label:'Детали',prompt:'Аккуратно улучши мелкие детали, чёткость и текстуры фотографии. Сохрани естественный вид, внешность и композицию, не добавляй лишних объектов.'}
+});
+function pickStudioPhoto(){if(!$('makeImage').disabled)$('imageFile').click();}
+function syncStudioTool(){
+  document.querySelectorAll('[data-studio-tool]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.studioTool===selectedStudioTool)));
+  const tool=STUDIO_TOOLS[selectedStudioTool];
+  $('studioToolHint').textContent=tool
+    ?(!studioImageFile&&selectedStudioTool!=='style'?'Добавь фото для действия «'+tool.label+'».':tool.label+' · Добавь пожелания или создай фото с этими настройками.')
+    :studioImageFile?'Фото добавлено. Выбери действие или опиши изменения.':'Без фото можно создать изображение по описанию.';
+}
+function selectStudioTool(tool){
+  if($('makeImage').disabled||!Object.hasOwn(STUDIO_TOOLS,tool))return;
+  selectedStudioTool=selectedStudioTool===tool?null:tool;
+  syncStudioTool();tg?.HapticFeedback?.selectionChanged?.();
+}
+function buildStudioPrompt(text,file){
+  text=String(text||'').trim();
+  const tool=STUDIO_TOOLS[selectedStudioTool];
+  if(tool&&!file&&selectedStudioTool!=='style')throw Error('Добавь фото для действия «'+tool.label+'».');
+  if(!text&&(!file||!tool))return '';
+  const prompt=tool?tool.prompt+(text?'\nПожелания пользователя: '+text:''):text;
+  if(prompt.length>1200)throw Error('Сократи описание: вместе с выбранным действием — до 1200 символов.');
+  return prompt;
+}
+function setStudioPhoto(file){
+  if($('makeImage').disabled)return false;
+  if(!file)return false;
+  if(!['image/jpeg','image/png','image/webp'].includes(file.type)){toast('Выбери фото JPEG, PNG или WebP.');return false;}
+  if(file.size<=0||file.size>20*1024*1024){toast('Фото должно быть непустым и меньше 20 МБ.');return false;}
+  if(!studioImageFile)studioPreviousModel=$('imageModel').value;
+  if(studioPreviewUrl)URL.revokeObjectURL(studioPreviewUrl);
+  studioImageFile=file;studioPreviewUrl=URL.createObjectURL(file);
+  const preview=$('studioPhotoPreview');preview.src=studioPreviewUrl;preview.hidden=false;
+  $('studioUploadStage').classList.add('has-photo');
+  $('studioRemovePhoto').hidden=false;
+  $('studioUploadButton').setAttribute('aria-label','Заменить фото');
+  $('studioUploadLabel').textContent='Заменить фото';$('studioUploadCaption').textContent=file.name||'Выбрано фото';
+  $('imageModel').value='kontext';$('imageModel').disabled=true;
+  syncStudioTool();return true;
+}
+function studioPhotoPicked(input){setStudioPhoto(input.files?.[0]);input.value='';}
+function clearStudioPhoto(){
+  if($('makeImage').disabled)return;
+  if(studioPreviewUrl)URL.revokeObjectURL(studioPreviewUrl);
+  studioImageFile=null;studioPreviewUrl=null;selectedStudioTool=null;
+  const preview=$('studioPhotoPreview');preview.hidden=true;preview.removeAttribute('src');
+  $('imageFile').value='';$('studioUploadStage').classList.remove('has-photo','drag-over');
+  $('studioRemovePhoto').hidden=true;$('studioUploadButton').setAttribute('aria-label','Добавить фото');
+  $('studioUploadLabel').textContent='Добавить фото';$('studioUploadCaption').textContent='Нажми или перетащи сюда';
+  $('imageModel').disabled=false;$('imageModel').value=studioPreviousModel;
+  syncStudioTool();
+}
+function studioDragOver(event){event.preventDefault();if(!$('makeImage').disabled)$('studioUploadStage').classList.add('drag-over');}
+function studioDragLeave(event){if(!event.currentTarget.contains(event.relatedTarget))$('studioUploadStage').classList.remove('drag-over');}
+function studioDropPhoto(event){event.preventDefault();$('studioUploadStage').classList.remove('drag-over');setStudioPhoto(event.dataTransfer?.files?.[0]);}
+function setStudioBusy(value){
+  $('studioUploadButton').disabled=value;$('studioRemovePhoto').disabled=value;
+  $('imagePrompt').disabled=value;$('imageRatio').disabled=value;$('imageModel').disabled=value||!!studioImageFile;
+  document.querySelectorAll('[data-studio-tool]').forEach(button=>button.disabled=value);
+  $('studioCreateLabel').textContent=value?(studioImageFile?'Изменяю фото…':'Создаю фото…'):'Создать фото';
+}
+
+
 async function generateMedia(kind){
   if(!initData||!user){
     toast("Открой ANIS AI через Telegram");
     return;
   }
 
-  const prompt=$(kind+"Prompt").value.trim();
+  const file=kind==="image"?studioImageFile:$("videoFile").files?.[0]||null;
+  let prompt=$(kind+"Prompt").value.trim();
+  if(kind==="image"){
+    try{prompt=buildStudioPrompt(prompt,file);}catch(error){toast(error.message);return;}
+  }
   if(!prompt){
     toast(kind==="image"?"Опиши, какое фото создать или изменить":"Опиши, как создать или изменить видео");
     return;
   }
 
-  const file=$(kind==="image"?"imageFile":"videoFile").files?.[0]||null;
   if(kind==="image"&&file&&!file.type.startsWith("image/")){
     toast("Выбери изображение");
     return;
@@ -4587,6 +4663,7 @@ async function generateMedia(kind){
   const result=$(kind+"Result");
 
   button.disabled=true;
+  if(kind==="image")setStudioBusy(true);
   status.textContent=file
     ?(kind==="image"?"Изменяю фото…":"Анализирую исходное видео…")
     :"Создаю…";
@@ -4692,6 +4769,7 @@ async function generateMedia(kind){
   }finally{
     clearTimeout(timer);
     button.disabled=false;
+    if(kind==="image")setStudioBusy(false);
   }
 }
 
