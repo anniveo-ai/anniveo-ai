@@ -92,6 +92,9 @@ html[data-theme="light"] #bottomNav .studio-nav-ready-badge{border-color:#f6effa
 dialog>.anis-banner{position:sticky;top:0;left:auto;transform:none;width:100%;margin:12px 0}
 #studioKeyboardBar{position:fixed;z-index:2200;right:12px;height:44px;display:flex;align-items:center;padding:0;background:#201a2ff5;border:1px solid #ab80cd77;border-radius:14px;box-shadow:0 -4px 18px #0003}
 #studioKeyboardBar button{width:44px;height:44px;min-height:44px;padding:8px;font-size:22px;border:0;background:transparent}
+body.studio-typing #bottomNav,body.studio-typing #hideKeyboard{display:none!important}
+body.studio-typing #app{padding-bottom:calc(var(--studio-keyboard-inset,0px) + 150px);scroll-padding-top:12px;scroll-padding-bottom:64px}
+body.studio-typing .studio-prompt-box textarea{max-height:max(80px,calc(var(--studio-visible-height,100dvh) - 190px));scroll-margin-block:20px 64px}
 .anis-expiry{padding:12px 14px;border:1px solid #9878b455;border-radius:16px;margin:12px 0;color:#cdbde0;font-size:13px;line-height:1.45}.anis-expiry.warning{border-color:#d9ae63;color:#f4cd8e}
 .anis-steps{display:flex;gap:5px;margin:10px 0 16px}.anis-steps span{flex:1;height:4px;border-radius:4px;background:#76658c44}.anis-steps .done{background:#ba80ef}
 .anis-notify{display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #86739855;border-radius:16px;margin:12px 0;font-size:14px}.anis-notify input{width:22px;height:22px;accent-color:#965ad0;flex-shrink:0}

@@ -259,8 +259,29 @@
  const keyboardBar=el('div',{id:'studioKeyboardBar',hidden:true}),keyboardDone=button('✓',()=>document.activeElement?.blur());
  keyboardDone.setAttribute('aria-label','Закрыть клавиатуру');keyboardDone.title='Готово';
  keyboardBar.append(keyboardDone);document.body.append(keyboardBar);
- function keyboardLayout(){const id=document.activeElement?.id,v=window.visualViewport,focused=['imagePrompt','videoPrompt','projectAgentIdea'].includes(id);keyboardBar.hidden=!focused||!!v&&window.innerHeight-v.height<100;if(!keyboardBar.hidden){keyboardBar.style.top=((v?.offsetTop||0)+(v?.height||innerHeight)-52)+'px';}}
- document.addEventListener('focusin',()=>{keyboardLayout();setTimeout(keyboardLayout,250);});document.addEventListener('focusout',()=>setTimeout(keyboardLayout,0));window.visualViewport?.addEventListener('resize',keyboardLayout);window.visualViewport?.addEventListener('scroll',keyboardLayout);
+ let studioViewportHeight=window.innerHeight,studioKeyboardFrame=0;
+ function keyboardLayout(){
+  const field=document.activeElement,v=window.visualViewport,focused=['imagePrompt','videoPrompt','projectAgentIdea'].includes(field?.id);
+  document.body.classList.toggle('studio-typing',focused);
+  if(!focused){studioViewportHeight=window.innerHeight;keyboardBar.hidden=true;document.documentElement.style.removeProperty('--studio-keyboard-inset');document.documentElement.style.removeProperty('--studio-visible-height');requestAnimationFrame(moveGlider);return;}
+  const top=v?.offsetTop||0,visibleHeight=Math.min(v?.height||window.innerHeight,tg?.viewportHeight||window.innerHeight),bottom=top+visibleHeight;
+  const inset=Math.max(0,studioViewportHeight-visibleHeight,window.innerHeight-bottom);
+  document.documentElement.style.setProperty('--studio-keyboard-inset',inset+'px');
+  document.documentElement.style.setProperty('--studio-visible-height',visibleHeight+'px');
+  keyboardBar.hidden=inset<80;
+  keyboardBar.style.top=(bottom-52)+'px';
+  const box=field.closest('.studio-prompt-box')||field,rect=box.getBoundingClientRect(),fieldRect=field.getBoundingClientRect();
+  const available=Math.max(80,visibleHeight-76),target=rect.height<=available?rect:fieldRect;
+  const delta=target.bottom>bottom-60?target.bottom-bottom+60:target.top<top+12?target.top-top-12:0;
+  if(Math.abs(delta)>2){const scroller=field.closest('dialog[open]')||$('app');scroller?.scrollBy({top:delta,behavior:'instant'});}
+ }
+ function scheduleStudioKeyboard(){cancelAnimationFrame(studioKeyboardFrame);studioKeyboardFrame=requestAnimationFrame(keyboardLayout);}
+ document.addEventListener('focusin',()=>{scheduleStudioKeyboard();setTimeout(scheduleStudioKeyboard,250);setTimeout(scheduleStudioKeyboard,500);});document.addEventListener('focusout',()=>setTimeout(scheduleStudioKeyboard,0));document.addEventListener('input',scheduleStudioKeyboard);window.visualViewport?.addEventListener('resize',scheduleStudioKeyboard);window.visualViewport?.addEventListener('scroll',scheduleStudioKeyboard);window.addEventListener('resize',scheduleStudioKeyboard);tg?.onEvent?.('viewportChanged',scheduleStudioKeyboard);
+ // Hidden navigation has zero-sized buttons; never collapse its selection into a border sliver.
+ const originalMoveGlider=moveGlider;
+ moveGlider=function(){const active=$('bottomNav')?.querySelector('button.active');if(active?.getBoundingClientRect().width>0)originalMoveGlider();};
+ window.removeEventListener('resize',originalMoveGlider);window.addEventListener('resize',moveGlider);
+ if(typeof ResizeObserver==='function')new ResizeObserver(()=>requestAnimationFrame(moveGlider)).observe($('bottomNav'));
  // Keep focus until click: otherwise blur would hide the action before pointerup.
  keyboardBar.addEventListener('pointerdown',e=>e.preventDefault());
 
