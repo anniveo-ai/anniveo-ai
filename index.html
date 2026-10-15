@@ -1517,6 +1517,33 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
 @media(prefers-reduced-motion:reduce){.wallet-art-action img{animation:none}.wallet-package,.wallet-topup{transition:none}.coin-art-action.coin-jolt{animation:coinJoltReduced .18s ease-out}}
 @keyframes coinJoltReduced{50%{transform:scale(1.025)}}
 
+
+/* Компактное пополнение и единый значок валюты «Аниумы». */
+.anium-coin{display:inline-block;width:30px;height:30px;object-fit:contain;vertical-align:middle;flex:none;filter:drop-shadow(0 0 5px #af52ec55)}
+.credit>.anium-coin{width:26px;height:26px;margin-left:1px}
+.profile-balance-value strong{display:flex;align-items:center;gap:5px}
+.profile-balance-value .anium-coin{width:35px;height:35px}
+.balance-page{max-width:460px;padding-top:6px}
+.balance-page-heading h1{font-size:25px}
+.balance-page-subtitle{font-size:12px;margin:5px 0 2px}
+.balance-hero{margin:0;}
+.balance-total{gap:4px;padding-top:8px}
+.balance-total strong{display:flex;align-items:center;gap:5px;font-size:44px}
+.balance-total strong .anium-coin{width:42px;height:42px}
+.balance-total>span{font-size:12px}
+.wallet-art-action{width:min(84%,330px);margin:-1px auto -4px}
+.wallet-packages{gap:9px;margin:5px 0 10px}
+.wallet-package{min-height:87px;gap:4px;padding:12px 4px 11px;border-radius:18px}
+.wallet-package strong{display:flex;align-items:center;justify-content:center;gap:3px;font-size:22px;white-space:nowrap}
+.wallet-package strong .anium-coin{width:27px;height:27px}
+.wallet-package>.wallet-unit{font-size:10px;font-weight:450;color:#b2a2c6;margin-top:-2px;margin-bottom:4px}
+.wallet-package>span{font-size:14px}
+.wallet-topup{min-height:50px;border-radius:17px;font-size:16px}
+.wallet-payment-note{line-height:1.4;margin:7px 0 10px}
+.wallet-bonus{padding:13px 12px;border-radius:19px}
+.wallet-tools{margin-top:10px}.wallet-tools button{padding:12px 4px;gap:7px}
+@media(max-width:350px){.wallet-package strong{font-size:19px}.wallet-package strong .anium-coin{width:23px;height:23px}.wallet-package{min-height:81px}.wallet-art-action{width:82%}}
+
 </style>
 </head>
 
@@ -1556,7 +1583,7 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
   <button class="credit" onclick="openView('balance')">
     <span class="balance-label">Баланс</span>
     <span class="balance-number" data-wallet-balance>0</span>
-    <span class="balance-star">✦</span>
+    <img class="anium-coin" src="anium-coin-v1.webp" width="32" height="32" alt="" aria-hidden="true">
   </button>
   <button class="gear" onclick="openView('profile')">⚙</button>
 </header>
@@ -1760,7 +1787,7 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
     <button class="profile-settings" type="button" aria-label="Настройки профиля" onclick="showProfilePanel('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3-1 3-3 1-2 4 2 2v4l3 1 2 3h4l2-3 3-1v-4l2-2-2-4-3-1-1-3Z"/><circle cx="12" cy="12" r="3"/></svg></button>
   </div>
   <div class="profile-wallet">
-    <div class="profile-wallet-copy"><button class="profile-balance-value" type="button" aria-label="Открыть баланс" onclick="openView('balance')"><strong><b data-wallet-balance style="font:inherit">0</b> <span>✦</span></strong></button><span class="profile-wallet-label">Баланс ANNIVEO</span>
+    <div class="profile-wallet-copy"><button class="profile-balance-value" type="button" aria-label="Открыть баланс" onclick="openView('balance')"><strong><b data-wallet-balance style="font:inherit">0</b> <img class="anium-coin" src="anium-coin-v1.webp" width="32" height="32" alt="" aria-hidden="true"></strong></button><span class="profile-wallet-label">Баланс · Аниумы</span>
       <button type="button" onclick="openView('balance')">＋ Пополнить</button>
     </div>
     <div class="profile-coins-art"><button class="coin-art-action" type="button" onclick="joltCoins(this)" aria-label="Пошевелить монеты"><img src="profile-coins-real-v1.webp" width="768" height="512" alt="Сияющие монеты ANNIVEO" decoding="async"></button></div>
@@ -1781,19 +1808,19 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
 <!-- БАЛАНС -->
 <section id="view-balance" class="view balance-page">
   <div class="balance-page-heading"><h1>Баланс</h1><button type="button" onclick="showWalletNotice('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7M12 7v5l3 2"/></svg>История</button></div>
-  <p class="balance-page-subtitle">Твои монеты — больше возможностей.</p>
+  <p class="balance-page-subtitle">Твои Аниумы — больше возможностей.</p>
   <div class="balance-hero">
-    <div class="balance-total"><strong><b data-wallet-balance style="font:inherit">0</b> <span>✦</span></strong><span>ANNIVEO</span></div>
+    <div class="balance-total"><strong><b data-wallet-balance style="font:inherit">0</b> <img class="anium-coin" src="anium-coin-v1.webp" width="32" height="32" alt="" aria-hidden="true"></strong><span>Аниумы</span></div>
     <button class="coin-art-action wallet-art-action" type="button" aria-label="Пошевелить монеты на балансе" onclick="joltCoins(this)"><img src="wallet-coins-real-v1.webp" width="1152" height="768" alt="Объёмные сияющие монеты с фиолетовым разломом" decoding="async"></button>
   </div>
-  <div class="wallet-packages" role="group" aria-label="Выбери пакет монет">
-    <button type="button" class="wallet-package" aria-pressed="false" data-wallet-pack="0" onclick="selectWalletPack(0)"><strong>100</strong><span>99 ⭐</span></button>
-    <button type="button" class="wallet-package selected" aria-pressed="true" data-wallet-pack="1" onclick="selectWalletPack(1)"><strong>500</strong><span>499 ⭐</span></button>
-    <button type="button" class="wallet-package" aria-pressed="false" data-wallet-pack="2" onclick="selectWalletPack(2)"><strong>1000</strong><span>999 ⭐</span></button>
+  <div class="wallet-packages" role="group" aria-label="Выбери пакет Аниумов">
+    <button type="button" class="wallet-package" aria-pressed="false" data-wallet-pack="0" onclick="selectWalletPack(0)"><strong>100 <img class="anium-coin" src="anium-coin-v1.webp" width="32" height="32" alt="" aria-hidden="true"></strong><span class="wallet-unit">Аниумы</span><span>99 ⭐</span></button>
+    <button type="button" class="wallet-package selected" aria-pressed="true" data-wallet-pack="1" onclick="selectWalletPack(1)"><strong>500 <img class="anium-coin" src="anium-coin-v1.webp" width="32" height="32" alt="" aria-hidden="true"></strong><span class="wallet-unit">Аниумы</span><span>499 ⭐</span></button>
+    <button type="button" class="wallet-package" aria-pressed="false" data-wallet-pack="2" onclick="selectWalletPack(2)"><strong>1000 <img class="anium-coin" src="anium-coin-v1.webp" width="32" height="32" alt="" aria-hidden="true"></strong><span class="wallet-unit">Аниумы</span><span>999 ⭐</span></button>
   </div>
   <button class="wallet-topup" type="button" onclick="startWalletTopup()">Пополнить</button>
-  <p class="wallet-payment-note">Оплата через Telegram Stars · монеты начисляются после оплаты</p>
-  <button class="wallet-bonus" type="button" onclick="showWalletNotice('bonus')"><span class="wallet-bonus-icon">✦</span><span><strong>Получить монеты</strong><small>Бонусы и новые возможности</small></span><span class="wallet-bonus-arrow">›</span></button>
+  <p class="wallet-payment-note">Оплата через Telegram Stars · Аниумы начисляются после оплаты</p>
+  <button class="wallet-bonus" type="button" onclick="showWalletNotice('bonus')"><span class="wallet-bonus-icon">✦</span><span><strong>Получить Аниумы</strong><small>Бонусы и новые возможности</small></span><span class="wallet-bonus-arrow">›</span></button>
   <div class="wallet-tools"><button type="button" onclick="showWalletNotice('history')"><span>◷</span>История</button><button type="button" onclick="showWalletNotice('promo')"><span>✧</span>Промокод</button><button type="button" onclick="showWalletNotice('gift')"><span>♧</span>Подарить</button></div>
 </section>
 </div>
@@ -3457,8 +3484,8 @@ async function awaitWalletCredit(orderId){
       const data=await refreshWallet();
       const receipt=data?.history?.find(item=>item.order_id===orderId);
       if(receipt&&!receipt.refunded_at){
-        walletNote('Готово! На баланс зачислено '+receipt.coins+' монет.');
-        toast('Баланс пополнен на '+receipt.coins+' монет');
+        walletNote('Готово! На баланс зачислено '+receipt.coins+' Аниумов.');
+        toast('Баланс пополнен на '+receipt.coins+' Аниумов');
         tg?.HapticFeedback?.notificationOccurred?.('success');
         return;
       }
@@ -3503,7 +3530,7 @@ async function showWalletHistory(){
   if(!data.history.length){const p=document.createElement('p');p.textContent='Пополнений пока нет.';body.append(p);return;}
   for(const item of data.history){
     const row=document.createElement('p');row.style.cssText='padding:12px 0;border-bottom:1px solid #ffffff14;line-height:1.6';
-    const label=document.createElement('strong');label.textContent=(item.refunded_at?'Возврат: ':'+')+item.coins+' монет · '+item.stars+' ⭐';
+    const label=document.createElement('strong');label.textContent=(item.refunded_at?'Возврат: ':'+')+item.coins+' Аниумов · '+item.stars+' ⭐';
     const details=document.createElement('small');details.style.cssText='display:block;overflow-wrap:anywhere;opacity:.7';
     details.textContent=new Date(item.paid_at*1000).toLocaleString('ru-RU')+' · Заказ '+item.order_id;
     row.append(label,details);body.append(row);
@@ -3535,10 +3562,10 @@ function showWalletNotice(kind){
   const body=$("profileDialogBody"),title=$("profileDialogTitle");body.replaceChildren();
   const pack=WALLET_PACKS[selectedWalletPack];
   const notices={
-    history:["История операций","Операций пока нет. Здесь появятся пополнения и списания монет."],
-    bonus:["Получить монеты","Бонусы и задания готовятся к запуску. Начисление монет пока недоступно."],
+    history:["История операций","Операций пока нет. Здесь появятся пополнения и списания Аниумов."],
+    bonus:["Получить Аниумы","Бонусы и задания готовятся к запуску. Бонусные Аниумы пока недоступны."],
     promo:["Промокод","Промокоды пока недоступны."],
-    gift:["Подарить монеты","Подарки и переводы монет пока недоступны."]
+    gift:["Подарить Аниумы","Подарки и переводы Аниумов пока недоступны."]
   };
   const notice=notices[kind];if(!notice)return;
   title.textContent=notice[0];const p=document.createElement("p");p.textContent=notice[1];body.append(p);
