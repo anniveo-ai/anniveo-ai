@@ -1643,6 +1643,9 @@ html[data-theme=light]{color-scheme:light;--bg:#f5f1fa;--panel:#fff;--line:#dfd4
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 .source-mode-chips{display:flex;gap:7px;margin:4px 0 10px}.source-mode-chips button{flex:1;padding:9px 7px;border:1px solid #ab7dc533;border-radius:12px;background:#a878c20b;color:#bca0ce;font-size:10px}html[data-theme=light] .source-mode-chips button{background:#efe4f7;color:#8c64a4;border-color:#d9c5e8}
+
+html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) label{color:#735881}html[data-theme=light] :is(.profile-wallet-copy strong,.profile-usage-heading h2,.profile-shortcuts b,.wallet-package strong,.wallet-total strong,.statistics-card strong){color:#493151}html[data-theme=light] :is(.profile-wallet-label,.balance-label,.usage-note,.usage-metrics span,.profile-pro small,.profile-support,.profile-id-line,.wallet-package>span){color:#856b96}html[data-theme=light] #navGlider{background:linear-gradient(125deg,#aa78cb,#7c50a4);border-color:#aa7fcd;box-shadow:inset 0 1px #e7c7ff55,0 4px 14px #8955ac21}html[data-theme=light] :is(.profile-settings,.profile-edit){color:#8f69a5;background:#efe4f6;border-color:#d9c2e8}html[data-theme=light] #messageInput{color:#483253}html[data-theme=light] .profile-theme-row{color:#785b8c}.profile-pro-badge{left:calc(50% + 51px);top:14px}.project-dock{transition:opacity .3s,transform .4s}body.keyboard-open .project-dock{opacity:0;pointer-events:none;transform:translateY(8px)}
+.video-identity-row{display:flex;align-items:center;gap:9px;padding:10px 12px;border:1px solid #ad80c42b;border-radius:15px;margin:-4px 0 13px;color:#c4a6d6;background:#a376bd09;font-size:11px}.video-identity-row>span{flex:1;min-width:0}.video-identity-row small{display:block;font-size:9px;color:#9f86b1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;margin-top:4px}.video-identity-row button{border:1px solid #b489ca3b;border-radius:10px;background:#b085cd12;padding:7px 9px;color:#c8a5df;font-size:11px}.video-identity-row button[hidden]{display:none!important}.own-video-template{display:flex;align-items:center;gap:14px;width:100%;padding:17px;border:1px solid #b486d144;border-radius:19px;background:#a773c50d;color:#c9abe0;text-align:left;margin-top:13px}.own-video-template strong{flex:1;font-size:13px}.own-video-template small{display:block;font-size:10px;font-weight:400;margin-top:5px;color:#a48db7}.own-video-template>span{font-size:25px}html[data-theme=light] :is(.video-identity-row,.own-video-template){background:#f4eaf9;color:#815c99;border-color:#d9c1e9}
 </style>
 </head>
 
@@ -1784,13 +1787,13 @@ html[data-theme=light]{color-scheme:light;--bg:#f5f1fa;--panel:#fff;--line:#dfd4
     </button>
     <button class="studio-remove-photo" id="videoRemoveFile" type="button" onclick="clearStudioVideo()" aria-label="Убрать выбранное видео" hidden>×</button>
     <input id="videoFile" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" onchange="studioVideoPicked(this)" hidden>
-  </div>
+  </div><div class="video-identity-row"><span>Добавить себя в ролик <small id="videoIdentityLabel">Фото лица · необязательно</small></span><button type="button" onclick="$('videoIdentityInput').click()">＋ Фото</button><button id="videoIdentityRemove" type="button" aria-label="Убрать фото лица" onclick="clearVideoIdentity()" hidden>×</button><input id="videoIdentityInput" type="file" accept="image/jpeg,image/png,image/webp" onchange="stageMediaAttachment('videoFace',this.files?.[0]);this.value=''" hidden></div>
 <div class="studio-prompt-box"><label for="videoPrompt">Напиши, что хочешь сделать</label><textarea id="videoPrompt" maxlength="1200" placeholder="Например: плавный пролёт камеры, закат и мягкий кинематографичный свет…"></textarea><div class="media-prompt-actions"><span id="videoVoiceNote" class="media-voice-note" role="status"></span><button id="videoPromptCancel" class="media-prompt-cancel" type="button" aria-label="Отменить голосовой ввод" onclick="cancelMediaDictation()" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button><button id="videoPromptMic" class="media-prompt-mic" type="button" aria-label="Продиктовать описание" aria-pressed="false" onclick="mediaMicClick(event,'video')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg></button><button id="makeVideo" class="studio-create-button" type="button" onclick="generateMedia('video')"><span id="videoCreateLabel">Создать видео</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"/></svg></button></div></div>
 <div class="media-settings studio-fields"><div><label for="videoQuality">Качество видео</label><select id="videoQuality"><option value="fast">Быстро · 480p</option><option value="high">Высокое · 720p</option></select></div><div><div class="format-field-heading"><label for="videoRatio">Формат</label><button type="button" class="format-help-trigger" onclick="openFormatHelp('video')" aria-haspopup="dialog" aria-controls="formatHelpDialog"><span aria-hidden="true">?</span> Подсказка</button></div><select id="videoRatio"><option value="16:9">Широкий · 16:9</option><option value="9:16">Вертикальный · 9:16</option><option value="1:1">Квадрат · 1:1</option></select></div><div class="media-duration-setting"><label for="duration">Длительность</label><select id="duration"><option value="4">4 секунды</option><option value="6">6 секунд</option><option value="8">8 секунд</option></select></div></div><p class="studio-tool-hint">Добавь фото для оживления, ролик до 15 секунд или просто опиши новое видео.</p>
 <div id="videoStatus" class="status studio-result-status" role="status" aria-live="polite"></div><div id="videoResult" class="result studio-result"></div>
 </section>
 
-<section id="view-templates" class="view photo-studio"><div class="studio-heading"><div><h1 class="page-title">Твоя следующая история</h1><p class="subtitle">Выбери стиль, добавь себя и создай новый кадр или видео.</p></div></div><div id="studioTemplateList" class="studio-template-list"></div><p class="note">Примеры показывают стиль. ИИ создаёт новый результат по твоему фото и описанию.</p></section>
+<section id="view-templates" class="view photo-studio"><div class="studio-heading"><div><h1 class="page-title">Твоя следующая история</h1><p class="subtitle">Выбери стиль, добавь себя и создай новый кадр или видео.</p></div></div><div id="studioTemplateList" class="studio-template-list"></div><button type="button" class="own-video-template" onclick="useOwnVideoTemplate()"><span>▷</span><strong>Мой видеошаблон<small>Готовый ролик + твоё фото</small></strong><b>↗</b></button><p class="note">Примеры показывают стиль. ИИ создаёт новый результат по твоему фото и описанию.</p></section>
 <!-- ИСТОРИЯ -->
 <section id="view-history" class="view">
   <h1 class="page-title">История</h1>
@@ -4586,7 +4589,7 @@ async function openHistoryMedia(item){
 }
 
 /* ФОТО И ВИДЕО */
-let studioVideoFile=null,studioVideoPreviewUrl=null;
+let studioVideoFile=null,studioVideoPreviewUrl=null,studioVideoIdentityFile=null;
 function pickStudioVideo(type){if(!$('makeVideo').disabled){$('videoFile').accept=type==='image'?'image/jpeg,image/png,image/webp':type==='video'?'video/mp4,video/quicktime,video/webm':'image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm';$('videoFile').click();}}
 function setStudioVideo(file){
  if($('makeVideo').disabled||!file)return false;
@@ -4778,7 +4781,7 @@ const projectWatchers=new Set();
 const PROJECT_TERMINAL=['completed','failed','unknown'];
 function studioProjectKey(){return 'anis-projects-v2:'+user?.id;}
 function persistStudioProjects(){
- try{localStorage.setItem(studioProjectKey(),JSON.stringify([...studioProjects.values()].slice(-24).map(p=>({id:p.id,kind:p.kind,status:p.status,prompt:p.prompt,quality:p.quality,ratio:p.ratio,duration:p.duration,resultUrl:p.resultUrl,error:p.error,created:p.created,order:p.order,hasSource:!!p.sourceFile}))));}catch{}
+ try{localStorage.setItem(studioProjectKey(),JSON.stringify([...studioProjects.values()].slice(-24).map(p=>({id:p.id,kind:p.kind,status:p.status,prompt:p.prompt,quality:p.quality,ratio:p.ratio,duration:p.duration,resultUrl:p.resultUrl,error:p.error,created:p.created,order:p.order,hasSource:!!p.sourceFile||!!p.hasSource,hasIdentity:!!p.identityFile||!!p.hasIdentity}))));}catch{}
 }
 function updateProjectDock(){
  const projects=[...studioProjects.values()],active=projects.filter(p=>!PROJECT_TERMINAL.includes(p.status)).length;
@@ -4856,7 +4859,7 @@ async function launchStudioProject(p){
  try{
   const file=p.sourceFile&&p.sourceFile.type.startsWith('image/')?await prepareStudioImage(p.sourceFile):p.sourceFile;
   const payload={action:'media-create',kind:p.kind,requestId:p.id,prompt:p.prompt,quality:p.quality,ratio:p.ratio,initData};if(p.kind==='video')payload.duration=p.duration;
-  let response;if(file){const form=new FormData();for(const [key,value]of Object.entries(payload))form.append(key,String(value));form.append('file',file,file.name);response=await fetch(API_URL,{method:'POST',body:form,signal:controller.signal});}
+  let response;if(file||p.identityFile){const form=new FormData();for(const [key,value]of Object.entries(payload))form.append(key,String(value));if(file)form.append('file',file,file.name);if(p.identityFile)form.append('identityFile',p.identityFile,p.identityFile.name);response=await fetch(API_URL,{method:'POST',body:form,signal:controller.signal});}
   else response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});
   const data=await response.json();if(!response.ok){p.status='failed';throw Error(data.error||'Не удалось создать проект.');}
   setMediaBusy(p.kind,false);clearTimeout(timer);await watchMediaJob(p.kind,p.id,data);
@@ -4871,17 +4874,18 @@ async function pumpStudioQueue(){
 async function createStudioVariant(snapshot){
  if(!initData||!user){toast('Открой ANIS AI через Telegram');return;}
  if([...studioProjects.values()].filter(p=>!PROJECT_TERMINAL.includes(p.status)).length>=8){toast('В очереди уже 8 вариантов. Дождись завершения.');return;}
+ if((snapshot.sourceFile?.size||0)+(snapshot.identityFile?.size||0)>25*1024*1024){toast('Общий размер ролика и фото — до 25 МБ.');return;}
  const prompt=String(snapshot.prompt||'').trim();if(prompt.length<3||prompt.length>1200){toast('Опиши идею: от 3 до 1200 символов.');return;}
  const p={...snapshot,id:crypto.randomUUID(),prompt,status:'queued',created:Date.now(),order:++projectCounter};studioProjects.set(p.id,p);selectedStudioProject=p.id;openProjectRoom(p.id);return pumpStudioQueue();
 }
 async function generateMedia(kind){
  if(mediaVoiceTask){toast('Сначала заверши голосовой ввод.');return;}
- return createStudioVariant({kind,prompt:$(kind+'Prompt').value,sourceFile:kind==='image'?studioImageFile:studioVideoFile,quality:$(kind+'Quality').value,ratio:$(kind+'Ratio').value,duration:kind==='video'?Number($('duration').value):undefined});
+ return createStudioVariant({kind,prompt:$(kind+'Prompt').value,sourceFile:kind==='image'?studioImageFile:studioVideoFile,identityFile:kind==='video'?studioVideoIdentityFile:null,quality:$(kind+'Quality').value,ratio:$(kind+'Ratio').value,duration:kind==='video'?Number($('duration').value):undefined});
 }
 async function addAgentVariant(){
- const base=studioProjects.get(selectedStudioProject),idea=$('projectAgentIdea').value.trim();if(!base||!idea){toast('Добавь идею для нового варианта.');return;}
+ const base=studioProjects.get(selectedStudioProject),idea=$('projectAgentIdea').value.trim();if(base&&(base.hasSource&&!base.sourceFile||base.hasIdentity&&!base.identityFile)){toast('Для нового варианта заново добавь исходные файлы в студии.');return;}if(!base||!idea){toast('Добавь идею для нового варианта.');return;}
  const prompt=base.prompt+'\nНовый вариант: '+idea;if(prompt.length>1200){toast('Сократи дополнительную идею.');return;}
- $('projectAgentIdea').value='';return createStudioVariant({kind:base.kind,prompt,sourceFile:base.sourceFile,quality:base.quality||'fast',ratio:base.ratio||'1:1',duration:base.duration||4});
+ $('projectAgentIdea').value='';return createStudioVariant({kind:base.kind,prompt,sourceFile:base.sourceFile,identityFile:base.identityFile,quality:base.quality||'fast',ratio:base.ratio||'1:1',duration:base.duration||4});
 }
 async function resumeMediaProjects(){
  if(!initData||!user)return;
@@ -4896,7 +4900,7 @@ function cancelStagedAttachment(){if(stagedMediaAttachment)URL.revokeObjectURL(s
 function stageMediaAttachment(kind,file){
  if(!file)return;
  const image=['image/jpeg','image/png','image/webp'].includes(file.type),video=['video/mp4','video/quicktime','video/webm'].includes(file.type);
- if(!(kind==='image'?image:image||video)||!file.size||file.size>(kind==='image'?20:25)*1024*1024){toast(kind==='image'?'Выбери фото JPEG, PNG или WebP до 20 МБ.':'Выбери фото или видео до 25 МБ.');return;}
+ if(!(['image','videoFace'].includes(kind)?image:image||video)||!file.size||file.size>(kind==='videoFace'?10:kind==='image'?20:25)*1024*1024){toast(kind==='videoFace'?'Выбери фото лица до 10 МБ.':kind==='image'?'Выбери фото JPEG, PNG или WebP до 20 МБ.':'Выбери фото или видео до 25 МБ.');return;}
  if(stagedMediaAttachment)URL.revokeObjectURL(stagedMediaAttachment.url);
  const state={kind,file,url:URL.createObjectURL(file)};stagedMediaAttachment=state;
  $('attachmentPreviewTitle').textContent=image?'Добавить фото?':'Добавить фото или видео?';$('attachmentPreviewName').textContent=file.name+' · '+(file.size/1024/1024).toFixed(1)+' МБ';$('attachmentPreviewState').textContent='Подготавливаю предпросмотр…';$('attachmentPreviewConfirm').disabled=true;
@@ -4905,7 +4909,10 @@ function stageMediaAttachment(kind,file){
  media.onload=ready;media.onloadedmetadata=ready;media.onerror=()=>{if(stagedMediaAttachment===state){$('attachmentPreviewState').textContent='Предпросмотр недоступен. Можно добавить исходный файл.';$('attachmentPreviewConfirm').disabled=false;}};
  $('attachmentPreviewMedia').replaceChildren(media);if(!$('attachmentPreviewDialog').open)$('attachmentPreviewDialog').showModal();
 }
-function confirmStagedAttachment(){const staged=stagedMediaAttachment;if(!staged)return;const applied=staged.kind==='image'?setStudioPhoto(staged.file):setStudioVideo(staged.file);if(applied){cancelStagedAttachment();toast('Файл добавлен');}}
+function confirmStagedAttachment(){const staged=stagedMediaAttachment;if(!staged)return;const applied=staged.kind==='image'?setStudioPhoto(staged.file):staged.kind==='videoFace'?setVideoIdentity(staged.file):setStudioVideo(staged.file);if(applied){cancelStagedAttachment();toast('Файл добавлен');}}
+function setVideoIdentity(file){if(!file||!file.type.startsWith('image/')||file.size>10*1024*1024)return false;studioVideoIdentityFile=file;$('videoIdentityLabel').textContent=file.name;$('videoIdentityRemove').hidden=false;return true;}
+function clearVideoIdentity(){studioVideoIdentityFile=null;$('videoIdentityLabel').textContent='Фото лица · необязательно';$('videoIdentityRemove').hidden=true;}
+function useOwnVideoTemplate(){openView('video');$('videoPrompt').value='Воссоздай сцену и движение исходного видео с человеком с добавленного фото. Сохрани внешность и черты лица человека на фото. Стабильное лицо, естественные движения и согласованный свет.';toast('Выбери готовый ролик, затем добавь своё фото.');pickStudioVideo('video');}
 function openTextImageCreation(){openView('studio');$('imagePrompt').focus({preventScroll:true});}
 function applyAppTheme(theme){
  const value=theme==='light'?'light':'dark';document.documentElement.dataset.theme=value;
@@ -5189,6 +5196,7 @@ loadHistory();
 void refreshWallet();
 void prefetchUsageStats();
 setupMediaMicGestures();
+syncMediaMic();
 void resumeMediaProjects();
 </script>
 

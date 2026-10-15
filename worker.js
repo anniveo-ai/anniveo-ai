@@ -43,7 +43,7 @@ async function getMediaHistory(db,userId,kind){
  const result=await db.prepare('SELECT id,kind,status,result_url,created_at FROM media_jobs WHERE user_id=? AND kind=? ORDER BY created_at DESC,id DESC LIMIT 50').bind(userId,kind).all();
  return {items:(result.results||[]).map(row=>{const expired=Date.now()-Date.parse(row.created_at.replace(' ','T')+'Z')>7*86400000;return {jobId:row.id,kind:row.kind,status:row.status,createdAt:row.created_at,expired,...(row.status==='completed'&&!expired?{url:row.result_url}:{})};})};
 }
-async function createPremiumMedia(env,userId,body,file){
+async function createPremiumMedia(env,userId,body,file,identityFile=null){
  if(!env.POLZA_API_KEY||!env.DB)throw Error('Платный сервис ИИ пока недоступен.');
  const selection=choosePremiumMedia(body,file),model=selection.model,config=PREMIUM_MEDIA_MODELS[model],kind=body.kind;
  if(!config||config.kind!==kind)throw Error('Выбери доступную модель фото или видео.');
@@ -53,6 +53,8 @@ async function createPremiumMedia(env,userId,body,file){
  if(!['1:1','9:16','16:9'].includes(ratio))throw Error('Выбери формат изображения.');
  const duration=Number(body.duration||4);if(kind==='video'&&![4,6,8].includes(duration))throw Error('Выбери длительность видео.');
  if(file&&(typeof file==='string'||!file.size||file.size>(kind==='image'?20:25)*1024*1024||!(kind==='image'?['image/jpeg','image/png','image/webp']:['image/jpeg','image/png','image/webp','video/mp4','video/quicktime','video/webm']).includes(file.type)))throw Error('Файл не поддерживается или слишком большой.');
+ if(identityFile&&(kind!=='video'||typeof identityFile==='string'||!identityFile.size||identityFile.size>10*1024*1024||!['image/jpeg','image/png','image/webp'].includes(identityFile.type)))throw Error('Добавь фото лица JPEG, PNG или WebP до 10 МБ.');
+ if((file?.size||0)+(identityFile?.size||0)>25*1024*1024)throw Error('Общий размер файлов — до 25 МБ.');
  const existing=await env.DB.prepare('SELECT * FROM media_jobs WHERE id=? AND user_id=?').bind(id,userId).first();
  if(existing)return publicMediaJob(existing);
  // Reserve before the paid request. Repeated clicks never create another provider job.
@@ -64,6 +66,7 @@ async function createPremiumMedia(env,userId,body,file){
   if(kind==='image'){input.image_resolution=selection.resolution||config.resolution;input.output_format='png';}
   else{input.duration=String(duration);input.resolution=selection.resolution||config.resolution;input.generate_audio=false;}
   if(file){const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));input[file.type.startsWith('image/')?'images':'videos']=[{type:'base64',data:'data:'+file.type+';base64,'+btoa(binary)}];}
+  if(identityFile){const bytes=new Uint8Array(await identityFile.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));input.images=[...(input.images||[]),{type:'base64',data:'data:'+identityFile.type+';base64,'+btoa(binary)}];}
   const data=await polzaMediaRequest(env,'',{model,input,async:true,user:'anis-'+userId});
   if(typeof data.id!=='string'||!/^[\w-]{1,200}$/.test(data.id))throw Error('Сервис не подтвердил номер проекта.');
   await env.DB.prepare('UPDATE media_jobs SET provider_id=? WHERE id=? AND user_id=?').bind(data.id,id,userId).run();
@@ -1301,7 +1304,7 @@ export default {
         if(!voiceUser) return json({error:"Открой ANIS AI через Telegram"},401,headers);
         const multipartAction=String(form.get("action")||"");
         if(multipartAction==="media-create"){
-          try{return json(await createPremiumMedia(env,voiceUser,Object.fromEntries(form),form.get('file')),200,headers);}
+          try{return json(await createPremiumMedia(env,voiceUser,Object.fromEntries(form),form.get('file'),form.get('identityFile')),200,headers);}
           catch(error){return json({error:error.message},error.status||400,headers);}
         }
         if(!env.POLLINATIONS_API_KEY) return json({error:"Ключ ИИ не настроен"},503,headers);
