@@ -5205,6 +5205,7 @@ setupMediaMicGestures();
 syncMediaMic();
 </script>
 <script src="project-actions.js?v=__ANIS_BUILD__"></script>
+<script>const previewFetch=window.fetch.bind(window);window.fetch=(input,options)=>String(input).startsWith("/release.json")?Promise.resolve(new Response('{"version":"preview"}',{headers:{"Content-Type":"application/json"}})):previewFetch(input,options);</script>
 <script src="stability.js?v=__ANIS_BUILD__"></script>
 
 <script>
