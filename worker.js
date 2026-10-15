@@ -5,37 +5,47 @@ async function recordMediaUsage(db,userId,kind){
 }
 
 async function getUsageStats(db, userId, requestedDays, requestedOffset, nowMs = Date.now()) {
-  const days = Number(requestedDays) === 30 ? 30 : 7;
-  const parsedOffset = Number(requestedOffset);
-  const offset = Number.isInteger(parsedOffset) && Math.abs(parsedOffset) <= 840 ? parsedOffset : 0;
-  const dayMs = 86400000;
-  const todayLocal = Math.floor((nowMs + offset * 60000) / dayMs) * dayMs;
-  const startLocal = todayLocal - (days - 1) * dayMs;
-  const startUTC = new Date(startLocal - offset * 60000).toISOString().slice(0,19).replace('T',' ');
-  const endUTC = new Date(todayLocal + dayMs - offset * 60000).toISOString().slice(0,19).replace('T',' ');
-  // One D1 round trip for both indexed aggregations.
+  const allTime=requestedDays==='all';
+  const requestedPeriod=Number(requestedDays)===30?30:7;
+  const parsedOffset=Number(requestedOffset);
+  const offset=Number.isInteger(parsedOffset)&&Math.abs(parsedOffset)<=840?parsedOffset:0;
+  const dayMs=86400000;
+  const todayLocal=Math.floor((nowMs+offset*60000)/dayMs)*dayMs;
+  let startLocal=todayLocal-(requestedPeriod-1)*dayMs;
+  const startUTC=allTime?'0001-01-01 00:00:00':new Date(startLocal-offset*60000).toISOString().slice(0,19).replace('T',' ');
+  const endUTC=new Date(todayLocal+dayMs-offset*60000).toISOString().slice(0,19).replace('T',' ');
   const [rows,events]=await db.batch([
     db.prepare("SELECT date(created_at, ?) AS day, COUNT(*) AS questions FROM chat_messages WHERE user_id=? AND role='user' AND created_at>=? AND created_at<? GROUP BY day ORDER BY day")
       .bind(offset+' minutes',userId,startUTC,endUTC),
     db.prepare("SELECT date(created_at, ?) AS day,kind,COUNT(*) AS count FROM usage_events WHERE user_id=? AND created_at>=? AND created_at<? GROUP BY day,kind")
       .bind(offset+' minutes',userId,startUTC,endUTC)
   ]);
+  const counts=new Map((rows.results||[]).filter(row=>row.day).map(row=>[row.day,Number(row.questions)]));
   const media={image:0,video:0,voice:0},mediaByDay=new Map();
   for(const row of events.results||[]){
-    if(!Object.hasOwn(media,row.kind))continue;
+    if(!row.day||!Object.hasOwn(media,row.kind))continue;
     media[row.kind]+=Number(row.count);
     if(!mediaByDay.has(row.day))mediaByDay.set(row.day,{image:0,video:0,voice:0});
     mediaByDay.get(row.day)[row.kind]=Number(row.count);
   }
-  const counts = new Map((rows.results || []).map(row => [row.day, Number(row.questions)]));
-  const series = Array.from({length:days},(_,i)=>{
-    const date = new Date(startLocal + i * dayMs).toISOString().slice(0,10);
-    return {date,questions:counts.get(date)||0,media:mediaByDay.get(date)||{image:0,video:0,voice:0}};
+  if(allTime){
+    const dates=[...counts.keys(),...mediaByDay.keys()].sort();
+    startLocal=dates.length?Math.min(todayLocal,Date.parse(dates[0]+'T00:00:00Z')):todayLocal;
+  }
+  const days=Math.round((todayLocal-startLocal)/dayMs)+1;
+  // Bound chart and table size without truncating lifetime totals.
+  const bucketDays=allTime?Math.max(1,Math.ceil(days/30)):1;
+  const series=Array.from({length:Math.ceil(days/bucketDays)},(_,i)=>{
+    const start=startLocal+i*bucketDays*dayMs,end=Math.min(todayLocal,start+(bucketDays-1)*dayMs);
+    return {date:new Date(start).toISOString().slice(0,10),endDate:new Date(end).toISOString().slice(0,10),questions:0,media:{image:0,video:0,voice:0}};
   });
-  let streak=0, last=series.length-1;
-  if (!series[last].questions) last--;
-  for (;last>=0 && series[last].questions;last--) streak++;
-  return { days, series, media, questions:series.reduce((sum,d)=>sum+d.questions,0), activeDays:series.filter(d=>d.questions>0).length, streak };
+  const bucketFor=date=>Math.floor((Date.parse(date+'T00:00:00Z')-startLocal)/dayMs/bucketDays);
+  for(const [date,questions] of counts){const bucket=series[bucketFor(date)];if(bucket)bucket.questions+=questions;}
+  for(const [date,values] of mediaByDay){const bucket=series[bucketFor(date)];if(bucket)for(const kind of Object.keys(media))bucket.media[kind]+=values[kind];}
+  let streak=0,day=todayLocal;
+  if(!counts.get(new Date(day).toISOString().slice(0,10)))day-=dayMs;
+  for(;day>=startLocal&&counts.get(new Date(day).toISOString().slice(0,10));day-=dayMs)streak++;
+  return {period:allTime?'all':requestedPeriod,days,granularity:bucketDays>1?'range':'day',series,media,questions:[...counts.values()].reduce((n,c)=>n+c,0),activeDays:counts.size,streak};
 }
 
 // Server-owned prices; never accept coin quantities or prices from the client.

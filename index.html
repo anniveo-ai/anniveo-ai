@@ -1549,7 +1549,7 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
 .profile-usage{padding:16px 14px 12px;margin:0 0 12px;border:1px solid #a485c346;border-radius:22px;background:linear-gradient(145deg,#34264055,#171721 75%);box-shadow:inset 0 1px #ffffff09}
 .profile-usage-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px}
 .profile-usage-heading h2{margin:0;color:#e6dcef;font-size:14px;line-height:1.3;font-weight:600}
-.profile-usage-heading select{max-width:95px;padding:6px 8px;border:1px solid #b497d52b;border-radius:11px;background:#3c2e4e77;color:#dccde9;font-size:11px;flex:none}
+.profile-usage-heading select{max-width:124px;padding:6px 8px;border:1px solid #b497d52b;border-radius:11px;background:#3c2e4e77;color:#dccde9;font-size:11px;flex:none}
 .usage-chart{height:91px;display:flex;align-items:stretch;gap:8px;padding:0 3px;margin:0 0 13px}
 .usage-day{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:7px}
 .usage-bar-track{display:flex;align-items:flex-end;justify-content:center;width:100%;height:70px}
@@ -1822,7 +1822,7 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
     <div class="profile-coins-art"><button class="coin-art-action" type="button" onclick="joltCoins(this)" aria-label="Пошевелить монеты"><img src="profile-coins-real-v1.webp" width="768" height="512" alt="Сияющие монеты ANIS AI" decoding="async"></button></div>
   </div>
   <section class="profile-usage" aria-labelledby="usageTitle">
-    <div class="profile-usage-heading"><h2 id="usageTitle"><button class="usage-title-button" type="button" onclick="openUsageStats()">Статистика использования <span>›</span></button></h2><select id="usagePeriod" aria-label="Период статистики" onchange="loadUsageStats(this)"><option value="7">7 дней</option><option value="30">30 дней</option></select></div>
+    <div class="profile-usage-heading"><h2 id="usageTitle"><button class="usage-title-button" type="button" onclick="openUsageStats()">Статистика использования <span>›</span></button></h2><select id="usagePeriod" aria-label="Период статистики" onchange="loadUsageStats(this)"><option value="7">7 дней</option><option value="30">30 дней</option><option value="all">За всё время</option></select></div>
     <div class="usage-open" role="button" tabindex="0" aria-label="Открыть полную статистику" onclick="openUsageStats()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openUsageStats()}">
     <div class="usage-chart" id="usageChart" role="img" aria-label="Статистика ещё не загружена"></div>
     <div class="usage-metrics"><div><strong id="usageQuestions">—</strong><span>Запросов</span></div><div><strong id="usageActiveDays">—</strong><span>Дней активности</span></div><div><strong id="usageStreak">—</strong><span>Дней подряд</span></div></div>
@@ -1841,12 +1841,12 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
 
 <!-- ПОЛНАЯ СТАТИСТИКА -->
 <section id="view-statistics" class="view statistics-page">
-  <div class="statistics-heading"><button type="button" onclick="openView('profile')" aria-label="Вернуться в профиль">‹</button><h1>Статистика</h1><select id="usageFullPeriod" aria-label="Период полной статистики" onchange="loadUsageStats(this)"><option value="7">7 дней</option><option value="30">30 дней</option></select></div>
+  <div class="statistics-heading"><button type="button" onclick="openView('profile')" aria-label="Вернуться в профиль">‹</button><h1>Статистика</h1><select id="usageFullPeriod" aria-label="Период полной статистики" onchange="loadUsageStats(this)"><option value="7">7 дней</option><option value="30">30 дней</option><option value="all">За всё время</option></select></div>
   <p class="subtitle">Твоя активность в ANIS AI</p>
   <div class="profile-usage"><h2 class="usage-section-title">Запросы в чате</h2><div class="usage-chart usage-full-chart" id="usageFullChart" role="img" aria-label="Статистика ещё не загружена"></div><div class="usage-metrics"><div><strong id="usageFullQuestions">—</strong><span>Запросов</span></div><div><strong id="usageFullActiveDays">—</strong><span>Дней активности</span></div><div><strong id="usageFullStreak">—</strong><span>Дней подряд</span></div></div></div>
   <div class="usage-metrics usage-media-metrics"><div><strong id="usageImages">—</strong><span>Запросов фото</span></div><div><strong id="usageVideos">—</strong><span>Запросов видео</span></div><div><strong id="usageVoice">—</strong><span>Голосовых сообщений</span></div></div>
   <p class="usage-note" id="usageFullNote" role="status">По сохранённым чатам</p>
-  <div class="profile-usage usage-daily"><h2 class="usage-section-title">По дням</h2><div id="usageDailyRows"></div></div>
+  <div class="profile-usage usage-daily"><h2 class="usage-section-title" id="usageBreakdownTitle">По дням</h2><div id="usageDailyRows"></div></div>
 </section>
 
 <!-- БАЛАНС -->
@@ -3494,34 +3494,41 @@ function showProfilePanel(kind){
 
 let usageLoadVersion=0;
 let usagePeriod=7;
-let usageSnapshot=null;
-let usageRequest=null;
+const usageSnapshots={recent:null,all:null};
+const usageRequests={recent:null,all:null};
 let usageEpoch=0;
 const USAGE_FRESH_MS=30000;
-function usageCacheKey(){
+function usageScope(period){return period==='all'?'all':'recent';}
+function usageCacheKey(period=30){
   if(!user?.id)return null;
   const date=new Date();
-  return 'anis_usage_v2_'+user.id+'_'+date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate()+'_'+date.getTimezoneOffset();
+  return 'anis_usage_v2_'+user.id+'_'+date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate()+'_'+date.getTimezoneOffset()+(period==='all'?'_all':'');
 }
-function validUsageSnapshot(snapshot){
-  return snapshot&&Number.isFinite(snapshot.at)&&snapshot.at>=0&&snapshot.at<=Date.now()+60000&&snapshot.key===usageCacheKey()&&snapshot.data?.days===30&&Array.isArray(snapshot.data.series)&&snapshot.data.series.length===30&&snapshot.data.series.every(d=>/^\d{4}-\d{2}-\d{2}$/.test(d.date)&&Number.isSafeInteger(d.questions)&&d.questions>=0&&['image','video','voice'].every(kind=>Number.isSafeInteger(d.media?.[kind])&&d.media[kind]>=0));
+function validUsageSnapshot(snapshot,period=30){
+  const data=snapshot?.data;
+  const validPeriod=period==='all'
+    ?data?.period==='all'&&Number.isInteger(data.days)&&data.days>=1&&Array.isArray(data.series)&&data.series.length>=1&&data.series.length<=30&&['questions','activeDays','streak'].every(key=>Number.isSafeInteger(data[key])&&data[key]>=0)&&['image','video','voice'].every(kind=>Number.isSafeInteger(data.media?.[kind])&&data.media[kind]>=0)
+    :data?.days===30&&Array.isArray(data.series)&&data.series.length===30;
+  return snapshot&&Number.isFinite(snapshot.at)&&snapshot.at>=0&&snapshot.at<=Date.now()+60000&&snapshot.key===usageCacheKey(period)&&validPeriod&&data.series.every(d=>/^\d{4}-\d{2}-\d{2}$/.test(d.date)&&(!d.endDate||/^\d{4}-\d{2}-\d{2}$/.test(d.endDate))&&Number.isSafeInteger(d.questions)&&d.questions>=0&&['image','video','voice'].every(kind=>Number.isSafeInteger(d.media?.[kind])&&d.media[kind]>=0));
 }
-function cachedUsageSnapshot(){
-  if(validUsageSnapshot(usageSnapshot))return usageSnapshot;
+function cachedUsageSnapshot(period=30){
+  const scope=usageScope(period),snapshot=usageSnapshots[scope];
+  if(validUsageSnapshot(snapshot,period))return snapshot;
   try{
-    const saved=JSON.parse(localStorage.getItem(usageCacheKey())||'null');
-    if(validUsageSnapshot(saved)){usageSnapshot=saved;return saved;}
+    const saved=JSON.parse(localStorage.getItem(usageCacheKey(period))||'null');
+    if(validUsageSnapshot(saved,period)){usageSnapshots[scope]=saved;return saved;}
   }catch{}
-  usageSnapshot=null;return null;
+  usageSnapshots[scope]=null;return null;
 }
-function persistUsageSnapshot(){
-  try{localStorage.setItem(usageSnapshot.key,JSON.stringify(usageSnapshot));}catch{}
+function persistUsageSnapshot(snapshot){
+  try{localStorage.setItem(snapshot.key,JSON.stringify(snapshot));}catch{}
 }
 function invalidateUsageStats(){
   usageEpoch++;
-  if(usageSnapshot){usageSnapshot.at=0;persistUsageSnapshot();}
+  for(const snapshot of Object.values(usageSnapshots))if(snapshot){snapshot.at=0;persistUsageSnapshot(snapshot);}
 }
 function usageForPeriod(snapshot,days){
+  if(days==='all')return snapshot.data;
   const series=snapshot.data.series.slice(-days);
   const media={image:0,video:0,voice:0};
   for(const day of series)for(const kind of Object.keys(media))media[kind]+=day.media[kind];
@@ -3530,16 +3537,17 @@ function usageForPeriod(snapshot,days){
   for(;i>=0&&series[i].questions;i--)streak++;
   return {days,series,media,questions:series.reduce((n,d)=>n+d.questions,0),activeDays:series.filter(d=>d.questions>0).length,streak};
 }
-function ensureUsageSnapshot(){
-  if(usageRequest)return usageRequest;
-  const epoch=usageEpoch,key=usageCacheKey();
-  usageRequest=(async()=>{
-    const data=await api({action:'usage-stats',days:30,utcOffsetMinutes:-new Date().getTimezoneOffset()},8000);
+function ensureUsageSnapshot(period=30){
+  const scope=usageScope(period);
+  if(usageRequests[scope])return usageRequests[scope];
+  const epoch=usageEpoch,key=usageCacheKey(period);
+  usageRequests[scope]=(async()=>{
+    const data=await api({action:'usage-stats',days:period,utcOffsetMinutes:-new Date().getTimezoneOffset()},8000);
     const snapshot={key,at:epoch===usageEpoch?Date.now():0,data};
-    if(!validUsageSnapshot(snapshot))throw Error('Не удалось загрузить статистику');
-    usageSnapshot=snapshot;persistUsageSnapshot();return snapshot;
-  })().finally(()=>{usageRequest=null;});
-  return usageRequest;
+    if(!validUsageSnapshot(snapshot,period))throw Error('Не удалось загрузить статистику');
+    usageSnapshots[scope]=snapshot;persistUsageSnapshot(snapshot);return snapshot;
+  })().finally(()=>{usageRequests[scope]=null;});
+  return usageRequests[scope];
 }
 async function prefetchUsageStats(){
   if(!initData||!user)return;
@@ -3563,33 +3571,38 @@ function renderUsageData(snapshot){
   $('usageVoice').textContent=data.media.voice.toLocaleString('ru-RU');
   $('usageNote').textContent=(data.questions?'За выбранный период':'Пока нет запросов за этот период')+' · Подробнее ›';
   $('usageFullNote').textContent='По сохранённым чатам; анонимные не учитываются. Фото, видео и голос учитываются с 15.10.2026. Все показатели — за выбранный период, по времени устройства.';
+  $('usageBreakdownTitle').textContent=data.granularity==='range'?'По периодам':'По дням';
   const rows=$('usageDailyRows');rows.replaceChildren();
   for(const day of [...data.series].reverse()){
     const row=document.createElement('div'),date=document.createElement('span'),count=document.createElement('strong');row.className='usage-daily-row';
-    date.textContent=day.date.split('-').reverse().join('.');count.textContent=day.questions+' запросов';row.append(date,count);rows.append(row);
+    date.textContent=day.date.split('-').reverse().join('.')+(day.endDate&&day.endDate!==day.date?' — '+day.endDate.split('-').reverse().join('.'):'');count.textContent=day.questions+' запросов';row.append(date,count);rows.append(row);
   }
 }
 async function loadUsageStats(source){
-  if(source)usagePeriod=Number(source.value)===30?30:7;
+  if(source)usagePeriod=source.value==='all'?'all':Number(source.value)===30?30:7;
   $('usagePeriod').value=String(usagePeriod);$('usageFullPeriod').value=String(usagePeriod);
   const version=++usageLoadVersion;
   if(!initData||!user){
     for(const id of ['usageNote','usageFullNote'])$(id).textContent='Открой приложение через Telegram, чтобы увидеть свою статистику.';
     return;
   }
-  const saved=cachedUsageSnapshot();
+  const requestedPeriod=usagePeriod==='all'?'all':30;
+  const saved=cachedUsageSnapshot(requestedPeriod);
   if(saved){
     renderUsageData(saved); // Synchronous first paint, before any network await.
     if(Date.now()-saved.at<USAGE_FRESH_MS)return;
     $('usageNote').textContent='Сохранённые данные · Обновляем в фоне…';
   }else{
+    for(const prefix of ['usage','usageFull'])for(const metric of ['Questions','ActiveDays','Streak'])$(prefix+metric).textContent='—';
+    for(const id of ['usageImages','usageVideos','usageVoice'])$(id).textContent='—';
+    for(const id of ['usageChart','usageFullChart','usageDailyRows'])$(id).replaceChildren();
     for(const id of ['usageNote','usageFullNote'])$(id).textContent='Загружаем статистику…';
   }
   try{
-    const snapshot=await ensureUsageSnapshot();
+    const snapshot=await ensureUsageSnapshot(requestedPeriod);
     if(version!==usageLoadVersion)return;
     renderUsageData(snapshot);
-    if(!snapshot.at){void prefetchUsageStats();}
+    if(!snapshot.at){void ensureUsageSnapshot(requestedPeriod).catch(()=>{});}
   }catch{
     if(version!==usageLoadVersion)return;
     if(saved){$('usageNote').textContent='Сохранённые данные · Обновим при подключении';}
@@ -3598,15 +3611,15 @@ async function loadUsageStats(source){
 }
 
 function renderUsageChart(container, data){
-  container.replaceChildren();container.classList.toggle('month',data.days===30);
+  container.replaceChildren();container.classList.toggle('month',data.series.length>7);
   const max=Math.max(1,...data.series.map(day=>day.questions));
-  container.setAttribute('aria-label','Запросы в чате за '+data.days+' дней: '+data.questions);
+  container.setAttribute('aria-label',(data.period==='all'?'Запросы в чате за всё время':'Запросы в чате за '+data.days+' дней')+': '+data.questions);
   for(let i=0;i<data.series.length;i++){
     const day=data.series[i],column=document.createElement('div');column.className='usage-day'+(day.questions?'':' empty');
     const track=document.createElement('span');track.className='usage-bar-track';
     const bar=document.createElement('span');bar.className='usage-bar';bar.style.height=(day.questions?Math.max(9,day.questions/max*100):4)+'%';
-    const date=document.createElement('time');date.dateTime=day.date;date.textContent=data.days===7||i%5===0||i===data.series.length-1?String(Number(day.date.slice(-2))):'';
-    column.title=day.date+': '+day.questions+' запросов';column.setAttribute('aria-hidden','true');track.append(bar);column.append(track,date);container.append(column);
+    const date=document.createElement('time');date.dateTime=day.date;date.textContent=data.series.length<=7||i%5===0||i===data.series.length-1?(data.period==='all'?day.date.slice(8)+'.'+day.date.slice(5,7):String(Number(day.date.slice(-2)))):'';
+    column.title=day.date+(day.endDate&&day.endDate!==day.date?' — '+day.endDate:'')+': '+day.questions+' запросов';column.setAttribute('aria-hidden','true');track.append(bar);column.append(track,date);container.append(column);
   }
 }
 const WALLET_PACKS=Object.freeze([{id:"coins100",coins:100,stars:99},{id:"coins500",coins:500,stars:499},{id:"coins1000",coins:1000,stars:999}]);
