@@ -59,7 +59,7 @@ async function polzaMediaRequest(env,path,body){
   return await response.json();
  }finally{clearTimeout(timer);}
 }
-function publicMediaJob(row){return {jobId:row.id,kind:row.kind,status:row.status,prompt:row.prompt||'',quality:row.quality||'fast',ratio:row.ratio||'1:1',duration:row.duration||4,createdAt:row.created_at||null,expiresAt:row.created_at?new Date(Date.parse(row.created_at.replace(' ','T')+'Z')+7*86400000).toISOString():null,region:row.region_json?JSON.parse(row.region_json):null,...(row.status==='completed'?{url:row.result_url}:{}),...(row.error?{error:row.error}:{})};}
+function publicMediaJob(row){return {jobId:row.id,groupId:row.group_id||row.id,kind:row.kind,status:row.status,prompt:row.prompt||'',quality:row.quality||'fast',ratio:row.ratio||'1:1',duration:row.duration||4,createdAt:row.created_at||null,expiresAt:row.created_at?new Date(Date.parse(row.created_at.replace(' ','T')+'Z')+7*86400000).toISOString():null,region:row.region_json?JSON.parse(row.region_json):null,...(row.status==='completed'?{url:row.result_url}:{}),...(row.error?{error:row.error}:{})};}
 function providerResultUrl(data){const value=data?.data?.url||data?.data?.[0]?.url||data?.output?.url;try{const u=new URL(value);return u.protocol==='https:'?u.href:null;}catch{return null;}}
 async function updatePremiumJob(env,row,data){
  const status=['pending','processing','completed','failed','cancelled'].includes(data.status)?data.status:'processing';
@@ -103,13 +103,17 @@ async function createPremiumMedia(env,userId,body,file,identityFile=null){
  if((file?.size||0)+(identityFile?.size||0)>25*1024*1024)throw Error('Общий размер файлов — до 25 МБ.');
  const existing=await env.DB.prepare('SELECT * FROM media_jobs WHERE id=? AND user_id=?').bind(id,userId).first();
  if(existing)return publicMediaJob(existing);
+ const groupId=String(body.groupId||id);
+ if(groupId!==id){const root=await env.DB.prepare('SELECT * FROM media_jobs WHERE id=? AND user_id=?').bind(groupId,userId).first();if(!root||root.kind!==kind)throw Error('Исходный проект не найден. Открой его в своих проектах.');}
  // Reserve before the paid request. Repeated clicks never create another provider job.
  const reserve=await env.DB.prepare("INSERT OR IGNORE INTO media_jobs(id,user_id,kind,model,status) SELECT ?,?,?,?,'creating' WHERE (SELECT COUNT(*) FROM media_jobs WHERE user_id=? AND status IN ('creating','pending','processing') AND created_at>datetime('now','-1 day'))<2").bind(id,userId,kind,model,userId).run();
  if(!reserve.meta?.changes){const row=await env.DB.prepare('SELECT * FROM media_jobs WHERE id=? AND user_id=?').bind(id,userId).first();if(row)return publicMediaJob(row);throw Error('Уже обрабатываются два проекта. Дождись готовности.');}
- const row={id,user_id:userId,kind,model,status:'creating'};
+ const row={id,user_id:userId,kind,model,status:'creating',group_id:groupId};
  try{
+  await env.DB.prepare('UPDATE media_jobs SET group_id=? WHERE id=? AND user_id=?').bind(groupId,id,userId).run();
   let region=null;
   if(body.region){try{region=typeof body.region==='string'?JSON.parse(body.region):body.region;}catch{throw Error('Заново выдели область фотографии.');}if(kind!=='image'||!Array.isArray(region.points)||region.points.length<3||region.points.length>300||region.points.some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x<0||p.x>1||p.y<0||p.y>1))throw Error('Заново выдели область фотографии.');}
+  if(region){const points=region.points.map(p=>({x:p.x,y:p.y})),xs=points.map(p=>p.x),ys=points.map(p=>p.y),bounds={x:Math.min(...xs),y:Math.min(...ys),w:Math.max(...xs)-Math.min(...xs),h:Math.max(...ys)-Math.min(...ys)};if(bounds.w<.015||bounds.h<.015)throw Error('Выдели область чуть крупнее.');region={points,bounds};}
   row.prompt=prompt;row.quality=String(body.quality||'fast');row.ratio=ratio;row.duration=duration;row.region_json=region?JSON.stringify(region):null;
   await env.DB.prepare('UPDATE media_jobs SET prompt=?,quality=?,ratio=?,duration=?,region_json=? WHERE id=? AND user_id=?').bind(prompt,row.quality,ratio,duration,row.region_json,id,userId).run();
   const input={prompt,aspect_ratio:ratio};
