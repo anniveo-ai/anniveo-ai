@@ -11,6 +11,8 @@
 <link rel="preconnect" href="https://anniveo-ai-api.yaylaevismail.workers.dev" crossorigin>
 <link rel="preload" as="image" href="orb20-real.webp">
 <link rel="preload" as="image" href="anium-coin-v1.webp">
+<link rel="preload" as="image" href="template-portrait-v1.jpg" fetchpriority="low">
+<link rel="preload" as="image" href="template-cinema-v1.jpg" fetchpriority="low">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
@@ -1695,6 +1697,15 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
 <div id="mediaProjectSwitcher" class="studio-project-tabs" role="group" aria-label="Тип проекта" hidden><span class="studio-tab-highlight" aria-hidden="true"></span><button type="button" data-media-tab="studio" aria-pressed="true" onclick="openView('studio')"><svg class="studio-tab-icon" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="20" height="20" rx="5"/><circle cx="18.5" cy="9.5" r="1.3" fill="currentColor" stroke="none"/><path d="m5 19 6-7 5 5 3-3 5 5"/></svg><span class="studio-tab-caption">Создать фото</span></button><button type="button" data-media-tab="video" aria-pressed="false" onclick="openView('video')"><svg class="studio-tab-icon" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="15" height="16" rx="4"/><path d="m18 11 7-4v14l-7-4Z"/><path d="m9 11 5 3-5 3Z"/></svg><span class="studio-tab-caption">Создать видео</span></button><button type="button" data-media-tab="templates" aria-pressed="false" onclick="openView('templates')"><svg class="studio-tab-icon" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 5 2.2 6.8L21 14l-6.8 2.2L12 23l-2.2-6.8L3 14l6.8-2.2Z"/><path d="m22 3 1 3 3 1-3 1-1 3-1-3-3-1 3-1Z"/></svg><span class="studio-tab-caption">Шаблоны</span></button><button type="button" data-media-tab="ready" aria-pressed="false" onclick="window.anisStability?.openReadyProjects()"><svg class="studio-tab-icon" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 3 11 6-11 6L3 9Z"/><path d="m3 14 11 6 11-6M3 19l11 6 11-6"/></svg><span class="studio-tab-caption">Готовые</span></button></div>
 <!-- ЧАТ -->
 <section id="view-chat" class="view active">
+<div id="homePrivacyBar" class="home-privacy-bar">
+  <button id="anonToggle" class="anon-mini-toggle" type="button"
+    role="switch" aria-checked="false" aria-label="Анонимный чат"
+    aria-describedby="modeText" onclick="toggleAnonymous()">
+    <span class="anon-mini-mascot" aria-hidden="true"><img src="anonymous-chat-reference-v1.jpeg" alt="" draggable="false" decoding="async"></span>
+    <span class="anon-mini-copy"><b>Анонимный чат</b><small id="modeText">История сохраняется</small></span>
+    <span class="anon-mini-switch" aria-hidden="true"></span>
+  </button>
+</div>
 <div id="welcome" class="welcome">
   <h1 id="greeting">Привет 👋🏻</h1>
   <h2>С чего начнём?</h2>
@@ -1747,17 +1758,6 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
   </div>
 </div>
 
-<div class="mode">
-  <span class="shield">♢</span>
-  <div>
-    <b>Анонимный чат</b>
-    <small id="modeText">История сохраняется</small>
-  </div>
-  <button id="anonToggle" class="switch"
-    role="switch" aria-checked="false"
-    aria-label="Включить анонимный чат"
-    onclick="toggleAnonymous()"></button>
-</div>
 <div id="messages" class="messages"></div>
 </section>
 
@@ -1765,7 +1765,7 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
 <section id="view-studio" class="view photo-studio">
 <div class="studio-heading"><div><h1 class="page-title">Создай фото</h1><p class="subtitle">Загрузи фото или начни с идеи.</p></div></div>
   <div class="studio-upload-stage" id="studioUploadStage" ondragover="studioDragOver(event)" ondragleave="studioDragLeave(event)" ondrop="studioDropPhoto(event)">
-    <div class="studio-upload-decor" aria-hidden="true"><span class="studio-backplate"></span><span class="studio-sample-card sample-one"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=240&q=80" alt="" decoding="async" loading="lazy"></span><span class="studio-sample-card sample-two"><img src="https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=240&q=80" alt="" decoding="async" loading="lazy"></span><span class="studio-upload-spark spark-one"></span><span class="studio-upload-spark spark-two"></span></div>
+    <div class="studio-upload-decor" aria-hidden="true"><span class="studio-backplate"></span><span class="studio-sample-card sample-one"><img src="template-portrait-v1.jpg" alt="" decoding="async" loading="lazy"></span><span class="studio-sample-card sample-two"><img src="template-cinema-v1.jpg" alt="" decoding="async" loading="lazy"></span><span class="studio-upload-spark spark-one"></span><span class="studio-upload-spark spark-two"></span></div>
     <button id="studioUploadButton" class="studio-upload-square" type="button" onclick="pickStudioPhoto()" aria-label="Добавить фото">
       <img id="studioPhotoPreview" class="studio-photo-preview" alt="Выбранное фото" hidden>
       <span class="studio-upload-content"><span class="studio-upload-plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><strong id="studioUploadLabel">Добавить фото</strong><small id="studioUploadCaption">Нажми или перетащи сюда</small></span>
@@ -1782,7 +1782,7 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
 <section id="view-video" class="view photo-studio">
 <div class="studio-heading"><div><h1 class="page-title">Создай видео</h1><p class="subtitle">Оживи фото, измени ролик или создай сцену с нуля.</p></div></div>
   <div class="studio-upload-stage" id="videoUploadStage" ondragover="videoDragOver(event)" ondragleave="videoDragLeave(event)" ondrop="videoDropFile(event)">
-    <div class="studio-upload-decor" aria-hidden="true"><span class="studio-backplate"></span><span class="studio-sample-card sample-one"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=240&q=80" alt="" decoding="async" loading="lazy"></span><span class="studio-sample-card sample-two"><img src="https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=240&q=80" alt="" decoding="async" loading="lazy"></span><span class="studio-upload-spark spark-one"></span><span class="studio-upload-spark spark-two"></span></div>
+    <div class="studio-upload-decor" aria-hidden="true"><span class="studio-backplate"></span><span class="studio-sample-card sample-one"><img src="template-portrait-v1.jpg" alt="" decoding="async" loading="lazy"></span><span class="studio-sample-card sample-two"><img src="template-cinema-v1.jpg" alt="" decoding="async" loading="lazy"></span><span class="studio-upload-spark spark-one"></span><span class="studio-upload-spark spark-two"></span></div>
     <button id="videoUploadButton" class="studio-upload-square" type="button" onclick="pickStudioVideo()" aria-label="Добавить фото или видео">
       <img id="studioVideoImagePreview" class="studio-photo-preview" alt="Фото для создания видео" hidden><video id="studioVideoPreview" class="studio-photo-preview" preload="metadata" muted playsinline hidden></video>
       <span class="studio-upload-content"><span class="studio-upload-plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><strong id="videoUploadLabel">Добавить фото или видео</strong><small id="videoUploadCaption">Нажми или перетащи сюда</small></span>
@@ -2692,7 +2692,7 @@ if(user){
 const tilesHTML = `
 <button class="tile" onclick="openView('image')">
   <img
-    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=650&q=85"
+    src="template-portrait-v1.jpg"
     alt="Фото" loading="lazy">
   <span class="tile-icon">▧</span>
   <span class="tile-text">
@@ -2702,7 +2702,7 @@ const tilesHTML = `
 </button>
 <button class="tile" onclick="openView('video')">
   <img
-    src="https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=650&q=85"
+    src="template-cinema-v1.jpg"
     alt="Видео" loading="lazy">
   <span class="tile-icon">▣</span>
   <span class="tile-text">
@@ -2792,6 +2792,7 @@ function openView(name){
 function updateWelcome(){
   const landingVisible=showWelcome&&!anonymous;
   $("welcome").classList.toggle("hidden",!landingVisible);
+  $("homePrivacyBar")?.classList.toggle("hidden",currentView!=="chat"||(!landingVisible&&!anonymous));
   $("collapseChatButton")?.classList.toggle("hidden",landingVisible||anonymous||currentView!=="chat");
   const showReturn=landingVisible&&returnToChatAvailable&&!anonymous&&currentView==="chat";
   $("returnToChatButton")?.classList.toggle("hidden",!showReturn);
@@ -4829,13 +4830,13 @@ function closeGeneratedMedia(){
 }
 function openGeneratedMedia(kind){const p=[...studioProjects.values()].reverse().find(p=>p.kind===kind&&p.status==='completed');if(p)openProjectRoom(p.id);}
 function renderGeneratedResultLink(kind){$(kind+'Result').replaceChildren();updateProjectDock();}
-function mediaFromBlob(kind,blob){const ext=blob.type.includes('jpeg')?'jpg':blob.type.includes('webp')?'webp':blob.type.includes('webm')?'webm':kind==='video'?'mp4':'png';return {blob,url:URL.createObjectURL(blob),file:new File([blob],'anis-'+kind+'.'+ext,{type:blob.type})};}
+function mediaFromBlob(kind,blob){const type=blob.type.toLowerCase().split(';')[0],ext=({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','video/mp4':'mp4','video/quicktime':'mov','video/webm':'webm'})[type]||(kind==='video'?'mp4':'png');return {blob,url:URL.createObjectURL(blob),file:new File([blob],'anis-'+(kind==='video'?'video':'photo')+'.'+ext,{type})};}
 function showGeneratedMedia(kind,blob){
  const p={id:crypto.randomUUID(),kind,status:'completed',media:mediaFromBlob(kind,blob),created:Date.now(),order:++projectCounter,prompt:''};studioProjects.set(p.id,p);generatedMedia[kind]=p.media;openProjectRoom(p.id);
 }
 function selectedProjectMedia(){const p=studioProjects.get(selectedStudioProject);return p?.media||generatedMedia[activeGeneratedKind];}
-function saveGeneratedMedia(){const item=selectedProjectMedia();if(!item)return;const a=document.createElement('a');a.href=item.url;a.download=item.file.name;document.body.append(a);a.click();a.remove();}
-async function shareGeneratedMedia(){const item=selectedProjectMedia();if(!item)return;try{if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[item.file]})))await navigator.share({files:[item.file],title:'ANIS AI'});else{saveGeneratedMedia();toast('Сохрани файл и отправь его из галереи.');}}catch(e){if(e.name!=='AbortError')toast('Нажми «Сохранить», чтобы скачать файл.');}}
+function saveGeneratedMedia(){const item=selectedProjectMedia();if(item)return window.anisProjectActions.saveMedia(item,studioProjects.get(selectedStudioProject)?.kind||activeGeneratedKind);}
+function shareGeneratedMedia(){return saveGeneratedMedia();}
 function editGeneratedMedia(){const item=selectedProjectMedia();if(!item)return;closeGeneratedMedia();openView('studio');setStudioPhoto(item.file);$('imagePrompt').focus({preventScroll:true});}
 async function mediaJSON(payload){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),60000);try{const response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,initData}),signal:controller.signal});const data=await response.json();if(!response.ok){const error=Error(data.error||'Сервис временно недоступен.');error.status=response.status;throw error;}return data;}finally{clearTimeout(timer);}}
 function setMediaBusy(kind,value){$(kind==='image'?'makeImage':'makeVideo').disabled=value;}
@@ -4929,13 +4930,13 @@ function applyAppTheme(theme){
 }
 function toggleAppTheme(){applyAppTheme(document.documentElement.dataset.theme==='light'?'dark':'light');}
 const STUDIO_TEMPLATES=Object.freeze([
- {id:'portrait',title:'Редакционный портрет',kind:'image',tag:'Фото · портрет',image:'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=480&q=80',prompt:'Создай редакционный портрет человека с загруженного фото. Сохрани лицо и индивидуальные черты. Мягкий студийный свет, спокойный фон, естественная кожа, современная журнальная фотография.'},
- {id:'cover',title:'Обложка моего канала',kind:'image',tag:'Фото · обложка',image:'https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=480&q=80',prompt:'Создай кинематографичную обложку с человеком с загруженного фото. Сохрани лицо. Глубокий ночной фон, фиолетовый свет по контуру, выразительный портрет, свободное пространство для заголовка, без текста.'},
- {id:'cinema',title:'Герой фильма',kind:'image',tag:'Фото · кино',image:'https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=480&q=80',prompt:'Создай кадр из атмосферного фильма с человеком с референса. Сохрани внешность. Вечерний город, мягкие отражения, реалистичный свет, спокойная уверенная поза, плёночная цветокоррекция.'},
- {id:'motion',title:'Живой кинопортрет',kind:'video',tag:'Видео · оживить фото',image:'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=480&q=80',prompt:'Оживи человека с фото: медленный плавный наезд камеры, естественное моргание, лёгкое движение волос, мягкий кинематографичный свет. Сохрани лицо и внешность на всех кадрах. Без резких движений и изменения возраста.'},
- {id:'neon',title:'Неоновая история',kind:'video',tag:'Видео · клип',image:'https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=480&q=80',prompt:'Создай короткий кинематографичный клип с человеком с загруженного фото: ночной город, неоновые фиолетовые отражения, плавное движение камеры вокруг героя. Сохрани его лицо и внешность, естественная пластика, стабильные детали.'}
+ {id:'portrait',title:'Редакционный портрет',kind:'image',tag:'Фото · портрет',image:'template-portrait-v1.jpg',prompt:'Создай редакционный портрет человека с загруженного фото. Сохрани лицо и индивидуальные черты. Мягкий студийный свет, спокойный фон, естественная кожа, современная журнальная фотография.'},
+ {id:'cover',title:'Обложка моего канала',kind:'image',tag:'Фото · обложка',image:'template-cinema-v1.jpg',prompt:'Создай кинематографичную обложку с человеком с загруженного фото. Сохрани лицо. Глубокий ночной фон, фиолетовый свет по контуру, выразительный портрет, свободное пространство для заголовка, без текста.'},
+ {id:'cinema',title:'Герой фильма',kind:'image',tag:'Фото · кино',image:'template-cinema-v1.jpg',prompt:'Создай кадр из атмосферного фильма с человеком с референса. Сохрани внешность. Вечерний город, мягкие отражения, реалистичный свет, спокойная уверенная поза, плёночная цветокоррекция.'},
+ {id:'motion',title:'Живой кинопортрет',kind:'video',tag:'Видео · оживить фото',image:'template-portrait-v1.jpg',prompt:'Оживи человека с фото: медленный плавный наезд камеры, естественное моргание, лёгкое движение волос, мягкий кинематографичный свет. Сохрани лицо и внешность на всех кадрах. Без резких движений и изменения возраста.'},
+ {id:'neon',title:'Неоновая история',kind:'video',tag:'Видео · клип',image:'template-cinema-v1.jpg',prompt:'Создай короткий кинематографичный клип с человеком с загруженного фото: ночной город, неоновые фиолетовые отражения, плавное движение камеры вокруг героя. Сохрани его лицо и внешность, естественная пластика, стабильные детали.'}
 ]);
-function renderStudioTemplates(){const list=$('studioTemplateList');list.replaceChildren();for(const t of STUDIO_TEMPLATES){const card=document.createElement('button');card.type='button';card.className='studio-template-card';const img=document.createElement('img');img.src=t.image;img.alt='Пример стиля';img.loading='lazy';const label=document.createElement('span');const title=document.createElement('strong');title.textContent=t.title;const meta=document.createElement('small');meta.textContent=t.tag;label.append(meta,title);const arrow=document.createElement('b');arrow.textContent=t.kind==='video'?'▷':'↗';card.append(img,label,arrow);card.onclick=()=>useStudioTemplate(t.id);list.append(card);}}
+function renderStudioTemplates(){const list=$('studioTemplateList');list.replaceChildren();for(const [index,t]of STUDIO_TEMPLATES.entries()){const card=document.createElement('button');card.type='button';card.className='studio-template-card';const img=document.createElement('img');img.src=t.image;img.alt='Пример стиля';img.loading=index<2?'eager':'lazy';img.decoding='async';img.width=240;img.height=320;const label=document.createElement('span');const title=document.createElement('strong');title.textContent=t.title;const meta=document.createElement('small');meta.textContent=t.tag;label.append(meta,title);const arrow=document.createElement('b');arrow.textContent=t.kind==='video'?'▷':'↗';card.append(img,label,arrow);card.onclick=()=>useStudioTemplate(t.id);list.append(card);}}
 function useStudioTemplate(id){const t=STUDIO_TEMPLATES.find(t=>t.id===id);if(!t)return;openView(t.kind==='image'?'studio':'video');$(t.kind+'Prompt').value=t.prompt;$(t.kind+'Ratio').value=t.id==='cover'?'16:9':'9:16';toast('Добавь своё фото, затем нажми «Создать».');if(t.kind==='image')pickStudioPhoto();else pickStudioVideo('image');}
 function jumpToChatHistory(index,items){
  if(recording||openingMic||transcribing||busy){toast('Сначала заверши текущий запрос.');return;}
@@ -5203,6 +5204,7 @@ void prefetchUsageStats();
 setupMediaMicGestures();
 syncMediaMic();
 </script>
+<script src="project-actions.js?v=__ANIS_BUILD__"></script>
 <script src="stability.js?v=__ANIS_BUILD__"></script>
 
 </body>

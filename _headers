@@ -4,3 +4,9 @@
   Cache-Control: no-store
 /release.json
   Cache-Control: no-store
+/template-portrait-v1.jpg
+  Cache-Control: public, max-age=2592000, immutable
+/template-cinema-v1.jpg
+  Cache-Control: public, max-age=2592000, immutable
+/anonymous-chat-reference-v1.jpeg
+  Cache-Control: public, max-age=2592000, immutable

@@ -27,7 +27,7 @@
  async function saveDurable(){try{await dbRecord('projects',[...studioProjects.values()].map(projectRecord));return true;}catch{storageWarning();return false;}}
  persistStudioProjects=function(){metadataPersist();clearTimeout(persistTimer);if(!state.restoring)persistTimer=setTimeout(()=>void saveDurable(),180);};
  const draftIds=['messageInput','imagePrompt','videoPrompt','projectAgentIdea','imageQuality','videoQuality','imageRatio','videoRatio','duration'];
- function saveDrafts(){const values={};for(const id of draftIds)if($(id))values[id]=$(id).value;write('drafts',{values,view:currentView});}
+ function saveDrafts(){const values={};for(const id of draftIds)if($(id))values[id]=id==='messageInput'&&anonymous?'':$(id).value;write('drafts',{values,view:currentView});}
  async function saveFileDrafts(){await dbRecord('files',{image:studioImageFile,video:studioVideoFile,identity:studioVideoIdentityFile,region:state.region});}
  document.addEventListener('input',event=>{if(draftIds.includes(event.target.id))saveDrafts();});
  document.addEventListener('change',event=>{if(draftIds.includes(event.target.id))saveDrafts();});
@@ -129,6 +129,8 @@
   }
   const addIdea=button('+',()=>$('projectAgentIdea').focus({preventScroll:false}));addIdea.className='project-variant-add';addIdea.setAttribute('aria-label','Добавить идею для нового варианта');cards.append(addIdea);
   $('mediaResultTitle').textContent=projectLabel(p)+(p.status==='completed'?' готово':p.status==='failed'?' · ошибка':p.status==='unknown'?' · проверка':' · в работе');
+  $('mediaResultOpen').textContent=p.kind==='video'?'Открыть видео':'Открыть фото';
+  if(p.status==='completed')$('mediaResultHelp').textContent='Фото и видео открываются с предпросмотром. На iPhone: «Сохранить» → «Сохранить изображение» или «Сохранить видео» в системном меню.';
   let steps=$('anisProjectSteps');if(!steps){steps=el('div',{id:'anisProjectSteps',className:'anis-steps','aria-hidden':'true'});for(let i=0;i<4;i++)steps.append(el('span'));$('projectStageStatus').after(steps);}
   const step=p.status==='completed'?4:p.loading?3:['pending','processing'].includes(p.status)?2:['submitting','creating'].includes(p.status)?1:0;
   [...steps.children].forEach((n,i)=>n.classList.toggle('done',i<step));
@@ -150,9 +152,12 @@
   const groups=new Map();for(const p of projects){const id=p.groupId||p.id;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(p);}
   for(const family of [...groups.values()].reverse()){
    const first=family[0],last=family.at(-1),display=[...family].reverse().find(p=>p.status==='completed'&&(p.media||p.resultUrl))||last;
-   const card=button('',()=>{openProjectRoom(display.id);if(display.status==='completed'&&!display.media&&display.resultUrl)void loadStudioProjectResult(display);});card.className='studio-template-card studio-ready-card';
-   const source=previewSource(display);if(display.status==='completed'&&source)card.append(previewElement(source));else if(!PROJECT_TERMINAL.includes(display.status))addWorkingPreview(card,display,true);else card.append(el('i',{className:'studio-ready-placeholder','aria-hidden':'true'},first.kind==='video'?'▷':'✦'));
-   const copy=el('span');copy.append(el('small',{},(first.kind==='video'?'Видео':'Фото')+' · '+projectStatusLabel(last)+(family.length>1?' · '+variantsText(family.length):'')),el('strong',{},(first.prompt||'Мой проект').slice(0,110)));card.append(copy,el('b',{'aria-hidden':'true'},first.kind==='video'?'▷':'↗'));readyGrid.append(card);
+   const card=el('article',{className:'studio-template-card studio-ready-card studio-ready-project','data-project-id':display.id});
+   const preview=button('',()=>{openProjectRoom(display.id);if(display.status==='completed'&&!display.media&&display.resultUrl)void loadStudioProjectResult(display);});preview.className='studio-ready-preview';preview.setAttribute('aria-label','Открыть '+(display.kind==='video'?'видео':'фото')+' · '+(first.prompt||'Мой проект').slice(0,110));
+   const source=previewSource(display);if(display.status==='completed'&&source)preview.append(previewElement(source));else if(!PROJECT_TERMINAL.includes(display.status))addWorkingPreview(preview,display,true);else preview.append(el('i',{className:'studio-ready-placeholder','aria-hidden':'true'},first.kind==='video'?'▷':'✦'));
+   const copy=el('span',{className:'studio-ready-copy'});copy.append(el('small',{},(first.kind==='video'?'Видео':'Фото')+' · '+projectStatusLabel(last)+(family.length>1?' · '+variantsText(family.length):'')),el('strong',{},(first.prompt||'Мой проект').slice(0,110)));preview.append(copy,el('b',{'aria-hidden':'true'},first.kind==='video'?'▷':'↗'));card.append(preview);
+   if(display.status==='completed'&&source)card.append(window.anisProjectActions.createControls(display));
+   readyGrid.append(card);
   }
   if(!groups.size){const empty=el('div',{className:'studio-ready-empty'});empty.append(el('strong',{},'Здесь будут твои фото и видео'),el('p',{},'Создай первую работу — она появится здесь.'),button('Создать фото',()=>openView('studio'),true));readyGrid.append(empty);}
  }
@@ -160,7 +165,7 @@
   if(p.loading)return;p.loading=true;renderProjectRoom();
   try{
    const response=await fetch(p.resultUrl,{signal:AbortSignal.timeout(90000)});if(!response.ok)throw Error('Готовый файл пока недоступен. Нажми «Открыть готовый файл» ещё раз.');
-   let blob=await response.blob();if(!blob.size||!blob.type.startsWith(p.kind==='image'?'image/':'video/'))throw Error('Сервис ещё не отдал готовый файл. Проверь позже.');
+   let blob=await window.anisProjectActions.normalizeBlob(p.kind,await response.blob());
    if(p.region){if(!p.regionOriginalFile)throw Error('Чтобы собрать результат без изменения остального фото, нужен оригинал с этого устройства. Не создавай заказ заново.');blob=await compositeRegion(p,blob);}
    p.media=mediaFromBlob(p.kind,blob);p.mediaBlob=blob;generatedMedia[p.kind]=p.media;invalidateUsageStats();await saveDurable();
   }catch(error){p.error=readableMediaError(error);if(selectedStudioProject===p.id&&$('mediaResultDialog').open)explain(error,()=>loadStudioProjectResult(p),'Открыть готовый файл');}
