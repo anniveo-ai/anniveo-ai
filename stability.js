@@ -72,11 +72,12 @@
  state.ackStudioResults=()=>{acknowledgeStudioResults();updateProjectDock();};
  state.updateStudioIndicator=function(){
   const projects=[...studioProjects.values()],active=projects.filter(p=>!PROJECT_TERMINAL.includes(p.status)||p.loading).length;
-  if(['studio','video','templates'].includes(currentView)&&!state.restoring)acknowledgeStudioResults();
+  if(['studio','video','templates','ready'].includes(currentView)&&!state.restoring)acknowledgeStudioResults();
   const unseen=completedStudioResults().some(p=>!seenStudioResults.has(p.id));
   studioNav.classList.toggle('studio-nav-working',active>0);studioNav.classList.toggle('studio-nav-ready',unseen);
   studioNav.setAttribute('aria-label',active?'Студия. Идёт создание'+(unseen?'. Есть готовый результат':''):unseen?'Студия. Новый результат готов':'Студия');
   studioNav.title=active?'Создание продолжается':unseen?'Результат готов':'Студия';
+  if(currentView==='ready')renderReadyProjects();
   document.querySelectorAll('[data-studio-projects]').forEach(b=>{b.hidden=!projects.length;b.textContent=active?'Мои проекты · в работе '+active:'Мои проекты';});
  };
  const previewUrls=new Map();
@@ -117,17 +118,22 @@
   }
   if(/проект\s+не найден/i.test(p.error||'')){$('mediaResultPreview').replaceChildren();$('mediaResultTitle').textContent=projectLabel(p);$('projectStageStatus').textContent='';}
  };
- const projectList=dialog('anisProjectList','Готовые'),projectListBody=el('div',{className:'project-group-list'});projectList.append(projectListBody);
- state.openReadyProjects=()=>{const tabs=$('mediaProjectSwitcher');tabs.classList.add('ready-selected');tabs.querySelectorAll('[data-media-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mediaTab==='ready')));openProjectList();};
- projectList.addEventListener('close',()=>{const tabs=$('mediaProjectSwitcher');tabs.classList.remove('ready-selected');tabs.querySelectorAll('[data-media-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mediaTab===currentView)));});
- function openProjectList(){
-  projectListBody.replaceChildren();const groups=new Map();for(const p of studioProjects.values()){const id=p.groupId||p.id;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(p);}
+ const readyView=el('section',{id:'view-ready',className:'view photo-studio'}),readyHeading=el('div',{className:'studio-heading'}),readyHeadingCopy=el('div'),readyGrid=el('div',{id:'studioReadyList',className:'studio-template-list studio-ready-list'});
+ readyHeadingCopy.append(el('h1',{className:'page-title'},'Твои готовые работы'),el('p',{className:'subtitle'},'Фото, видео и новые варианты — всё в одном месте.'));readyHeading.append(readyHeadingCopy);readyView.append(readyHeading,readyGrid);$('view-templates').after(readyView);
+ const originalOpenStudioView=openView;
+ openView=function(name){originalOpenStudioView(name);const tabs=$('mediaProjectSwitcher'),ready=currentView==='ready';tabs.classList.toggle('ready-selected',ready);if(ready){tabs.hidden=false;tabs.classList.remove('video-selected','templates-selected');tabs.querySelectorAll('[data-media-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mediaTab==='ready')));studioNav.classList.add('active');state.ackStudioResults();renderReadyProjects();requestAnimationFrame(moveGlider);}};
+ state.openReadyProjects=()=>openView('ready');
+ let readyRenderKey='';
+ function renderReadyProjects(){
+  const projects=[...studioProjects.values()],key=projects.map(p=>[p.id,p.status,p.loading,previewSource(p)?.url,p.prompt].join(':')).join('|');if(readyGrid.childElementCount&&key===readyRenderKey)return;readyRenderKey=key;readyGrid.replaceChildren();
+  const groups=new Map();for(const p of projects){const id=p.groupId||p.id;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(p);}
   for(const family of [...groups.values()].reverse()){
-   const first=family[0],last=family.at(-1),row=button('',()=>{projectList.close();openProjectRoom(last.id);});row.className='project-group-row';
-   const picture=el('div',{className:'project-group-picture'}),source=previewSource([...family].reverse().find(p=>p.media)||first);if(source)picture.append(previewElement(source));else picture.textContent=first.kind==='video'?'▷':'✦';
-   const copy=el('span');copy.append(el('strong',{},(first.kind==='video'?'Видео':'Фото')+' · '+(first.prompt||'Мой проект').slice(0,65)),el('small',{},variantsText(family.length)+' · '+projectStatusLabel(last)));row.append(picture,copy,el('span',{},'↗'));projectListBody.append(row);
+   const first=family[0],last=family.at(-1),display=[...family].reverse().find(p=>p.status==='completed'&&(p.media||p.resultUrl))||last;
+   const card=button('',()=>{openProjectRoom(display.id);if(display.status==='completed'&&!display.media&&display.resultUrl)void loadStudioProjectResult(display);});card.className='studio-template-card studio-ready-card';
+   const source=previewSource(display);if(display.status==='completed'&&source)card.append(previewElement(source));else if(!PROJECT_TERMINAL.includes(display.status))addWorkingPreview(card,display,true);else card.append(el('i',{className:'studio-ready-placeholder','aria-hidden':'true'},first.kind==='video'?'▷':'✦'));
+   const copy=el('span');copy.append(el('small',{},(first.kind==='video'?'Видео':'Фото')+' · '+projectStatusLabel(last)+(family.length>1?' · '+variantsText(family.length):'')),el('strong',{},(first.prompt||'Мой проект').slice(0,110)));card.append(copy,el('b',{'aria-hidden':'true'},first.kind==='video'?'▷':'↗'));readyGrid.append(card);
   }
-  if(!groups.size)projectListBody.append(el('p',{},'Здесь появятся твои проекты.'));projectList.showModal();
+  if(!groups.size){const empty=el('div',{className:'studio-ready-empty'});empty.append(el('strong',{},'Здесь будут твои фото и видео'),el('p',{},'Создай первую работу — она появится здесь.'),button('Создать фото',()=>openView('studio'),true));readyGrid.append(empty);}
  }
  loadStudioProjectResult=async function(p){
   if(p.loading)return;p.loading=true;renderProjectRoom();
@@ -271,9 +277,11 @@
   keyboardBar.hidden=inset<80;
   keyboardBar.style.top=(bottom-52)+'px';
   const box=field.closest('.studio-prompt-box')||field,rect=box.getBoundingClientRect(),fieldRect=field.getBoundingClientRect();
-  const available=Math.max(80,visibleHeight-76),target=rect.height<=available?rect:fieldRect;
-  const delta=target.bottom>bottom-60?target.bottom-bottom+60:target.top<top+12?target.top-top-12:0;
-  if(Math.abs(delta)>2){const scroller=field.closest('dialog[open]')||$('app');scroller?.scrollBy({top:delta,behavior:'instant'});}
+  if(inset<80)return;
+  const available=Math.max(80,visibleHeight-144),target=rect.height<=available?rect:fieldRect;
+  // iOS can scroll the focused field too far up: correct in both directions.
+  const delta=Math.min(target.bottom-bottom+60,target.top-top-84);
+  if(Math.abs(delta)>8){const scroller=field.closest('dialog[open]')||$('app');scroller?.scrollBy({top:delta,behavior:'instant'});}
  }
  function scheduleStudioKeyboard(){cancelAnimationFrame(studioKeyboardFrame);studioKeyboardFrame=requestAnimationFrame(keyboardLayout);}
  document.addEventListener('focusin',()=>{scheduleStudioKeyboard();setTimeout(scheduleStudioKeyboard,250);setTimeout(scheduleStudioKeyboard,500);});document.addEventListener('focusout',()=>setTimeout(scheduleStudioKeyboard,0));document.addEventListener('input',scheduleStudioKeyboard);window.visualViewport?.addEventListener('resize',scheduleStudioKeyboard);window.visualViewport?.addEventListener('scroll',scheduleStudioKeyboard);window.addEventListener('resize',scheduleStudioKeyboard);tg?.onEvent?.('viewportChanged',scheduleStudioKeyboard);
