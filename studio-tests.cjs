@@ -1,43 +1,18 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-const html=fs.readFileSync('index.html','utf8');
-const nodes=new Map(),requests=[],toasts=[],revoked=[];
-let id=0;
-function node(){return{value:'',disabled:false,hidden:false,textContent:'',children:[],attrs:{},dataset:{},listeners:{},addEventListener(k,fn){this.listeners[k]=fn},setPointerCapture(){},classList:{add(){},remove(){},toggle(){}},setAttribute(k,v){this.attrs[k]=v},removeAttribute(k){delete this[k]},replaceChildren(...children){this.children=children},append(...children){this.children.push(...children)},click(){},showModal(){this.open=true},close(){this.open=false},querySelector(){return null},focus(){},remove(){}}}
-const getNode=key=>{if(!nodes.has(key))nodes.set(key,node());return nodes.get(key)};
-getNode('imageModel').value='google/gemini-3.1-flash-image-preview';getNode('imageRatio').value='1:1';
-const tools=['improve','background','style','details'].map(key=>({...node(),dataset:{studioTool:key}}));
-const ctx=vm.createContext({console,Blob,File,FormData,Response,AbortController,AbortSignal,setTimeout,clearTimeout,atob,Uint8Array,crypto:require('node:crypto').webcrypto,URL,
- navigator:{},recording:false,openingMic:false,transcribing:false,MediaRecorder:function(){},localStorage:{getItem(){return null},setItem(){},removeItem(){}},window:{},
- $:getNode,initData:'test',user:{id:123},tg:null,API_URL:'https://example.test',
- URL:{createObjectURL:()=>`blob:test-${++id}`,revokeObjectURL:url=>revoked.push(url)},
- document:{querySelectorAll:()=>tools,createElement:()=>node(),body:node()},toast:t=>toasts.push(t),invalidateUsageStats(){},
- fetch:async(url,options)=>{if(url==='https://cdn.test/image.png')return new Response(new Blob(['image'],{type:'image/png'}));requests.push(options);return Response.json({status:'completed',url:'https://cdn.test/image.png'})}
-});
-const source=html.slice(html.indexOf('let studioImageFile=null;'),html.indexOf('/* КЛАВИАТУРА IPHONE */'));
-vm.runInContext(source,ctx);const run=code=>vm.runInContext(code,ctx);
+const html=fs.readFileSync('index.html','utf8'),nodes=new Map(),requests=[],toasts=[],revoked=[];let id=0;
+function node(){return{value:'',disabled:false,hidden:false,textContent:'',children:[],attrs:{},dataset:{},listeners:{},addEventListener(k,f){this.listeners[k]=f},setPointerCapture(){},classList:{add(){},remove(){},toggle(){}},setAttribute(k,v){this.attrs[k]=v},removeAttribute(k){delete this[k]},replaceChildren(...c){this.children=c},append(...c){this.children.push(...c)},click(){},showModal(){this.open=true},close(){this.open=false},querySelector(){return null},focus(){},remove(){}}}
+const getNode=k=>{if(!nodes.has(k))nodes.set(k,node());return nodes.get(k)};
+for(const k of ['image','video']){getNode(k+'Quality').value='fast';getNode(k+'Ratio').value='1:1'}getNode('duration').value='4';
+const ctx=vm.createContext({console,Blob,File,FormData,Response,AbortController,AbortSignal,setTimeout,clearTimeout,atob,Uint8Array,crypto:require('node:crypto').webcrypto,recording:false,openingMic:false,transcribing:false,MediaRecorder:function(){},navigator:{},window:{},localStorage:{getItem(){return null},setItem(){},removeItem(){}},$:getNode,initData:'test',user:{id:123},tg:null,API_URL:'https://example.test',URL:{createObjectURL:()=>`blob:test-${++id}`,revokeObjectURL:u=>revoked.push(u)},document:{querySelectorAll:()=>[],createElement:()=>node(),body:node()},toast:t=>toasts.push(t),invalidateUsageStats(){},fetch:async(url,o)=>{if(url.includes('cdn.test'))return new Response(new Blob(['media'],{type:url.endsWith('.mp4')?'video/mp4':'image/png'}));requests.push(o);const p=o.body instanceof FormData?Object.fromEntries(o.body):JSON.parse(o.body);return Response.json({status:'completed',url:'https://cdn.test/'+(p.kind==='video'?'video.mp4':'image.png')})}});
+vm.runInContext(html.slice(html.indexOf('let studioVideoFile=null'),html.indexOf('/* КЛАВИАТУРА IPHONE */')),ctx);const run=s=>vm.runInContext(s,ctx);
 (async()=>{
- const file=new File(['example-photo'],'photo.png',{type:'image/png'});ctx.photo=file;
- assert.equal(run('setStudioPhoto(photo)'),true);assert.equal(getNode('imageModel').value,'google/gemini-3.1-flash-image-preview');assert.equal(getNode('imageModel').disabled,false);
- run("selectStudioTool('improve')");assert.equal(tools[0].attrs['aria-pressed'],'true');
- getNode('imagePrompt').value='Сделай свет теплее';
- await run("generateMedia('image')");
- const edit=requests.at(-1).body;assert.ok(edit instanceof FormData);assert.equal(edit.get('action'),'media-create');assert.equal(edit.get('model'),'google/gemini-3.1-flash-image-preview');
- assert.equal(edit.get('file').name,'photo.png');assert.match(edit.get('prompt'),/Сделай свет теплее/);assert.match(edit.get('prompt'),/Сохрани внешность/);
- assert.equal(getNode('makeImage').disabled,false);assert.equal(getNode('studioUploadButton').disabled,false);
- assert.equal(getNode('imageModel').disabled,false,'premium editing model remains selectable');
- run('clearStudioPhoto()');assert.equal(getNode('imageModel').value,'google/gemini-3.1-flash-image-preview');assert.equal(getNode('imageModel').disabled,false);assert.equal(getNode('studioPhotoPreview').hidden,true);assert.ok(revoked.length>=1);
- getNode('imagePrompt').value='Горы на рассвете';run("selectStudioTool('style')");await run("generateMedia('image')");
- const creation=JSON.parse(requests.at(-1).body);assert.equal(creation.action,'media-create');assert.equal(creation.model,'google/gemini-3.1-flash-image-preview');assert.match(creation.prompt,/Горы на рассвете/);
- run("selectStudioTool('background')");const before=requests.length;await run("generateMedia('image')");assert.equal(requests.length,before,'photo-specific tools cannot send empty reference');assert.match(toasts.at(-1),/Добавь фото/);
- ctx.invalid={type:'image/svg+xml',size:10,name:'not-supported.svg'};assert.equal(run('setStudioPhoto(invalid)'),false);
- ctx.tooLarge={type:'image/png',size:21*1024*1024,name:'big.png'};assert.equal(run('setStudioPhoto(tooLarge)'),false);
- assert.equal((html.match(/id="view-studio"/g)||[]).length,1);assert.equal((html.match(/id="imageFile"/g)||[]).length,1);
- assert.equal(getNode('mediaResultDialog').open,true);assert.equal(getNode('imageResult').children[0].textContent,'Открыть готовый результат ↗');
- let resolvePermission,stopped=0;ctx.navigator.mediaDevices={getUserMedia:()=>new Promise(r=>resolvePermission=r)};
- const opening=run("toggleMediaDictation('image')");run('cancelMediaDictation()');resolvePermission({getTracks:()=>[{stop(){stopped++}}]});await opening;assert.equal(stopped,1,'late microphone permission cannot reopen recording');assert.equal(run('mediaVoiceTask'),null);
- run('setupMediaMicGestures()');const mic=getNode('imagePromptMic');
- ctx.cancelled=0;run("mediaVoiceTask={kind:'image',phase:'recording',stream:{getTracks:()=>[{stop(){cancelled++}}]}};syncMediaMic()");assert.equal(getNode('imagePromptCancel').hidden,false);
- mic.listeners.pointerdown({pointerId:1,button:0,clientX:140,clientY:50});mic.listeners.pointermove({pointerId:1,clientX:60,clientY:55});mic.listeners.pointerup({pointerId:1});assert.equal(run('mediaVoiceTask'),null);assert.equal(ctx.cancelled,1);assert.equal(getNode('imagePromptCancel').hidden,true);
- const promptStart=html.indexOf('<div class="studio-prompt-box">'),toolsStart=html.indexOf('<div class="studio-tools"');assert.ok(html.indexOf('id="makeImage"')>promptStart&&html.indexOf('id="makeImage"')<toolsStart,'create button lives inside prompt');assert.equal((html.match(/id="makeImage"/g)||[]).length,1);
- console.log('PASS: preview lifecycle, editing reference upload, tool + user instructions, model restoration, creation routing, invalid file rejection and unique controls');
-})().catch(error=>{console.error(error);process.exitCode=1});
+ ctx.photo=new File(['photo'],'reference.png',{type:'image/png'});assert.equal(run('setStudioPhoto(photo)'),true);getNode('imageQuality').value='max';getNode('imagePrompt').value='Сохрани лицо, добавь море';await run("generateMedia('image')");
+ const photo=requests.at(-1).body;assert.equal(photo.get('action'),'media-create');assert.equal(photo.get('quality'),'max');assert.equal(photo.get('model'),null);assert.equal(photo.get('file').name,'reference.png');assert.equal(getNode('mediaResultDialog').open,true);assert.equal(getNode('imageResult').children[0].textContent,'Открыть готовый результат ↗');assert.equal(getNode('imageQuality').disabled,false);run('clearStudioPhoto()');assert.equal(getNode('imageQuality').value,'max');assert.equal(getNode('studioPhotoPreview').hidden,true);
+ getNode('imagePrompt').value='Горы на рассвете';await run("generateMedia('image')");const p=JSON.parse(requests.at(-1).body);assert.equal(p.quality,'max');assert.equal(p.model,undefined);
+ ctx.clip=new File(['video'],'scene.mp4',{type:'video/mp4'});assert.equal(run('setStudioVideo(clip)'),true);getNode('videoPrompt').value='Море на закате';getNode('videoQuality').value='high';await run("generateMedia('video')");const video=requests.at(-1).body;assert.equal(video.get('kind'),'video');assert.equal(video.get('quality'),'high');assert.equal(video.get('file').name,'scene.mp4');assert.equal(getNode('mediaResultEdit').hidden,true);run('clearStudioVideo()');assert.equal(run('studioVideoFile'),null);
+ ctx.invalid={type:'image/svg+xml',size:10};assert.equal(run('setStudioPhoto(invalid)'),false);ctx.large={type:'video/mp4',size:26*1024*1024};assert.equal(run('setStudioVideo(large)'),false);
+ let resolvePermission,stopped=0;ctx.navigator.mediaDevices={getUserMedia:()=>new Promise(r=>resolvePermission=r)};const opening=run("toggleMediaDictation('image')");run('cancelMediaDictation()');resolvePermission({getTracks:()=>[{stop(){stopped++}}]});await opening;assert.equal(stopped,1);
+ run('setupMediaMicGestures()');ctx.cancelled=0;run("mediaVoiceTask={kind:'video',phase:'recording',stream:{getTracks:()=>[{stop(){cancelled++}}]}};syncMediaMic()");assert.equal(getNode('videoPromptCancel').hidden,false);const mic=getNode('videoPromptMic');mic.listeners.pointerdown({pointerId:1,button:0,clientX:150,clientY:40});mic.listeners.pointermove({pointerId:1,clientX:60,clientY:42});mic.listeners.pointerup({pointerId:1});assert.equal(run('mediaVoiceTask'),null);assert.equal(ctx.cancelled,1);
+ for(const [kind,next] of [['image','<!-- ВИДЕО -->'],['video','<!-- ИСТОРИЯ -->']]){const section=html.slice(html.indexOf('id="view-'+(kind==='image'?'studio':'video')+'"'),html.indexOf(next));assert.equal((section.match(new RegExp('id="make'+(kind==='image'?'Image':'Video')+'"','g'))||[]).length,1);assert.ok(section.indexOf('class="studio-prompt-box"')<section.indexOf('id="make'));assert.ok(!section.includes('Model'));assert.ok(!section.includes('data-studio-tool'));assert.ok(section.includes(kind+'Quality'));}
+ assert.equal((html.match(/id="mediaProjectSwitcher"/g)||[]).length,1);assert.ok(html.includes('transition:transform 340ms'));console.log('PASS: photo/video upload, quality payload without model IDs, result dialog, preview cleanup, dictation cancellation, shared animated tabs and composer placement');
+})().catch(e=>{console.error(e);process.exitCode=1});

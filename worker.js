@@ -24,9 +24,28 @@ async function updatePremiumJob(env,row,data){
  if(status==='completed')await env.DB.prepare('INSERT OR IGNORE INTO usage_events(id,user_id,kind) VALUES(?,?,?)').bind('media:'+row.id,row.user_id,row.kind).run();
  return publicMediaJob({...row,status,result_url:url,error});
 }
+function choosePremiumMedia(body,file){
+ const kind=body.kind,quality=body.quality;
+ if(quality===undefined)return {model:String(body.model||''),resolution:null};
+ if(kind==='image'){
+  if(!['fast','high','max'].includes(quality))throw Error('Выбери качество фото.');
+  const complex=!!file||/текст|надпис|логотип|шрифт|портрет|идентич|сохрани|дизайн|инфограф|text|logo|portrait/i.test(String(body.prompt||''));
+  return {model:quality==='max'||quality==='high'&&complex?'google/gemini-3-pro-image-preview':'google/gemini-3.1-flash-image-preview',resolution:{fast:'1K',high:'2K',max:'4K'}[quality]};
+ }
+ if(kind==='video'){
+  if(!['fast','high'].includes(quality))throw Error('Выбери качество видео.');
+  return {model:quality==='high'?'bytedance/seedance-2':'bytedance/seedance-2-fast',resolution:quality==='high'?'720p':'480p'};
+ }
+ throw Error('Выбери фото или видео.');
+}
+async function getMediaHistory(db,userId,kind){
+ if(!['image','video'].includes(kind))throw Error('Выбери фото или видео.');
+ const result=await db.prepare('SELECT id,kind,status,result_url,created_at FROM media_jobs WHERE user_id=? AND kind=? ORDER BY created_at DESC,id DESC LIMIT 50').bind(userId,kind).all();
+ return {items:(result.results||[]).map(row=>{const expired=Date.now()-Date.parse(row.created_at.replace(' ','T')+'Z')>7*86400000;return {jobId:row.id,kind:row.kind,status:row.status,createdAt:row.created_at,expired,...(row.status==='completed'&&!expired?{url:row.result_url}:{})};})};
+}
 async function createPremiumMedia(env,userId,body,file){
  if(!env.POLZA_API_KEY||!env.DB)throw Error('Платный сервис ИИ пока недоступен.');
- const model=String(body.model||''),config=PREMIUM_MEDIA_MODELS[model],kind=body.kind;
+ const selection=choosePremiumMedia(body,file),model=selection.model,config=PREMIUM_MEDIA_MODELS[model],kind=body.kind;
  if(!config||config.kind!==kind)throw Error('Выбери доступную модель фото или видео.');
  const prompt=String(body.prompt||'').trim(),ratio=String(body.ratio||'1:1'),id=String(body.requestId||'');
  if(!/^[a-zA-Z0-9-]{16,80}$/.test(id))throw Error('Неверный номер запроса.');
@@ -42,8 +61,8 @@ async function createPremiumMedia(env,userId,body,file){
  const row={id,user_id:userId,kind,model,status:'creating'};
  try{
   const input={prompt,aspect_ratio:ratio};
-  if(kind==='image'){input.image_resolution=config.resolution;input.output_format='png';}
-  else{input.duration=String(duration);input.resolution=config.resolution;input.generate_audio=false;}
+  if(kind==='image'){input.image_resolution=selection.resolution||config.resolution;input.output_format='png';}
+  else{input.duration=String(duration);input.resolution=selection.resolution||config.resolution;input.generate_audio=false;}
   if(file){const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));input[kind==='image'?'images':'videos']=[{type:'base64',data:'data:'+file.type+';base64,'+btoa(binary)}];}
   const data=await polzaMediaRequest(env,'',{model,input,async:true,user:'anis-'+userId});
   if(typeof data.id!=='string'||!/^[\w-]{1,200}$/.test(data.id))throw Error('Сервис не подтвердил номер проекта.');
@@ -1358,6 +1377,10 @@ export default {
         );
       }
 
+      if(action==="media-history"){
+        if(!env.DB)return json({error:'История временно недоступна'},503,headers);
+        try{return json(await getMediaHistory(env.DB,userId,body.kind),200,headers);}catch(error){return json({error:error.message},400,headers);}
+      }
       if(action==="media-config")return json({premium:!!env.POLZA_API_KEY},200,headers);
       if(action==="media-status"||action==="media-create"){
         try{return json(action==="media-status"?await readPremiumMedia(env,userId,body.jobId):await createPremiumMedia(env,userId,body,null),200,headers);}

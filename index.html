@@ -1617,6 +1617,12 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
 .studio-prompt-box .media-prompt-actions{justify-content:flex-end;gap:8px;margin-top:9px;align-items:center}.studio-prompt-box .media-voice-note{flex:1;min-width:0}.studio-prompt-box .studio-create-button{display:flex;align-items:center;justify-content:center;gap:9px;width:auto;min-height:44px;margin:0;padding:10px 16px;border-radius:15px;font-size:13px;white-space:nowrap;box-shadow:inset 0 1px 2px #ffffff66,0 0 16px #ac45e83d}.studio-prompt-box .studio-create-button svg{width:19px;height:19px}.media-prompt-mic{touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer}.media-prompt-mic.show-stop:after{content:'';display:block;width:13px;height:13px;background:currentColor;border-radius:4px}.media-prompt-cancel{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;padding:8px;border-radius:13px;background:#ffffff06;border:1px solid #c197ef40;color:#d2bfdf;cursor:pointer}.media-prompt-cancel svg{width:21px;height:21px}.media-prompt-cancel[hidden],.media-result-actions button[hidden]{display:none!important}.media-prompt-mic.swipe-cancel{background:#704e84;box-shadow:0 0 0 5px #c197ef15;opacity:.6}
 .media-result-dialog{padding:20px;border-radius:28px;background:radial-gradient(ellipse at 85% 0,#63338c24,transparent 55%),#17131f;border-color:#b58dd359;box-shadow:inset 0 1px #ffffff10,0 28px 110px #000a}.media-result-dialog header{padding:2px 1px 4px}.media-result-dialog header small{font-size:10px;letter-spacing:1.8px;text-transform:uppercase}.media-result-preview{border:1px solid #b58dd326;box-shadow:0 10px 28px #0003}.media-result-preview img,.media-result-preview video{max-height:49dvh}.media-result-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}.media-result-actions button{display:flex;align-items:center;justify-content:center;gap:10px;min-height:58px;margin:0;width:100%;padding:13px 10px;border:1px solid #b88ed833;border-radius:17px;background:linear-gradient(135deg,#30253c,#221b2b);color:#e8d9f5;font-size:13px;font-weight:600;cursor:pointer}.media-result-actions .media-save-result{grid-column:1/-1;justify-content:flex-start;padding:13px 20px;min-height:68px;background:linear-gradient(115deg,#a753e4,#7137ad);border-color:#d7a1ff80;box-shadow:inset 0 1px #ffffff36,0 5px 22px #9445cf20;font-size:16px}.media-save-result>span:last-child{text-align:left}.media-save-result small{display:block;font-size:11px;font-weight:400;opacity:.75;margin-top:3px}.result-action-icon{display:grid;place-items:center;flex:0 0 28px}.result-action-icon svg{width:23px;height:23px}.media-save-result .result-action-icon{background:#ffffff15;border-radius:12px;flex-basis:40px;height:40px;margin-right:4px}.media-result-dialog[data-kind=video] .media-share-result{grid-column:1/-1}.media-result-dialog .note{font-size:11px;color:#9f8eaf;line-height:1.5;margin:13px 2px 0}.media-result-actions button:active{transform:scale(.98)}
 @media(max-width:350px){.studio-prompt-box .studio-create-button{padding:10px;font-size:12px}.media-prompt-actions{gap:5px}.media-result-dialog{padding:15px}.media-result-actions{gap:8px}.media-result-actions button{font-size:12px;gap:6px}}
+
+#mediaProjectSwitcher{position:relative;isolation:isolate;box-sizing:border-box;width:100%;max-width:520px;margin:8px auto 18px;gap:0}#mediaProjectSwitcher[hidden]{display:none!important}.studio-tab-highlight{position:absolute;z-index:-1;left:5px;top:5px;bottom:5px;width:calc((100% - 10px)/2);border-radius:14px;background:linear-gradient(130deg,#9d50dc,#6430a2);box-shadow:0 3px 15px #a551ef36;transform:translateX(0);transition:transform 340ms cubic-bezier(.22,.8,.25,1);pointer-events:none}#mediaProjectSwitcher.video-selected .studio-tab-highlight{transform:translateX(100%)}#mediaProjectSwitcher button{background:transparent;box-shadow:none;transition:color 250ms}#mediaProjectSwitcher button[aria-pressed=true]{background:transparent;box-shadow:none;color:#fff}.studio-duration{margin-top:13px}.studio-duration select{width:100%}#view-video .studio-photo-preview{width:100%;height:100%;object-fit:contain;background:#0b0811}#view-video .studio-upload-stage.has-photo .studio-upload-content{pointer-events:none}#view-video .studio-upload-caption{max-width:100%}@media(prefers-reduced-motion:reduce){.studio-tab-highlight{transition:none}}
+
+.media-settings{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}.media-settings label{display:block;color:#b9a9c9;font-size:12px;margin-bottom:7px}.media-settings select{width:100%;min-width:0;border-radius:16px;padding:13px 10px;background:#211a2b;border:1px solid #aa84c63d;color:#eddef8;font-size:13px}.media-duration-setting{grid-column:1/-1}
+
+.media-prompt-actions.voice-active .media-voice-note{flex:0 0 auto;margin-left:auto;white-space:nowrap;color:#e7d2f7;font-size:12px}.recording-speak{font-size:13px;color:#d8c1ed;white-space:nowrap;margin-left:-3px}.recording-speak[hidden]{display:none!important}.history-kind-tabs{display:flex;gap:7px;margin:18px 0}.history-kind-tabs button{flex:1;border:1px solid #aa84c638;border-radius:15px;padding:12px;background:#211b2b;color:#bbaaC9;font:inherit;font-size:13px}.history-kind-tabs button[aria-pressed=true]{background:linear-gradient(120deg,#744291,#53316f);border-color:#c69ae369;color:#fff}.media-history-card{display:flex;align-items:center;gap:14px;width:100%;padding:13px;margin:0 0 10px;border:1px solid #aa84c638;border-radius:20px;background:linear-gradient(130deg,#241d2f,#19151f);color:#e9dcf5;text-align:left;font:inherit}.media-history-card:disabled{opacity:.5}.media-history-thumb{display:grid;place-items:center;flex:0 0 64px;height:64px;background:#75459c22;border-radius:13px;overflow:hidden;font-size:27px;color:#ba86e3}.media-history-thumb img{width:100%;height:100%;object-fit:cover}.media-history-card strong,.media-history-card small{display:block}.media-history-card strong{font-size:14px}.media-history-card small{font-size:12px;color:#a996bc;margin-top:6px}
 </style>
 </head>
 
@@ -1661,6 +1667,7 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
   <button class="gear" onclick="openView('profile')">⚙</button>
 </header>
 
+<div id="mediaProjectSwitcher" class="studio-project-tabs" role="group" aria-label="Тип проекта" hidden><span class="studio-tab-highlight" aria-hidden="true"></span><button type="button" data-media-tab="studio" aria-pressed="true" onclick="openView('studio')">Создать фото</button><button type="button" data-media-tab="video" aria-pressed="false" onclick="openView('video')">Создать видео</button></div>
 <!-- ЧАТ -->
 <section id="view-chat" class="view active">
 <div id="welcome" class="welcome">
@@ -1731,7 +1738,7 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
 
 <!-- СТУДИЯ -->
 <section id="view-studio" class="view photo-studio">
-<div class="studio-project-tabs" role="group" aria-label="Тип проекта"><button type="button" aria-pressed="true" onclick="openView('studio')">Создать фото</button><button type="button" aria-pressed="false" onclick="openView('video')">Создать видео</button></div><div class="studio-heading"><div><h1 class="page-title">Создай фото</h1><p class="subtitle">Загрузи фото или начни с идеи.</p></div></div>
+<div class="studio-heading"><div><h1 class="page-title">Создай фото</h1><p class="subtitle">Загрузи фото или начни с идеи.</p></div></div>
   <div class="studio-upload-stage" id="studioUploadStage" ondragover="studioDragOver(event)" ondragleave="studioDragLeave(event)" ondrop="studioDropPhoto(event)">
     <div class="studio-upload-decor" aria-hidden="true"><span class="studio-backplate"></span><span class="studio-sample-card sample-one"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=240&q=80" alt="" decoding="async" loading="lazy"></span><span class="studio-sample-card sample-two"><img src="https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=240&q=80" alt="" decoding="async" loading="lazy"></span><span class="studio-upload-spark spark-one"></span><span class="studio-upload-spark spark-two"></span></div>
     <button id="studioUploadButton" class="studio-upload-square" type="button" onclick="pickStudioPhoto()" aria-label="Добавить фото">
@@ -1742,68 +1749,31 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
     <input id="imageFile" type="file" accept="image/jpeg,image/png,image/webp" onchange="studioPhotoPicked(this)" hidden>
   </div>
   <div class="studio-prompt-box"><label for="imagePrompt">Напиши, что хочешь сделать</label><textarea id="imagePrompt" maxlength="1200" placeholder="Например: сделай свет мягче, замени фон на закат…"></textarea><div class="media-prompt-actions"><span id="imageVoiceNote" class="media-voice-note" role="status"></span><button id="imagePromptCancel" class="media-prompt-cancel" type="button" aria-label="Отменить голосовой ввод" onclick="cancelMediaDictation()" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button><button id="imagePromptMic" class="media-prompt-mic" type="button" aria-label="Продиктовать описание" aria-pressed="false" onclick="mediaMicClick(event,'image')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg></button><button id="makeImage" class="studio-create-button" type="button" onclick="generateMedia('image')"><span id="studioCreateLabel">Создать фото</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"/></svg></button></div></div>
-  <div class="studio-tools" role="group" aria-label="Действие с фото">
-    <button type="button" data-studio-tool="improve" aria-pressed="false" onclick="selectStudioTool('improve')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 20 11-11 3 3L7 23ZM14 4l1-3 1 3 3 1-3 1-1 3-1-3-3-1ZM5 8l1-3 1 3 3 1-3 1-1 3-1-3-3-1M20 17l1-2 1 2 2 1-2 1-1 2-1-2-2-1"/></svg><span>Улучшить</span></button>
-    <button type="button" data-studio-tool="background" aria-pressed="false" onclick="selectStudioTool('background')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" stroke-dasharray="3 3"/><path d="m4 17 5-5 4 4 3-3 4 5"/><circle cx="15" cy="8" r="2"/></svg><span>Фон</span></button>
-    <button type="button" data-studio-tool="style" aria-pressed="false" onclick="selectStudioTool('style')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h2a2 2 0 0 0 0-4h-1a2 2 0 0 1 0-4h4a4 4 0 0 0 4-4c0-3-4-6-9-6Z"/><path d="M7 9h.01M10 6h.01M15 7h.01M6 13h.01"/></svg><span>Стиль</span></button>
-    <button type="button" data-studio-tool="details" aria-pressed="false" onclick="selectStudioTool('details')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M21 15v4a2 2 0 0 1-2 2h-4M9 21H5a2 2 0 0 1-2-2v-4"/><circle cx="12" cy="12" r="4"/><path d="M12 10v4M10 12h4"/></svg><span>Детали</span></button>
-  </div>
-  <p id="studioToolHint" class="studio-tool-hint" role="status">Без фото можно создать изображение по описанию.</p>
-  <div class="fields studio-fields"><div><label for="imageModel">Модель</label><select id="imageModel"><option value="google/gemini-3.1-flash-image-preview">Nano Banana 2 · быстро</option><option value="google/gemini-3-pro-image-preview">Nano Banana Pro · качество 2K</option></select></div><div><label for="imageRatio">Формат</label><select id="imageRatio"><option value="1:1">1:1</option><option value="9:16">9:16</option><option value="16:9">16:9</option></select></div></div>
-
+<div class="media-settings studio-fields"><div><label for="imageQuality">Качество фото</label><select id="imageQuality"><option value="fast">Стандартное · 1K</option><option value="high">Высокое · 2K</option><option value="max">Максимальное · 4K</option></select></div><div><label for="imageRatio">Формат</label><select id="imageRatio"><option value="1:1">Квадрат · 1:1</option><option value="9:16">Вертикальный · 9:16</option><option value="16:9">Широкий · 16:9</option></select></div></div><p class="studio-tool-hint">Опиши идею — ANIS AI выберет подходящий способ обработки.</p>
   <div id="imageStatus" class="status studio-result-status" role="status" aria-live="polite"></div><div id="imageResult" class="result studio-result"></div>
 </section>
 
 <!-- ВИДЕО -->
-<section id="view-video" class="view photo-studio"><div class="studio-project-tabs" role="group" aria-label="Тип проекта"><button type="button" aria-pressed="false" onclick="openView('studio')">Создать фото</button><button type="button" aria-pressed="true" onclick="openView('video')">Создать видео</button></div>
-  <h1 class="page-title">Создай видео</h1>
-  <p class="subtitle">Создай ролик по описанию или подготовь новую версию исходного видео.</p>
-  <div class="panel">
-    <label for="videoPrompt">Описание видео</label>
-    <textarea id="videoPrompt" class="prompt"
-      maxlength="1200"
-      placeholder="Ночной город, неон, плавное движение камеры..."></textarea><div class="media-prompt-actions"><span id="videoVoiceNote" class="media-voice-note" role="status"></span><button id="videoPromptCancel" class="media-prompt-cancel" type="button" aria-label="Отменить голосовой ввод" onclick="cancelMediaDictation()" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button><button id="videoPromptMic" class="media-prompt-mic" type="button" aria-label="Продиктовать описание" aria-pressed="false" onclick="mediaMicClick(event,'video')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg></button></div>
-    <div style="margin-top:14px">
-      <label for="videoFile">Исходное видео для изменения (необязательно)</label>
-      <input id="videoFile" class="media-upload" type="file"
-        accept="video/mp4,video/quicktime,video/webm">
-      <p class="note">Добавь ролик и опиши желаемые изменения. Видео используется как референс, из него создаётся новая версия.</p>
-    </div>
-    <div class="fields">
-      <div>
-        <label for="videoModel">Модель</label>
-        <select id="videoModel"><option value="bytedance/seedance-2-fast">Seedance 2 Fast · быстро</option><option value="bytedance/seedance-2">Seedance 2 · качество</option></select>
-      </div>
-      <div>
-        <label for="videoRatio">Формат</label>
-        <select id="videoRatio">
-          <option value="16:9">16:9</option>
-          <option value="9:16">9:16</option>
-          <option value="1:1">1:1</option>
-        </select>
-      </div>
-    </div>
-    <div style="margin-top:14px">
-      <label for="duration">Длительность</label>
-      <select id="duration">
-        <option value="4">4 секунды</option>
-        <option value="6">6 секунд</option>
-        <option value="8">8 секунд</option>
-      </select>
-    </div>
-    <button id="makeVideo" class="studio-create-button"
-      onclick="generateMedia('video')">
-      Создать видео
+<section id="view-video" class="view photo-studio">
+<div class="studio-heading"><div><h1 class="page-title">Создай видео</h1><p class="subtitle">Добавь ролик или опиши сцену с нуля.</p></div></div>
+  <div class="studio-upload-stage" id="videoUploadStage" ondragover="videoDragOver(event)" ondragleave="videoDragLeave(event)" ondrop="videoDropFile(event)">
+    <div class="studio-upload-decor" aria-hidden="true"><span class="studio-backplate"></span><span class="studio-sample-card sample-one"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=240&q=80" alt="" decoding="async" loading="lazy"></span><span class="studio-sample-card sample-two"><img src="https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=240&q=80" alt="" decoding="async" loading="lazy"></span><span class="studio-upload-spark spark-one"></span><span class="studio-upload-spark spark-two"></span></div>
+    <button id="videoUploadButton" class="studio-upload-square" type="button" onclick="pickStudioVideo()" aria-label="Добавить видео">
+      <video id="studioVideoPreview" class="studio-photo-preview" preload="metadata" muted playsinline hidden></video>
+      <span class="studio-upload-content"><span class="studio-upload-plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><strong id="videoUploadLabel">Добавить видео</strong><small id="videoUploadCaption">Нажми или перетащи сюда</small></span>
     </button>
-    <div id="videoStatus" class="status"></div>
-    <div id="videoResult" class="result"></div>
+    <button class="studio-remove-photo" id="videoRemoveFile" type="button" onclick="clearStudioVideo()" aria-label="Убрать выбранное видео" hidden>×</button>
+    <input id="videoFile" type="file" accept="video/mp4,video/quicktime,video/webm" onchange="studioVideoPicked(this)" hidden>
   </div>
+<div class="studio-prompt-box"><label for="videoPrompt">Напиши, что хочешь сделать</label><textarea id="videoPrompt" maxlength="1200" placeholder="Например: плавный пролёт камеры, закат и мягкий кинематографичный свет…"></textarea><div class="media-prompt-actions"><span id="videoVoiceNote" class="media-voice-note" role="status"></span><button id="videoPromptCancel" class="media-prompt-cancel" type="button" aria-label="Отменить голосовой ввод" onclick="cancelMediaDictation()" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button><button id="videoPromptMic" class="media-prompt-mic" type="button" aria-label="Продиктовать описание" aria-pressed="false" onclick="mediaMicClick(event,'video')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg></button><button id="makeVideo" class="studio-create-button" type="button" onclick="generateMedia('video')"><span id="videoCreateLabel">Создать видео</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"/></svg></button></div></div>
+<div class="media-settings studio-fields"><div><label for="videoQuality">Качество видео</label><select id="videoQuality"><option value="fast">Быстро · 480p</option><option value="high">Высокое · 720p</option></select></div><div><label for="videoRatio">Формат</label><select id="videoRatio"><option value="16:9">Широкий · 16:9</option><option value="9:16">Вертикальный · 9:16</option><option value="1:1">Квадрат · 1:1</option></select></div><div class="media-duration-setting"><label for="duration">Длительность</label><select id="duration"><option value="4">4 секунды</option><option value="6">6 секунд</option><option value="8">8 секунд</option></select></div></div><p class="studio-tool-hint">Добавь ролик до 15 секунд как референс или создай видео по описанию.</p>
+<div id="videoStatus" class="status studio-result-status" role="status" aria-live="polite"></div><div id="videoResult" class="result studio-result"></div>
 </section>
 
 <!-- ИСТОРИЯ -->
 <section id="view-history" class="view">
   <h1 class="page-title">История</h1>
-  <p class="subtitle">Твоя сохранённая переписка.</p>
+  <p class="subtitle">Твои разговоры и созданные проекты.</p><div class="history-kind-tabs" role="group" aria-label="Раздел истории"><button type="button" data-history-kind="chat" aria-pressed="true" onclick="selectHistoryCategory('chat')">Чаты</button><button type="button" data-history-kind="image" aria-pressed="false" onclick="selectHistoryCategory('image')">Фото</button><button type="button" data-history-kind="video" aria-pressed="false" onclick="selectHistoryCategory('video')">Видео</button></div>
   <div id="historyList"></div>
 </section>
 
@@ -1925,6 +1895,7 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
   </div>
   <form id="chatForm" class="composer">
     <button type="button" id="attachButton" class="circle" aria-label="Добавить вложение" aria-expanded="false" onclick="handleAttachmentButton()"><span id="attachGlyph">＋</span></button>
+    <span id="recordingSpeak" class="recording-speak" hidden>Говори</span>
     <textarea id="messageInput" rows="1"
       maxlength="4000"
       placeholder="Спроси ANIS AI…"></textarea>
@@ -2442,7 +2413,7 @@ function setupMicGestures(){
     swipeTrack.classList.remove("returning");
     swipeTrack.setPointerCapture?.(event.pointerId);
     moveSwipeHint(trackDrag.progress*lockDistance);
-    $("chatStatus").textContent="Потяни свечение вниз к микрофону, чтобы удалить запись";
+    $("chatStatus").textContent="";
   };
   const moveTrackDrag=event=>{
     if(!trackDrag||trackDrag.id!==event.pointerId) return;
@@ -2509,7 +2480,7 @@ function setupMicGestures(){
       state.locked=false;
       button.classList.remove("locked");
       button.classList.add("cancel-armed");
-      $("chatStatus").textContent="Отпусти, чтобы отменить запись";
+      $("chatStatus").textContent="";
       return;
     }
     if(dy>requiredLift&&dy>=Math.abs(dx)){
@@ -2521,14 +2492,14 @@ function setupMicGestures(){
       button.classList.add("locked");
       setAttachmentCancelMode(true);
       suppressClick();
-      $("chatStatus").textContent="Запись закреплена · крестик отменит, микрофон или замок завершит";
+      $("chatStatus").textContent="";
       return;
     }
     if(state.cancelArmed){
       state.cancelArmed=false;
       button.classList.remove("cancel-armed");
       plus.classList.remove("cancel-armed");
-      $("chatStatus").textContent="Запись идёт…";
+      $("chatStatus").textContent="";
     }
   };
   const finishGesture=state=>{
@@ -2757,6 +2728,9 @@ function openView(name){
   if(!returnToTyping) endVoiceSession();
   $("messageInput").blur();
   currentView = name;
+  const mediaSwitcher=$('mediaProjectSwitcher');mediaSwitcher.hidden=!['studio','video'].includes(name);
+  mediaSwitcher.classList.toggle('video-selected',name==='video');
+  mediaSwitcher.querySelectorAll('[data-media-tab]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.mediaTab===name)));
   app.classList.toggle("profile-visible",name==="profile"||name==="balance"||name==="statistics");
   updateWelcome();
 
@@ -3381,7 +3355,7 @@ function toggleAttachmentMenu(){
 function setAttachmentCancelMode(active){
   const button=$("attachButton"),glyph=$("attachGlyph");
   if(!button||!glyph) return;
-  button.classList.toggle("recording-cancel",active);
+  button.classList.toggle("recording-cancel",active);$("recordingSpeak").hidden=!active;
   glyph.textContent=active?"×":"＋";
   glyph.style.transform="rotate(0deg) scale(1)";
   glyph.style.color="";
@@ -4379,7 +4353,7 @@ async function handleMic(){
       $("mic").setAttribute("aria-label","Остановить запись и отправить");
       $("mic").title="Запись: нажми для отправки, потяни вверх или нажми на замок";
       $("mic").classList.add("recording");
-      $("chatStatus").textContent="Запись… потяни микрофон вверх, чтобы закрепить";
+      $("chatStatus").textContent="";
     }else{
       $("chatStatus").textContent="";
     }
@@ -4526,81 +4500,73 @@ async function finishVoice(){
 }
 
 /* ИСТОРИЯ */
+let historyCategory='chat',historyViewVersion=0;
+function selectHistoryCategory(category){if(!['chat','image','video'].includes(category))return;historyCategory=category;void showHistory();}
 async function showHistory(){
-  const list=$("historyList");
-  list.innerHTML=
-    '<div class="empty">Загружаю историю…</div>';
-
-  try{
-    const data=await api({action:"history"},20000);
-    const items=cleanHistory(data.messages);
-    list.replaceChildren();
-
-    if(!items.length){
-      list.innerHTML=
-        '<div class="empty">История пока пуста</div>';
-      return;
-    }
-
-    items.reverse().forEach(item=>{
-      const el=document.createElement("div");
-      el.className="history-item";
-      const b=document.createElement("b");
-      b.textContent=item.role==="user"
-        ?"Ты":"ANIS AI";
-      const p=document.createElement("p");
-      p.textContent=item.content;
-      el.append(b,p);
-      list.append(el);
-    });
-  }catch(e){
-    list.replaceChildren();
-    const error=document.createElement("div");
-    error.className="empty";
-    error.textContent=e.message;
-    list.append(error);
+ const version=++historyViewVersion,category=historyCategory,list=$('historyList');
+ document.querySelectorAll('[data-history-kind]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.historyKind===category)));
+ list.replaceChildren();const note=document.createElement('div');note.className='empty';note.textContent='Загружаю историю…';list.append(note);
+ try{
+  const data=await api(category==='chat'?{action:'history'}:{action:'media-history',kind:category},20000);
+  if(version!==historyViewVersion)return;list.replaceChildren();
+  if(category==='chat'){
+   const items=cleanHistory(data.messages).reverse();if(!items.length){note.textContent='Переписка пока пуста';list.append(note);return;}
+   for(const item of items){const row=document.createElement('div');row.className='history-item';const title=document.createElement('b');title.textContent=item.role==='user'?'Ты':'ANIS AI';const text=document.createElement('p');text.textContent=item.content;row.append(title,text);list.append(row);}return;
   }
+  const items=data.items||[];
+  if(!items.length){note.textContent=category==='image'?'Здесь появятся твои фото':'Здесь появятся твои видео';list.append(note);return;}
+  for(const item of items){
+   const row=document.createElement('button');row.type='button';row.className='media-history-card';
+   const thumb=document.createElement('span');thumb.className='media-history-thumb';
+   if(category==='image'&&item.url&&!item.expired){const image=document.createElement('img');image.src=item.url;image.alt='Созданное фото';image.loading='lazy';thumb.append(image);}else thumb.textContent=category==='image'?'▧':'▷';
+   const copy=document.createElement('span'),title=document.createElement('strong'),caption=document.createElement('small');title.textContent=(category==='image'?'Фото':'Видео')+' · '+new Date(item.createdAt.replace(' ','T')+'Z').toLocaleDateString('ru-RU');
+   caption.textContent=item.expired?'Срок хранения файла истёк':item.status==='completed'?'Готово · открыть результат':item.status==='failed'?'Не удалось создать':item.status==='cancelled'?'Отменено':'В обработке · проверить';copy.append(title,caption);row.append(thumb,copy);
+   row.disabled=item.expired||['failed','cancelled'].includes(item.status);row.onclick=()=>void openHistoryMedia(item);list.append(row);
+  }
+  const retention=document.createElement('p');retention.className='note';retention.textContent='Файлы доступны 7 дней. Сохраняй готовые результаты на устройство.';list.append(retention);
+ }catch(error){if(version!==historyViewVersion)return;note.textContent=error.message;list.replaceChildren(note);}
+}
+async function openHistoryMedia(item){
+ if(item.status!=='completed'){openView(item.kind==='image'?'studio':'video');void watchMediaJob(item.kind,item.jobId);return;}
+ try{const response=await fetch(item.url,{signal:AbortSignal.timeout(90000)});if(!response.ok)throw Error('Файл больше недоступен.');const blob=await response.blob();if(!blob.type.startsWith(item.kind==='image'?'image/':'video/'))throw Error('Не удалось открыть результат.');showGeneratedMedia(item.kind,blob);}
+ catch(error){toast(readableMediaError(error));}
 }
 
 /* ФОТО И ВИДЕО */
+let studioVideoFile=null,studioVideoPreviewUrl=null;
+function pickStudioVideo(){if(!$('makeVideo').disabled)$('videoFile').click();}
+function setStudioVideo(file){
+ if($('makeVideo').disabled||!file)return false;
+ if(!['video/mp4','video/quicktime','video/webm'].includes(file.type)){toast('Выбери видео MP4, MOV или WebM.');return false;}
+ if(!file.size||file.size>25*1024*1024){toast('Видео должно быть непустым и меньше 25 МБ.');return false;}
+ if(studioVideoPreviewUrl)URL.revokeObjectURL(studioVideoPreviewUrl);
+ studioVideoFile=file;studioVideoPreviewUrl=URL.createObjectURL(file);
+ const preview=$('studioVideoPreview');preview.src=studioVideoPreviewUrl;preview.hidden=false;
+ $('videoUploadStage').classList.add('has-photo');$('videoRemoveFile').hidden=false;
+ $('videoUploadButton').setAttribute('aria-label','Заменить видео');$('videoUploadLabel').textContent='Заменить видео';$('videoUploadCaption').textContent=file.name;
+ return true;
+}
+function studioVideoPicked(input){setStudioVideo(input.files?.[0]);input.value='';}
+function clearStudioVideo(){
+ if($('makeVideo').disabled)return;
+ const preview=$('studioVideoPreview');preview.pause?.();preview.hidden=true;preview.removeAttribute('src');preview.load?.();
+ if(studioVideoPreviewUrl)URL.revokeObjectURL(studioVideoPreviewUrl);
+ studioVideoFile=null;studioVideoPreviewUrl=null;$('videoFile').value='';$('videoUploadStage').classList.remove('has-photo','drag-over');$('videoRemoveFile').hidden=true;
+ $('videoUploadButton').setAttribute('aria-label','Добавить видео');$('videoUploadLabel').textContent='Добавить видео';$('videoUploadCaption').textContent='Нажми или перетащи сюда';
+}
+function videoDragOver(event){event.preventDefault();if(!$('makeVideo').disabled)$('videoUploadStage').classList.add('drag-over');}
+function videoDragLeave(event){if(!event.currentTarget.contains(event.relatedTarget))$('videoUploadStage').classList.remove('drag-over');}
+function videoDropFile(event){event.preventDefault();$('videoUploadStage').classList.remove('drag-over');setStudioVideo(event.dataTransfer?.files?.[0]);}
+
 let studioImageFile=null;
 let studioPreviewUrl=null;
-let studioPreviousModel='google/gemini-3.1-flash-image-preview';
-let selectedStudioTool=null;
-const STUDIO_TOOLS=Object.freeze({
-  improve:{label:'Улучшить',prompt:'Улучши качество и чёткость фото, аккуратно скорректируй свет и цвета. Сохрани внешность, пропорции и естественную текстуру.'},
-  background:{label:'Фон',prompt:'Замени фон фотографии. Если другой фон не указан, используй минималистичную студию с мягким светом. Сохрани главный объект без изменений.'},
-  style:{label:'Стиль',prompt:'Примени художественный стиль к изображению. Если стиль не указан, используй кинематографичный свет и глубокие естественные цвета. Сохрани основные черты и композицию.'},
-  details:{label:'Детали',prompt:'Аккуратно улучши мелкие детали, чёткость и текстуры фотографии. Сохрани естественный вид, внешность и композицию, не добавляй лишних объектов.'}
-});
 function pickStudioPhoto(){if(!$('makeImage').disabled)$('imageFile').click();}
-function syncStudioTool(){
-  document.querySelectorAll('[data-studio-tool]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.studioTool===selectedStudioTool)));
-  const tool=STUDIO_TOOLS[selectedStudioTool];
-  $('studioToolHint').textContent=tool
-    ?(!studioImageFile&&selectedStudioTool!=='style'?'Добавь фото для действия «'+tool.label+'».':tool.label+' · Добавь пожелания или создай фото с этими настройками.')
-    :studioImageFile?'Фото добавлено. Выбери действие или опиши изменения.':'Без фото можно создать изображение по описанию.';
-}
-function selectStudioTool(tool){
-  if($('makeImage').disabled||!Object.hasOwn(STUDIO_TOOLS,tool))return;
-  selectedStudioTool=selectedStudioTool===tool?null:tool;
-  syncStudioTool();tg?.HapticFeedback?.selectionChanged?.();
-}
-function buildStudioPrompt(text,file){
-  text=String(text||'').trim();
-  const tool=STUDIO_TOOLS[selectedStudioTool];
-  if(tool&&!file&&selectedStudioTool!=='style')throw Error('Добавь фото для действия «'+tool.label+'».');
-  if(!text&&(!file||!tool))return '';
-  const prompt=tool?tool.prompt+(text?'\nПожелания пользователя: '+text:''):text;
-  if(prompt.length>1200)throw Error('Сократи описание: вместе с выбранным действием — до 1200 символов.');
-  return prompt;
-}
+function buildStudioPrompt(text){if(text.length>1200)throw Error('Сократи описание до 1200 символов.');return text;}
 function setStudioPhoto(file){
   if($('makeImage').disabled)return false;
   if(!file)return false;
   if(!['image/jpeg','image/png','image/webp'].includes(file.type)){toast('Выбери фото JPEG, PNG или WebP.');return false;}
   if(file.size<=0||file.size>20*1024*1024){toast('Фото должно быть непустым и меньше 20 МБ.');return false;}
-  if(!studioImageFile)studioPreviousModel=$('imageModel').value;
   if(studioPreviewUrl)URL.revokeObjectURL(studioPreviewUrl);
   studioImageFile=file;studioPreviewUrl=URL.createObjectURL(file);
   const preview=$('studioPhotoPreview');preview.src=studioPreviewUrl;preview.hidden=false;
@@ -4608,28 +4574,25 @@ function setStudioPhoto(file){
   $('studioRemovePhoto').hidden=false;
   $('studioUploadButton').setAttribute('aria-label','Заменить фото');
   $('studioUploadLabel').textContent='Заменить фото';$('studioUploadCaption').textContent=file.name||'Выбрано фото';
-  $('imageModel').disabled=false;
-  syncStudioTool();return true;
+  return true;
 }
 function studioPhotoPicked(input){setStudioPhoto(input.files?.[0]);input.value='';}
 function clearStudioPhoto(){
   if($('makeImage').disabled)return;
   if(studioPreviewUrl)URL.revokeObjectURL(studioPreviewUrl);
-  studioImageFile=null;studioPreviewUrl=null;selectedStudioTool=null;
+  studioImageFile=null;studioPreviewUrl=null;
   const preview=$('studioPhotoPreview');preview.hidden=true;preview.removeAttribute('src');
   $('imageFile').value='';$('studioUploadStage').classList.remove('has-photo','drag-over');
   $('studioRemovePhoto').hidden=true;$('studioUploadButton').setAttribute('aria-label','Добавить фото');
   $('studioUploadLabel').textContent='Добавить фото';$('studioUploadCaption').textContent='Нажми или перетащи сюда';
-  $('imageModel').disabled=false;$('imageModel').value=studioPreviousModel;
-  syncStudioTool();
+
 }
 function studioDragOver(event){event.preventDefault();if(!$('makeImage').disabled)$('studioUploadStage').classList.add('drag-over');}
 function studioDragLeave(event){if(!event.currentTarget.contains(event.relatedTarget))$('studioUploadStage').classList.remove('drag-over');}
 function studioDropPhoto(event){event.preventDefault();$('studioUploadStage').classList.remove('drag-over');setStudioPhoto(event.dataTransfer?.files?.[0]);}
 function setStudioBusy(value){
   $('studioUploadButton').disabled=value;$('studioRemovePhoto').disabled=value;
-  $('imagePrompt').disabled=value;$('imageRatio').disabled=value;$('imageModel').disabled=value;$('imagePromptMic').disabled=value;
-  document.querySelectorAll('[data-studio-tool]').forEach(button=>button.disabled=value);
+  $('imagePrompt').disabled=value;$('imageRatio').disabled=value;$('imageQuality').disabled=value;$('imagePromptMic').disabled=value;
   $('studioCreateLabel').textContent=value?(studioImageFile?'Изменяю фото…':'Создаю фото…'):'Создать фото';
 }
 
@@ -4746,7 +4709,7 @@ function syncMediaMic(){
     const button=$(kind+'PromptMic'),active=mediaVoiceTask?.kind===kind,phase=active?mediaVoiceTask.phase:null;
     button.classList.toggle('recording',phase==='recording');button.classList.toggle('working',phase==='opening'||phase==='transcribing');button.setAttribute('aria-pressed',String(!!active));
     button.setAttribute('aria-label',phase==='recording'?'Остановить запись и вставить текст':phase?'Отменить голосовой ввод':'Продиктовать описание');
-    $(kind+'PromptCancel').hidden=!active;
+    $(kind+'PromptCancel').hidden=!active;button.closest?.('.media-prompt-actions')?.classList.toggle('voice-active',!!active);
     const micIcon=button.querySelector('svg');if(micIcon)micIcon.style.display=phase==='recording'?'none':'';
     button.classList.toggle('show-stop',phase==='recording');
   }
@@ -4777,7 +4740,7 @@ async function toggleMediaDictation(kind){
     task.recorder.onstop=()=>{task.stream.getTracks().forEach(track=>track.stop());if(!task.cancelled&&mediaVoiceTask===task)void transcribeMediaDictation(task);};
     task.recorder.onerror=()=>{if(mediaVoiceTask===task){cancelMediaDictation();toast('Запись прервалась. Попробуй ещё раз.');}};
     task.phase='recording';task.recorder.start();task.timer=setTimeout(()=>finishMediaDictation(task),60000);
-    $(kind+'VoiceNote').textContent='Говори… ← Свайп для отмены. Нажми ■, чтобы вставить текст.';syncMediaMic();
+    $(kind+'VoiceNote').textContent='Говори';syncMediaMic();
   }catch(error){if(mediaVoiceTask===task){cancelMediaDictation();toast(error.name==='NotAllowedError'?'Разреши доступ к микрофону в настройках Telegram.':readableMediaError(error));}}
 }
 async function transcribeMediaDictation(task){
@@ -4807,7 +4770,10 @@ async function mediaJSON(payload){
 function setMediaBusy(kind,value){
  $(kind==='image'?'makeImage':'makeVideo').disabled=value;
  if(kind==='image')setStudioBusy(value);
- else for(const id of ['videoPrompt','videoFile','videoModel','videoRatio','duration','videoPromptMic'])$(id).disabled=value;
+ else{
+  for(const id of ['videoPrompt','videoFile','videoQuality','videoRatio','duration','videoPromptMic','videoUploadButton','videoRemoveFile'])$(id).disabled=value;
+  $('videoCreateLabel').textContent=value?'Создаю видео…':'Создать видео';
+ }
 }
 async function watchMediaJob(kind,jobId,initial){
  if(pendingMediaJobs.has(kind))return;
@@ -4844,7 +4810,7 @@ async function generateMedia(kind){
  if(pendingMediaJobs.has(kind)||$(kind==='image'?'makeImage':'makeVideo').disabled)return;
  let pending;try{pending=localStorage.getItem(mediaJobKey(kind));}catch{}if(pending){void watchMediaJob(kind,pending);return;}
  if(mediaVoiceTask){toast('Сначала заверши голосовой ввод.');return;}
- let file=kind==='image'?studioImageFile:$('videoFile').files?.[0]||null;
+ let file=kind==='image'?studioImageFile:studioVideoFile;
  let prompt=$(kind+'Prompt').value.trim();
  try{if(kind==='image')prompt=buildStudioPrompt(prompt,file);if(prompt.length<3||prompt.length>1200)throw Error('Опиши идею: от 3 до 1200 символов.');if(file&&file.size>(kind==='image'?20:25)*1024*1024)throw Error('Файл слишком большой.');}catch(error){toast(error.message);return;}
  setMediaBusy(kind,true);const status=$(kind+'Status');status.textContent='Отправляю проект…';$(kind+'Result').replaceChildren();
@@ -4852,7 +4818,7 @@ async function generateMedia(kind){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),60000);
  try{
   if(kind==='image')file=await prepareStudioImage(file);
-  const payload={action:'media-create',kind,requestId,prompt,model:$(kind+'Model').value,ratio:$(kind+'Ratio').value,initData};
+  const payload={action:'media-create',kind,requestId,prompt,quality:$(kind+'Quality').value,ratio:$(kind+'Ratio').value,initData};
   if(kind==='video')payload.duration=Number($('duration').value);
   let response;
   if(file){const form=new FormData();for(const [key,value] of Object.entries(payload))form.append(key,String(value));form.append('file',file,file.name);response=await fetch(API_URL,{method:'POST',body:form,signal:controller.signal});}
