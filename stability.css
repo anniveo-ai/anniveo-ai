@@ -12,9 +12,9 @@
 html[data-theme=light] .anon-mini-toggle{color:#432d52;background:linear-gradient(135deg,#fff,#eee5f7);border-color:#d1b7e5}html[data-theme=light] .anon-mini-copy small{color:#85639e}
 
 /* Every ready result has its own preview and independent action buttons. */
-#view-ready .studio-ready-card.studio-ready-project{display:flex;flex-direction:column;min-height:0;padding:0;border-radius:21px;background:linear-gradient(150deg,#24192f,#13101d);overflow:hidden}
+#view-ready .studio-ready-card.studio-ready-project{display:flex;flex-direction:column;aspect-ratio:auto;min-height:0;padding:0;border-radius:21px;background:linear-gradient(150deg,#24192f,#13101d);overflow:hidden}
 #view-ready .studio-ready-project:after{display:none}
-#view-ready .studio-ready-preview{position:relative;display:block;isolation:isolate;width:100%;height:clamp(170px,53vw,285px);min-height:0;padding:0;border:0;border-radius:0;background:#1c1428;color:#fff;text-align:left;overflow:hidden}
+#view-ready .studio-ready-preview{position:relative;display:block;isolation:isolate;flex:0 0 auto;width:100%;height:clamp(170px,53vw,285px);min-height:0;padding:0;border:0;border-radius:0;background:#1c1428;color:#fff;text-align:left;overflow:hidden}
 #view-ready .studio-ready-preview>img,#view-ready .studio-ready-preview>video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.86}
 #view-ready .studio-ready-preview:after{content:'';position:absolute;z-index:0;inset:28% 0 0;background:linear-gradient(transparent,#100a1ce8)}
 #view-ready .studio-ready-copy{position:absolute;z-index:1;left:11px;right:9px;bottom:11px}
