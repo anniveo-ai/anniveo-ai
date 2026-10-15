@@ -1478,6 +1478,45 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
 @media(max-width:350px){.attachment-menu{gap:6px;padding:10px}.attachment-option{border-radius:17px;min-height:115px}.attachment-option strong{font-size:10.5px}.attachment-option small{font-size:9px}.orb-coins{right:-11px;transform:scale(.88);transform-origin:right center}.profile-wallet{padding-left:16px}.profile-wallet-copy button{padding:9px 12px}.profile-shortcuts b{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.attachment-menu{animation:none}.attachment-option,.profile-shortcuts button,.profile-pro{transition:none}}
 
+/* Реалистичные монеты и отдельный экран баланса. */
+.profile-wallet-copy .profile-balance-value{padding:0;border:0;background:none;box-shadow:none;text-align:left;border-radius:6px}
+.profile-coins-art{position:absolute;right:-3px;top:50%;width:min(53%,196px);height:142px;transform:translateY(-50%)}
+.coin-art-action{display:block;width:100%;padding:0;margin:0;border:0;background:transparent;color:inherit;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.profile-coins-art .coin-art-action{height:100%}
+.profile-coins-art img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 0 8px #a24bfa40)}
+.coin-art-action:focus-visible{outline:2px solid #c3a1eb;outline-offset:3px;border-radius:20px}
+.balance-page{max-width:560px;margin:0 auto;padding-top:12px}
+.balance-page-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.balance-page-heading h1{margin:0;font-size:29px;line-height:1.3}
+.balance-page-heading button{display:flex;align-items:center;gap:6px;padding:9px 12px;border:1px solid #aa8ccb33;border-radius:15px;background:#2f263e66;color:#d4c6e1;font-size:12px;box-shadow:inset 0 1px #fff1}
+.balance-page-heading svg{width:18px;height:18px}
+.balance-page-subtitle{color:#b8adc9;font-size:13px;line-height:1.5;margin:8px 0 3px}
+.balance-hero{position:relative;margin:0 -14px -2px;isolation:isolate}
+.balance-hero:before{content:"";position:absolute;inset:16% 4% 1%;z-index:-1;background:radial-gradient(ellipse at 50% 65%,#9f38ef2a,transparent 66%);filter:blur(10px);pointer-events:none}
+.balance-total{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:7px;padding:14px 0 0}
+.balance-total strong{font-size:55px;line-height:1.08;font-weight:500;color:#fff;text-shadow:0 0 20px #b989e51c}.balance-total strong span{font-size:42px;color:#bd8ef0;text-shadow:0 0 16px #b47bf34d}
+.balance-total>span{font-size:13px;font-weight:650;letter-spacing:.3px;color:#e1d7ee}
+.wallet-art-action img{display:block;width:100%;height:auto;aspect-ratio:3/2;object-fit:contain;filter:drop-shadow(0 0 8px #9b36ee29);animation:walletCoinShine 4.6s ease-in-out infinite}
+.wallet-packages{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;position:relative;z-index:2;margin:9px 0 14px}
+.wallet-package{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-width:0;min-height:91px;padding:19px 5px 14px;border:1px solid #8d78ae45;border-radius:21px;background:linear-gradient(145deg,#24202f66,#11131f);box-shadow:inset 0 1px #ffffff07;transition:transform .18s,border-color .18s,box-shadow .18s}
+.wallet-package strong{font-size:23px;line-height:1.1;font-weight:600;color:#f6f1ff}.wallet-package>span{font-size:15px;font-weight:600;color:#c8bddb}
+.wallet-package.selected{border-color:#ad75ecaa;background:linear-gradient(150deg,#653b9766,#2a204644);box-shadow:inset 0 0 0 1px #c699ff36,0 0 16px #813bce22}
+.wallet-package small{position:absolute;right:4px;top:-13px;padding:5px 10px;border:1px solid #d0a5ff66;border-radius:12px;background:linear-gradient(130deg,#ad73ef,#8956ce);color:white;font-size:9px;font-weight:650;box-shadow:0 2px 12px #a54aef33}
+.wallet-package:active{transform:scale(.96)}
+.wallet-topup{display:block;width:100%;min-height:56px;border:1px solid #d7b2ff55;border-radius:20px;background:linear-gradient(125deg,#ab6deb,#7741bc 65%,#6333a9);box-shadow:inset 0 1px 2px #ffffff42,0 0 17px #a450ee22;color:#fff;font-size:17px;font-weight:600;transition:transform .18s,filter .18s}
+.wallet-topup:active{transform:scale(.98);filter:brightness(1.12)}
+.wallet-payment-note{text-align:center;font-size:10px;color:#9686a8;margin:8px 0 13px}
+.wallet-bonus{display:flex;align-items:center;gap:12px;width:100%;padding:16px 13px;border:1px solid #8f6cb453;border-radius:22px;background:linear-gradient(130deg,#44265b66,#161521 65%);box-shadow:inset 0 1px #fff1;text-align:left}
+.wallet-bonus-icon{display:grid;place-items:center;width:45px;height:45px;border-radius:50%;background:radial-gradient(circle,#8a49cf77,#5a277a22);box-shadow:0 0 20px #8d3cc52c;color:#e5c9ff;font-size:29px;flex:none}
+.wallet-bonus strong{display:block;color:#f1e7fc;font-size:14px;font-weight:600}.wallet-bonus small{display:block;margin-top:5px;font-size:10px;color:#a89ab9}.wallet-bonus-arrow{margin-left:auto;color:#c2a9db;font-size:28px}
+.wallet-tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:13px}.wallet-tools button{display:flex;flex-direction:column;align-items:center;gap:9px;padding:15px 4px;border:1px solid #75648626;border-radius:17px;background:#1c192433;color:#b2a3c3;font-size:11px}.wallet-tools span{font-size:23px;line-height:1;color:#b6a2cc}
+.coin-art-action.coin-jolt{animation:coinJolt .5s cubic-bezier(.25,.7,.3,1)}
+@keyframes coinJolt{0%,100%{transform:translate(0,0) rotate(0) scale(1)}20%{transform:translate(-3px,-4px) rotate(-4deg) scale(1.035)}45%{transform:translate(4px,1px) rotate(3deg) scale(1.02)}70%{transform:translate(-2px,-1px) rotate(-1.5deg) scale(1.01)}}
+@keyframes walletCoinShine{0%,100%{filter:drop-shadow(0 0 8px #9b36ee29) brightness(1)}50%{filter:drop-shadow(0 0 15px #a95cff3b) brightness(1.065)}}
+@media(max-width:350px){.profile-coins-art{right:-7px;width:54%;height:133px}.wallet-package{min-height:85px;border-radius:18px}.wallet-package strong{font-size:21px}.wallet-package>span{font-size:14px}.wallet-packages{gap:8px}.balance-page-subtitle{font-size:12px}}
+@media(prefers-reduced-motion:reduce){.wallet-art-action img{animation:none}.wallet-package,.wallet-topup{transition:none}.coin-art-action.coin-jolt{animation:coinJoltReduced .18s ease-out}}
+@keyframes coinJoltReduced{50%{transform:scale(1.025)}}
+
 </style>
 </head>
 
@@ -1514,7 +1553,7 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
 </button>
 <header>
   <div class="logo">✦ ANNIVEO <span>AI</span></div>
-  <button class="credit" onclick="openView('profile')">
+  <button class="credit" onclick="openView('balance')">
     <span class="balance-label">Баланс</span>
     <span class="balance-number">0</span>
     <span class="balance-star">✦</span>
@@ -1721,10 +1760,10 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
     <button class="profile-settings" type="button" aria-label="Настройки профиля" onclick="showProfilePanel('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3-1 3-3 1-2 4 2 2v4l3 1 2 3h4l2-3 3-1v-4l2-2-2-4-3-1-1-3Z"/><circle cx="12" cy="12" r="3"/></svg></button>
   </div>
   <div class="profile-wallet">
-    <div class="profile-wallet-copy"><strong>0 <span>✦</span></strong><span class="profile-wallet-label">Баланс ANNIVEO</span>
-      <button type="button" onclick="showProfilePanel('balance')">＋ Пополнить</button>
+    <div class="profile-wallet-copy"><button class="profile-balance-value" type="button" aria-label="Открыть баланс" onclick="openView('balance')"><strong>0 <span>✦</span></strong></button><span class="profile-wallet-label">Баланс ANNIVEO</span>
+      <button type="button" onclick="openView('balance')">＋ Пополнить</button>
     </div>
-    <div class="orb-coins" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="profile-coins-art"><button class="coin-art-action" type="button" onclick="joltCoins(this)" aria-label="Пошевелить монеты"><img src="profile-coins-real-v1.webp" width="768" height="512" alt="Сияющие монеты ANNIVEO" decoding="async"></button></div>
   </div>
   <div class="profile-shortcuts">
     <button type="button" onclick="showProfilePanel('data')"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/></svg></span><b>Мои данные</b></button>
@@ -1737,6 +1776,25 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
   <button class="profile-pro" type="button" onclick="showProfilePanel('pro')"><span class="profile-pro-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 6 5 5 4-7 4 7 5-5-2 13H5ZM5 22h14"/></svg></span><span><strong>ANNIVEO Pro</strong><small>Больше возможностей</small></span><span class="profile-pro-arrow">→</span></button>
   <button class="profile-support" type="button" onclick="openProfileSupport()">Помощь и поддержка <span>↗</span></button>
   <div class="profile-id-line">Telegram ID <span id="telegramId">—</span></div>
+</section>
+
+<!-- БАЛАНС -->
+<section id="view-balance" class="view balance-page">
+  <div class="balance-page-heading"><h1>Баланс</h1><button type="button" onclick="showWalletNotice('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7M12 7v5l3 2"/></svg>История</button></div>
+  <p class="balance-page-subtitle">Твои монеты — больше возможностей.</p>
+  <div class="balance-hero">
+    <div class="balance-total"><strong>0 <span>✦</span></strong><span>ANNIVEO</span></div>
+    <button class="coin-art-action wallet-art-action" type="button" aria-label="Пошевелить монеты на балансе" onclick="joltCoins(this)"><img src="wallet-coins-real-v1.webp" width="1152" height="768" alt="Объёмные сияющие монеты с фиолетовым разломом" decoding="async"></button>
+  </div>
+  <div class="wallet-packages" role="group" aria-label="Выбери пакет монет">
+    <button type="button" class="wallet-package" aria-pressed="false" data-wallet-pack="0" onclick="selectWalletPack(0)"><strong>100</strong><span>249 ₽</span></button>
+    <button type="button" class="wallet-package selected" aria-pressed="true" data-wallet-pack="1" onclick="selectWalletPack(1)"><small>Выгодно</small><strong>500</strong><span>799 ₽</span></button>
+    <button type="button" class="wallet-package" aria-pressed="false" data-wallet-pack="2" onclick="selectWalletPack(2)"><strong>1000</strong><span>1490 ₽</span></button>
+  </div>
+  <button class="wallet-topup" type="button" onclick="showWalletNotice('checkout')">Пополнить</button>
+  <p class="wallet-payment-note">Приём оплаты пока не подключён</p>
+  <button class="wallet-bonus" type="button" onclick="showWalletNotice('bonus')"><span class="wallet-bonus-icon">✦</span><span><strong>Получить монеты</strong><small>Бонусы и новые возможности</small></span><span class="wallet-bonus-arrow">›</span></button>
+  <div class="wallet-tools"><button type="button" onclick="showWalletNotice('history')"><span>◷</span>История</button><button type="button" onclick="showWalletNotice('promo')"><span>✧</span>Промокод</button><button type="button" onclick="showWalletNotice('gift')"><span>♧</span>Подарить</button></div>
 </section>
 </div>
 
@@ -2620,7 +2678,7 @@ function openView(name){
   if(!returnToTyping) endVoiceSession();
   $("messageInput").blur();
   currentView = name;
-  app.classList.toggle("profile-visible",name==="profile");
+  app.classList.toggle("profile-visible",name==="profile"||name==="balance");
   updateWelcome();
 
   document.querySelectorAll(".view").forEach(el=>{
@@ -2631,7 +2689,7 @@ function openView(name){
   document.querySelectorAll("nav button").forEach(el=>{
     const tab = el.dataset.tab;
     const active =
-      tab===name ||
+      tab===name || (tab==="profile"&&name==="balance") ||
       (tab==="studio"&&["image","video"].includes(name));
     el.classList.toggle("active",active);
   });
@@ -3332,6 +3390,7 @@ function setProfileGlow(value){
 }
 try{document.body.dataset.uiGlow=localStorage.getItem("anniveo-ui-glow")==="soft"?"soft":"quiet";}catch(e){}
 function showProfilePanel(kind){
+  if(kind==="balance"){openView("balance");return;}
   const body=$("profileDialogBody"),title=$("profileDialogTitle");body.replaceChildren();
   const paragraph=text=>{const p=document.createElement("p");p.textContent=text;body.append(p);};
   const action=(label,run)=>{const b=document.createElement("button");b.type="button";b.className="profile-dialog-action";b.textContent=label;b.onclick=run;body.append(b);};
@@ -3355,6 +3414,40 @@ function showProfilePanel(kind){
     title.textContent="Внешний вид";paragraph("Тёмная тема и спокойные сиреневые акценты. Выбери интенсивность свечения в профиле.");
     action("Сдержанное оформление",()=>setProfileGlow("quiet"));action("Мягкое свечение",()=>setProfileGlow("soft"));
   }
+  $("profileDialog").showModal();
+}
+
+
+const WALLET_PACKS=Object.freeze([{coins:100,rubles:249},{coins:500,rubles:799},{coins:1000,rubles:1490}]);
+let selectedWalletPack=1;
+function selectWalletPack(index){
+  if(!Number.isInteger(index)||!WALLET_PACKS[index])return;
+  selectedWalletPack=index;
+  document.querySelectorAll("[data-wallet-pack]").forEach(button=>{
+    const selected=Number(button.dataset.walletPack)===index;
+    button.classList.toggle("selected",selected);button.setAttribute("aria-pressed",String(selected));
+  });
+  tg?.HapticFeedback?.selectionChanged?.();
+}
+function joltCoins(button){
+  button.classList.remove("coin-jolt");
+  void button.offsetWidth;
+  button.classList.add("coin-jolt");
+  button.addEventListener("animationend",()=>button.classList.remove("coin-jolt"),{once:true});
+  tg?.HapticFeedback?.impactOccurred("light");
+}
+function showWalletNotice(kind){
+  const body=$("profileDialogBody"),title=$("profileDialogTitle");body.replaceChildren();
+  const pack=WALLET_PACKS[selectedWalletPack];
+  const notices={
+    history:["История операций","Операций пока нет. Здесь появятся пополнения и списания монет."],
+    checkout:["Пополнение баланса",`Выбран пакет: ${pack.coins} монет за ${pack.rubles} ₽. Приём оплаты пока не подключён. Пополнить баланс сейчас нельзя.`],
+    bonus:["Получить монеты","Бонусы и задания готовятся к запуску. Начисление монет пока недоступно."],
+    promo:["Промокод","Активация промокодов появится после подключения баланса."],
+    gift:["Подарить монеты","Подарки и переводы монет пока недоступны."]
+  };
+  const notice=notices[kind];if(!notice)return;
+  title.textContent=notice[0];const p=document.createElement("p");p.textContent=notice[1];body.append(p);
   $("profileDialog").showModal();
 }
 
@@ -4560,4 +4653,3 @@ loadHistory();
 
 </body>
 </html>
-
