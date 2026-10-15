@@ -244,6 +244,9 @@
   const chat=currentView==='chat',hasMessages=$('messages').childElementCount>0;
   const top=Math.max($('app').getBoundingClientRect().top,window.visualViewport?.offsetTop||0);
   const inConversation=chat&&(!showWelcome||hasMessages&&$('welcome').getBoundingClientRect().bottom<=top+110);
+  if(inConversation)chatOpenedThisSession=true;
+  $('homePrivacyBar').classList.toggle('hidden',!chat);
+  $('homePrivacyBar').classList.toggle('chat-privacy-bar',inConversation);
   $('collapseChatButton').classList.toggle('hidden',!inConversation);
   $('returnToChatButton').classList.toggle('hidden',!(chat&&showWelcome&&returnToChatAvailable&&!inConversation));
  }

@@ -1,7 +1,13 @@
 /* Stability controls share ANIS AI's restrained glass surfaces. */
 /* Compact privacy control uses the original reference inside a CSS viewport. */
 .home-privacy-bar{display:flex;justify-content:flex-end;margin:5px 0 7px}
-.anon-mini-toggle{display:flex;align-items:center;gap:8px;width:218px;max-width:100%;min-height:48px;padding:6px 9px 6px 7px;border:1px solid #9e77c540;border-radius:16px;background:radial-gradient(ellipse at 100% 0,#65319e22,transparent 70%),linear-gradient(135deg,#24212e,#15131f);box-shadow:inset 0 1px #ffffff0a,0 3px 12px #0002;text-align:left;color:#f0e9f8;cursor:pointer;touch-action:manipulation}
+.anon-mini-toggle{display:flex;align-items:center;gap:5px;width:134px;max-width:100%;min-height:44px;padding:5px 6px;border:1px solid #9e77c540;border-radius:14px;background:radial-gradient(ellipse at 100% 0,#65319e22,transparent 70%),linear-gradient(135deg,#24212e,#15131f);box-shadow:inset 0 1px #ffffff0a,0 3px 12px #0002;text-align:left;color:#f0e9f8;cursor:pointer;touch-action:manipulation}
+.anon-mini-toggle .anon-mini-mascot{flex-basis:24px;width:24px;height:28px}
+.anon-mini-toggle .anon-mini-copy b{font-size:10px}.anon-mini-toggle .anon-mini-copy small{display:none}
+.anon-mini-toggle .anon-mini-switch{flex-basis:32px;width:32px;height:22px}.anon-mini-toggle .anon-mini-switch:after{width:16px;height:16px}
+.home-privacy-bar .anon-mini-toggle.on .anon-mini-switch:after{transform:translateX(10px)}
+.home-privacy-bar.chat-privacy-bar{position:fixed;z-index:90;top:calc(env(safe-area-inset-top,0px) + 59px);right:16px;margin:0}
+@media(max-width:350px){.chat-privacy-bar .anon-mini-toggle{width:128px}.collapse-chat-button{gap:6px;padding-left:10px;padding-right:10px;font-size:12px}}
 .anon-mini-mascot{position:relative;display:block;flex:0 0 32px;width:32px;height:32px;overflow:hidden;border-radius:9px;box-shadow:0 0 8px #9b51df25}
 .anon-mini-mascot img{position:absolute;left:-15.2px;top:-9.4px;width:175.4px;height:56.8px;max-width:none;pointer-events:none}
 .anon-mini-copy{flex:1;min-width:0}.anon-mini-copy b{display:block;font-size:11px;line-height:1.3;font-weight:650;white-space:nowrap}.anon-mini-copy small{display:block;color:#ac91c8;font-size:8px;line-height:1.4;margin-top:3px;white-space:nowrap}

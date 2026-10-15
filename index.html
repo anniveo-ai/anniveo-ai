@@ -1702,7 +1702,7 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
     role="switch" aria-checked="false" aria-label="Анонимный чат"
     aria-describedby="modeText" onclick="toggleAnonymous()">
     <span class="anon-mini-mascot" aria-hidden="true"><img src="anonymous-chat-reference-v1.jpeg" alt="" draggable="false" decoding="async"></span>
-    <span class="anon-mini-copy"><b>Анонимный чат</b><small id="modeText">История сохраняется</small></span>
+    <span class="anon-mini-copy"><b>Инкогнито</b><small id="modeText">История сохраняется</small></span>
     <span class="anon-mini-switch" aria-hidden="true"></span>
   </button>
 </div>
@@ -2102,6 +2102,7 @@ let micElapsedTimer=null,recordingStartedAt=0;
 let voiceProgressText="",voiceProgressError=false;
 let newestFirstChat=false;
 let returnToChatAvailable=false;
+let chatOpenedThisSession=false;
 let voiceStatusResetTimer=null;
 let voiceUtterance=null;
 let micGesture=null;
@@ -2737,7 +2738,7 @@ function scrollAppToBottom(){
 
 /* РАЗДЕЛЫ */
 function openView(name){
-  if(name==="home"){name="chat";showWelcome=true;returnToChatAvailable=normalHistory.length>0;newestFirstChat=true;}
+  if(name==="home"){if(currentView==="chat"&&!showWelcome)chatOpenedThisSession=true;name="chat";showWelcome=true;returnToChatAvailable=chatOpenedThisSession;newestFirstChat=true;}
   if(mediaVoiceTask)cancelMediaDictation();
   if(name==="image")name="studio";
   closeAttachmentMenu();
@@ -2791,8 +2792,10 @@ function openView(name){
 /* ГЛАВНЫЙ ЭКРАН */
 function updateWelcome(){
   const landingVisible=showWelcome;
+  if(currentView==="chat"&&!landingVisible)chatOpenedThisSession=true;
   $("welcome").classList.toggle("hidden",!landingVisible);
-  $("homePrivacyBar")?.classList.toggle("hidden",currentView!=="chat"||!landingVisible);
+  $("homePrivacyBar")?.classList.toggle("hidden",currentView!=="chat");
+  $("homePrivacyBar")?.classList.toggle("chat-privacy-bar",!landingVisible&&currentView==="chat");
   $("collapseChatButton")?.classList.toggle("hidden",landingVisible||currentView!=="chat");
   const showReturn=landingVisible&&returnToChatAvailable&&currentView==="chat";
   $("returnToChatButton")?.classList.toggle("hidden",!showReturn);
@@ -2806,14 +2809,14 @@ function collapseChat(){
     return;
   }
   endVoiceSession();
-  returnToChatAvailable=(anonymous?anonymousHistory:normalHistory).length>0;
+  chatOpenedThisSession=true;returnToChatAvailable=true;
   showWelcome=true;newestFirstChat=true;
   updateWelcome();renderChat();
   app.scrollTo({top:0,behavior:"smooth"});
   tg?.HapticFeedback?.impactOccurred("light");
 }
 function returnToChat(){
-  if(!returnToChatAvailable||!(anonymous?anonymousHistory:normalHistory).length)return;
+  if(!returnToChatAvailable)return;
   if(recording||transcribing||openingMic){
     toast("Сначала заверши голосовое сообщение");
     return;
@@ -3247,7 +3250,6 @@ function toggleAnonymous(){
   if(busy||recording||transcribing||openingMic) return;
   anonymous=!anonymous;
   anonymousHistory=[];
-  returnToChatAvailable=(anonymous?anonymousHistory:normalHistory).length>0;
   newestFirstChat=showWelcome;
 
   $("anonToggle").classList.toggle("on",anonymous);
