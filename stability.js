@@ -201,7 +201,7 @@
  }
  const welcomeUpdateOriginal=updateWelcome;
  updateWelcome=function(){welcomeUpdateOriginal();syncChatScrollNavigation();requestAnimationFrame(syncChatScrollNavigation);};
- $('collapseChatButton').querySelector('span').textContent='Вернуться на главную';
+ $('collapseChatButton').querySelector('span').textContent='Свернуть чат';
  let chatNavigationFrame=0;
  function scheduleChatScrollNavigation(){cancelAnimationFrame(chatNavigationFrame);chatNavigationFrame=requestAnimationFrame(syncChatScrollNavigation);}
  $('app').addEventListener('scroll',scheduleChatScrollNavigation,{passive:true});window.addEventListener('resize',scheduleChatScrollNavigation);window.visualViewport?.addEventListener('resize',scheduleChatScrollNavigation);
