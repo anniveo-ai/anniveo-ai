@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#101119">
 <title>ANIS AI</title>
+<link rel="preconnect" href="https://anniveo-ai-api.yaylaevismail.workers.dev" crossorigin>
 <link rel="preload" as="image" href="orb20-real.webp">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
@@ -3196,8 +3197,10 @@ async function api(payload,timeout=90000,onToken=null,requestController=null){
       }
       if(buffer.trim()&&!finished) processEvent(buffer);
       if(!reply.trim()) throw Error("Нейросеть вернула пустой ответ");
+      if(payload.action==="chat")invalidateUsageStats();
       return {reply};
     }
+    if(payload.action==="chat")invalidateUsageStats();
     return data;
   }catch(e){
     if(e.name==="AbortError"){
@@ -3491,9 +3494,109 @@ function showProfilePanel(kind){
 
 let usageLoadVersion=0;
 let usagePeriod=7;
-function openUsageStats(){
-  openView('statistics');
+let usageSnapshot=null;
+let usageRequest=null;
+let usageEpoch=0;
+const USAGE_FRESH_MS=30000;
+function usageCacheKey(){
+  if(!user?.id)return null;
+  const date=new Date();
+  return 'anis_usage_v2_'+user.id+'_'+date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate()+'_'+date.getTimezoneOffset();
 }
+function validUsageSnapshot(snapshot){
+  return snapshot&&Number.isFinite(snapshot.at)&&snapshot.at>=0&&snapshot.at<=Date.now()+60000&&snapshot.key===usageCacheKey()&&snapshot.data?.days===30&&Array.isArray(snapshot.data.series)&&snapshot.data.series.length===30&&snapshot.data.series.every(d=>/^\d{4}-\d{2}-\d{2}$/.test(d.date)&&Number.isSafeInteger(d.questions)&&d.questions>=0&&['image','video','voice'].every(kind=>Number.isSafeInteger(d.media?.[kind])&&d.media[kind]>=0));
+}
+function cachedUsageSnapshot(){
+  if(validUsageSnapshot(usageSnapshot))return usageSnapshot;
+  try{
+    const saved=JSON.parse(localStorage.getItem(usageCacheKey())||'null');
+    if(validUsageSnapshot(saved)){usageSnapshot=saved;return saved;}
+  }catch{}
+  usageSnapshot=null;return null;
+}
+function persistUsageSnapshot(){
+  try{localStorage.setItem(usageSnapshot.key,JSON.stringify(usageSnapshot));}catch{}
+}
+function invalidateUsageStats(){
+  usageEpoch++;
+  if(usageSnapshot){usageSnapshot.at=0;persistUsageSnapshot();}
+}
+function usageForPeriod(snapshot,days){
+  const series=snapshot.data.series.slice(-days);
+  const media={image:0,video:0,voice:0};
+  for(const day of series)for(const kind of Object.keys(media))media[kind]+=day.media[kind];
+  let streak=0,i=series.length-1;
+  if(!series[i].questions)i--;
+  for(;i>=0&&series[i].questions;i--)streak++;
+  return {days,series,media,questions:series.reduce((n,d)=>n+d.questions,0),activeDays:series.filter(d=>d.questions>0).length,streak};
+}
+function ensureUsageSnapshot(){
+  if(usageRequest)return usageRequest;
+  const epoch=usageEpoch,key=usageCacheKey();
+  usageRequest=(async()=>{
+    const data=await api({action:'usage-stats',days:30,utcOffsetMinutes:-new Date().getTimezoneOffset()},8000);
+    const snapshot={key,at:epoch===usageEpoch?Date.now():0,data};
+    if(!validUsageSnapshot(snapshot))throw Error('Не удалось загрузить статистику');
+    usageSnapshot=snapshot;persistUsageSnapshot();return snapshot;
+  })().finally(()=>{usageRequest=null;});
+  return usageRequest;
+}
+async function prefetchUsageStats(){
+  if(!initData||!user)return;
+  const saved=cachedUsageSnapshot();
+  if(saved&&Date.now()-saved.at<USAGE_FRESH_MS)return;
+  try{await ensureUsageSnapshot();}catch{}
+}
+window.addEventListener('focus',()=>{if(['profile','statistics'].includes(currentView))void loadUsageStats();});
+window.addEventListener('online',()=>{if(['profile','statistics'].includes(currentView))void loadUsageStats();else void prefetchUsageStats();});
+function openUsageStats(){openView('statistics');}
+function renderUsageData(snapshot){
+  const data=usageForPeriod(snapshot,usagePeriod);
+  renderUsageChart($('usageChart'),data);renderUsageChart($('usageFullChart'),data);
+  for(const prefix of ['usage','usageFull']){
+    $(prefix+'Questions').textContent=data.questions.toLocaleString('ru-RU');
+    $(prefix+'ActiveDays').textContent=data.activeDays;
+    $(prefix+'Streak').textContent=data.streak;
+  }
+  $('usageImages').textContent=data.media.image.toLocaleString('ru-RU');
+  $('usageVideos').textContent=data.media.video.toLocaleString('ru-RU');
+  $('usageVoice').textContent=data.media.voice.toLocaleString('ru-RU');
+  $('usageNote').textContent=(data.questions?'За выбранный период':'Пока нет запросов за этот период')+' · Подробнее ›';
+  $('usageFullNote').textContent='По сохранённым чатам; анонимные не учитываются. Фото, видео и голос учитываются с 15.10.2026. Все показатели — за выбранный период, по времени устройства.';
+  const rows=$('usageDailyRows');rows.replaceChildren();
+  for(const day of [...data.series].reverse()){
+    const row=document.createElement('div'),date=document.createElement('span'),count=document.createElement('strong');row.className='usage-daily-row';
+    date.textContent=day.date.split('-').reverse().join('.');count.textContent=day.questions+' запросов';row.append(date,count);rows.append(row);
+  }
+}
+async function loadUsageStats(source){
+  if(source)usagePeriod=Number(source.value)===30?30:7;
+  $('usagePeriod').value=String(usagePeriod);$('usageFullPeriod').value=String(usagePeriod);
+  const version=++usageLoadVersion;
+  if(!initData||!user){
+    for(const id of ['usageNote','usageFullNote'])$(id).textContent='Открой приложение через Telegram, чтобы увидеть свою статистику.';
+    return;
+  }
+  const saved=cachedUsageSnapshot();
+  if(saved){
+    renderUsageData(saved); // Synchronous first paint, before any network await.
+    if(Date.now()-saved.at<USAGE_FRESH_MS)return;
+    $('usageNote').textContent='Сохранённые данные · Обновляем в фоне…';
+  }else{
+    for(const id of ['usageNote','usageFullNote'])$(id).textContent='Загружаем статистику…';
+  }
+  try{
+    const snapshot=await ensureUsageSnapshot();
+    if(version!==usageLoadVersion)return;
+    renderUsageData(snapshot);
+    if(!snapshot.at){void prefetchUsageStats();}
+  }catch{
+    if(version!==usageLoadVersion)return;
+    if(saved){$('usageNote').textContent='Сохранённые данные · Обновим при подключении';}
+    else for(const id of ['usageNote','usageFullNote'])$(id).textContent='Нет соединения со статистикой. Открой раздел ещё раз.';
+  }
+}
+
 function renderUsageChart(container, data){
   container.replaceChildren();container.classList.toggle('month',data.days===30);
   const max=Math.max(1,...data.series.map(day=>day.questions));
@@ -3506,41 +3609,6 @@ function renderUsageChart(container, data){
     column.title=day.date+': '+day.questions+' запросов';column.setAttribute('aria-hidden','true');track.append(bar);column.append(track,date);container.append(column);
   }
 }
-async function loadUsageStats(source){
-  if(source)usagePeriod=Number(source.value)===30?30:7;
-  $('usagePeriod').value=String(usagePeriod);$('usageFullPeriod').value=String(usagePeriod);
-  const version=++usageLoadVersion;
-  if(!initData||!user){
-    for(const id of ['usageNote','usageFullNote'])$(id).textContent='Открой приложение через Telegram, чтобы увидеть свою статистику.';
-    return;
-  }
-  for(const id of ['usageNote','usageFullNote'])$(id).textContent='Загружаем статистику…';
-  try{
-    const data=await api({action:'usage-stats',days:usagePeriod,utcOffsetMinutes:-new Date().getTimezoneOffset()},15000);
-    if(version!==usageLoadVersion)return;
-    if(!Array.isArray(data.series)||data.series.length!==data.days)throw Error('Не удалось загрузить статистику');
-    renderUsageChart($('usageChart'),data);renderUsageChart($('usageFullChart'),data);
-    for(const prefix of ['usage','usageFull']){
-      $(prefix+'Questions').textContent=data.questions.toLocaleString('ru-RU');
-      $(prefix+'ActiveDays').textContent=data.activeDays;
-      $(prefix+'Streak').textContent=data.streak;
-    }
-    $('usageImages').textContent=data.media.image.toLocaleString('ru-RU');
-    $('usageVideos').textContent=data.media.video.toLocaleString('ru-RU');
-    $('usageVoice').textContent=data.media.voice.toLocaleString('ru-RU');
-    $('usageNote').textContent=(data.questions?'За выбранный период':'Пока нет запросов за этот период')+' · Подробнее ›';
-    $('usageFullNote').textContent='По сохранённым чатам; анонимные не учитываются. Фото, видео и голос учитываются с 15.10.2026. Все показатели — за выбранный период, по времени устройства.';
-    const rows=$('usageDailyRows');rows.replaceChildren();
-    for(const day of [...data.series].reverse()){
-      const row=document.createElement('div'),date=document.createElement('span'),count=document.createElement('strong');row.className='usage-daily-row';
-      date.textContent=day.date.split('-').reverse().join('.');count.textContent=day.questions+' запросов';row.append(date,count);rows.append(row);
-    }
-  }catch(error){
-    if(version!==usageLoadVersion)return;
-    for(const id of ['usageNote','usageFullNote'])$(id).textContent='Не удалось загрузить статистику. Открой раздел ещё раз.';
-  }
-}
-
 const WALLET_PACKS=Object.freeze([{id:"coins100",coins:100,stars:99},{id:"coins500",coins:500,stars:499},{id:"coins1000",coins:1000,stars:999}]);
 let selectedWalletPack=1;
 let walletData=null;
@@ -4402,6 +4470,7 @@ async function finishVoice(){
       throw Error(data.error||"Не удалось распознать голос");
     }
 
+    invalidateUsageStats();
     const text=String(data.text).trim();
     if(!text) throw Error("Не удалось разобрать речь. Попробуй записать ещё раз.");
     if(text.length>4000) throw Error("Голосовое слишком длинное");
@@ -4587,6 +4656,7 @@ async function generateMedia(kind){
 
     const url=URL.createObjectURL(blob);
     const media=document.createElement(kind==="image"?"img":"video");
+    invalidateUsageStats();
     media.src=url;
     if(kind==="video"){
       media.controls=true;
@@ -4866,6 +4936,7 @@ renderChat();
 updateControls();
 loadHistory();
 void refreshWallet();
+void prefetchUsageStats();
 </script>
 
 </body>

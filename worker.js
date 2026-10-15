@@ -13,15 +13,24 @@ async function getUsageStats(db, userId, requestedDays, requestedOffset, nowMs =
   const startLocal = todayLocal - (days - 1) * dayMs;
   const startUTC = new Date(startLocal - offset * 60000).toISOString().slice(0,19).replace('T',' ');
   const endUTC = new Date(todayLocal + dayMs - offset * 60000).toISOString().slice(0,19).replace('T',' ');
-  const rows = await db.prepare("SELECT date(created_at, ?) AS day, COUNT(*) AS questions FROM chat_messages WHERE user_id=? AND role='user' AND created_at>=? AND created_at<? GROUP BY day ORDER BY day")
-    .bind(offset + ' minutes', userId, startUTC, endUTC).all();
-  const events = await db.prepare("SELECT kind,COUNT(*) AS count FROM usage_events WHERE user_id=? AND created_at>=? AND created_at<? GROUP BY kind").bind(userId,startUTC,endUTC).all();
-  const media={image:0,video:0,voice:0};
-  for (const row of events.results||[]) if (Object.hasOwn(media,row.kind)) media[row.kind]=Number(row.count);
+  // One D1 round trip for both indexed aggregations.
+  const [rows,events]=await db.batch([
+    db.prepare("SELECT date(created_at, ?) AS day, COUNT(*) AS questions FROM chat_messages WHERE user_id=? AND role='user' AND created_at>=? AND created_at<? GROUP BY day ORDER BY day")
+      .bind(offset+' minutes',userId,startUTC,endUTC),
+    db.prepare("SELECT date(created_at, ?) AS day,kind,COUNT(*) AS count FROM usage_events WHERE user_id=? AND created_at>=? AND created_at<? GROUP BY day,kind")
+      .bind(offset+' minutes',userId,startUTC,endUTC)
+  ]);
+  const media={image:0,video:0,voice:0},mediaByDay=new Map();
+  for(const row of events.results||[]){
+    if(!Object.hasOwn(media,row.kind))continue;
+    media[row.kind]+=Number(row.count);
+    if(!mediaByDay.has(row.day))mediaByDay.set(row.day,{image:0,video:0,voice:0});
+    mediaByDay.get(row.day)[row.kind]=Number(row.count);
+  }
   const counts = new Map((rows.results || []).map(row => [row.day, Number(row.questions)]));
   const series = Array.from({length:days},(_,i)=>{
     const date = new Date(startLocal + i * dayMs).toISOString().slice(0,10);
-    return {date,questions:counts.get(date)||0};
+    return {date,questions:counts.get(date)||0,media:mediaByDay.get(date)||{image:0,video:0,voice:0}};
   });
   let streak=0, last=series.length-1;
   if (!series[last].questions) last--;
@@ -1164,6 +1173,7 @@ export default {
         "Content-Type",
       "Content-Type":
         "application/json; charset=utf-8",
+      "Access-Control-Max-Age": "600",
       "Cache-Control": "no-store"
     };
 

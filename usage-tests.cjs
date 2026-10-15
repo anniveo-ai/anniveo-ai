@@ -3,7 +3,7 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 const raw=new DatabaseSync(':memory:');
 raw.exec('CREATE TABLE chat_messages(user_id TEXT,role TEXT,content TEXT,created_at TEXT);');
 raw.exec(fs.readFileSync('usage.sql','utf8'));
-const db={prepare(sql){return{bind(...params){return{async all(){return{results:raw.prepare(sql).all(...params)}}}}}}};
+const db={async batch(statements){return Promise.all(statements.map(s=>s.all()));},prepare(sql){return{bind(...params){return{async all(){return{results:raw.prepare(sql).all(...params)}}}}}}};
 const insert=raw.prepare('INSERT INTO chat_messages VALUES(?,?,?,?)');
 for(const [u,r,t] of [
  ['one','user','2026-10-14 22:30:00'],['one','assistant','2026-10-14 22:31:00'],
