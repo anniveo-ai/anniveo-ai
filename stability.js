@@ -67,7 +67,7 @@
  const renderRoomOriginal=renderProjectRoom;
  const variantsText=n=>n+' '+(n%10===1&&n%100!==11?'вариант':n%10>=2&&n%10<=4&&(n%100<12||n%100>14)?'варианта':'вариантов');
  const originalProjectDock=updateProjectDock;
- updateProjectDock=function(){originalProjectDock();const groups=new Set(),active=new Set();for(const p of studioProjects.values()){const id=p.groupId||p.id;groups.add(id);if(!PROJECT_TERMINAL.includes(p.status))active.add(id);}$('projectDockLabel').textContent=active.size?'Проекты в работе · '+active.size:'Мои проекты · '+groups.size;};
+ updateProjectDock=function(){originalProjectDock();const groups=new Set(),active=new Set();for(const p of studioProjects.values()){const id=p.groupId||p.id;groups.add(id);if(!PROJECT_TERMINAL.includes(p.status))active.add(id);}const label=active.size?'Проекты в работе · '+active.size:'Мои проекты · '+groups.size;$('projectDockLabel').textContent=label;$('projectDock').setAttribute('aria-label',label+'. Нажми, чтобы открыть. Можно перетаскивать.');$('projectDock').title=label+' · можно перетаскивать';$('projectDockCount').textContent=String(active.size||groups.size);};
  const previewUrls=new Map();
  function previewSource(p){
   if(p.media?.url)return {url:p.media.url,type:p.kind==='video'?'video':'img'};
@@ -120,6 +120,25 @@
   if(!groups.size)projectListBody.append(el('p',{},'Здесь появятся твои проекты.'));projectList.showModal();
  }
  $('projectDock').onclick=openProjectList;
+ setupProjectBubble();
+ function setupProjectBubble(){
+  const bubble=$('projectDock'),positionKey=key('project-bubble');let saved;
+  try{saved=JSON.parse(localStorage.getItem(positionKey)||'null');}catch{}
+  let edge=saved?.edge==='right'?'right':'left',ratio=Number(saved?.ratio)>.05&&Number(saved?.ratio)<.95?Number(saved.ratio):.64,drag=null,suppressUntil=0;
+  function bounds(){const viewport=window.visualViewport,width=bubble.getBoundingClientRect().width||52,height=bubble.getBoundingClientRect().height||52,top=viewport?.offsetTop||0,bottom=top+(viewport?.height||innerHeight),keyboard=innerHeight-(viewport?.height||innerHeight)>100;return {width,height,minX:8,maxX:Math.max(8,innerWidth-width-8),minY:top+Math.min(100,(bottom-top)/4)+height/2,maxY:Math.max(top+height/2+8,bottom-height/2-(keyboard?68:106))};}
+  function place(x,y){const b=bounds();bubble.style.left=Math.max(b.minX,Math.min(b.maxX,x))+'px';bubble.style.top=Math.max(b.minY,Math.min(Math.max(b.minY,b.maxY),y))+'px';}
+  function restore(){if(drag)return;const b=bounds();place(edge==='left'?b.minX:b.maxX,ratio*innerHeight);bubble.dataset.edge=edge;}
+  function begin(event){if(event.button!==0||!event.isPrimary)return;const rect=bubble.getBoundingClientRect();drag={id:event.pointerId,x:event.clientX,y:event.clientY,left:rect.left,center:rect.top+rect.height/2,moved:false};bubble.classList.add('dragging');bubble.setPointerCapture?.(event.pointerId);}
+  function move(event){if(!drag||event.pointerId!==drag.id)return;const dx=event.clientX-drag.x,dy=event.clientY-drag.y;if(Math.hypot(dx,dy)>6)drag.moved=true;if(!drag.moved)return;event.preventDefault();place(drag.left+dx,drag.center+dy);}
+  function finish(event,cancelled=false){
+   if(!drag||event.pointerId!==drag.id)return;const wasMoved=drag.moved,rect=bubble.getBoundingClientRect();drag=null;bubble.classList.remove('dragging');
+   if(wasMoved){edge=rect.left+rect.width/2<innerWidth/2?'left':'right';ratio=(rect.top+rect.height/2)/Math.max(1,innerHeight);try{localStorage.setItem(positionKey,JSON.stringify({edge,ratio}));}catch{}}
+   if(wasMoved||cancelled)suppressUntil=Date.now()+600;restore();
+  }
+  bubble.addEventListener('pointerdown',begin);bubble.addEventListener('pointermove',move,{passive:false});bubble.addEventListener('pointerup',e=>finish(e));bubble.addEventListener('pointercancel',e=>finish(e,true));bubble.addEventListener('lostpointercapture',e=>finish(e,true));
+  bubble.addEventListener('click',e=>{if(Date.now()<suppressUntil){e.preventDefault();e.stopImmediatePropagation();}},{capture:true});
+  window.addEventListener('resize',restore,{passive:true});window.visualViewport?.addEventListener('resize',restore,{passive:true});window.visualViewport?.addEventListener('scroll',restore,{passive:true});restore();
+ }
  loadStudioProjectResult=async function(p){
   if(p.loading)return;p.loading=true;renderProjectRoom();
   try{

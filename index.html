@@ -2013,7 +2013,7 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
   </svg>
 </button>
 
-<button id="projectDock" class="project-dock" type="button" onclick="openProjectRoom()" hidden><span aria-hidden="true">✦</span><b id="projectDockLabel">Мои проекты</b><span aria-hidden="true">↗</span></button>
+<button id="projectDock" class="project-dock" type="button" onclick="openProjectRoom()" aria-label="Мои проекты. Кнопку можно перетаскивать" title="Мои проекты · можно перетаскивать" hidden><svg class="projects-folder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M7 13h10M7 17h7"/></svg><svg class="projects-working-icon" viewBox="0 0 28 28" fill="none" aria-hidden="true"><circle class="projects-progress-track" cx="14" cy="14" r="11" stroke="currentColor" stroke-opacity=".22" stroke-width="2"/><circle class="projects-progress-arc" cx="14" cy="14" r="11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="23 47"/><path d="m14 9 1.2 3.8L19 14l-3.8 1.2L14 19l-1.2-3.8L9 14l3.8-1.2Z" fill="currentColor"/></svg><b id="projectDockLabel">Мои проекты</b><span id="projectDockCount" class="projects-icon-count" aria-hidden="true"></span></button>
 <!-- НАВИГАЦИЯ -->
 <nav id="bottomNav">
   <div id="navGlider"></div>
@@ -4917,7 +4917,7 @@ function confirmStagedAttachment(){const staged=stagedMediaAttachment;if(!staged
 function setVideoIdentity(file){if(!file||!file.type.startsWith('image/')||file.size>10*1024*1024)return false;studioVideoIdentityFile=file;$('videoIdentityLabel').textContent=file.name;$('videoIdentityRemove').hidden=false;return true;}
 function clearVideoIdentity(){studioVideoIdentityFile=null;$('videoIdentityLabel').textContent='Фото лица · необязательно';$('videoIdentityRemove').hidden=true;}
 function useOwnVideoTemplate(){openView('video');$('videoPrompt').value='Воссоздай сцену и движение исходного видео с человеком с добавленного фото. Сохрани внешность и черты лица человека на фото. Стабильное лицо, естественные движения и согласованный свет.';toast('Выбери готовый ролик, затем добавь своё фото.');pickStudioVideo('video');}
-function openTextImageCreation(){openView('studio');$('imagePrompt').focus({preventScroll:true});}
+function openTextImageCreation(){document.activeElement?.blur();openView('studio');}
 function applyAppTheme(theme){
  const value=theme==='light'?'light':'dark';document.documentElement.dataset.theme=value;
  $('themeToggle')?.setAttribute('aria-checked',String(value==='light'));
