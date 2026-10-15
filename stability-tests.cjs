@@ -2,6 +2,7 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 const raw=new DatabaseSync(':memory:');
 raw.exec("CREATE TABLE chat_messages(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT,role TEXT,content TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);CREATE TABLE chat_requests(user_id TEXT,request_id TEXT,status TEXT,reply TEXT,PRIMARY KEY(user_id,request_id));CREATE TABLE usage_events(id TEXT PRIMARY KEY,user_id TEXT,kind TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP)");
 raw.exec(fs.readFileSync('media-jobs.sql','utf8'));raw.exec(fs.readFileSync('stability-migration.sql','utf8'));
+raw.exec(fs.readFileSync('project-groups.sql','utf8'));
 const db={prepare(sql){const stmt={bind(...p){stmt.params=p;return stmt;},async first(){return raw.prepare(sql).get(...(stmt.params||[]))||null},async all(){return {results:raw.prepare(sql).all(...(stmt.params||[]))}},async run(){return {meta:{changes:Number(raw.prepare(sql).run(...(stmt.params||[])).changes)}}}};return stmt;},async batch(statements){return Promise.all(statements.map(s=>s.run()))}};
 const context=vm.createContext({console,crypto:webcrypto,URL,Request,Response,Headers,FormData,File,Blob,TextEncoder,TextDecoder,AbortController,setTimeout,clearTimeout,Uint8Array,btoa,atob});
 vm.runInContext(fs.readFileSync('worker.js','utf8').replace('export default {','globalThis.handler={'),context);context.env={DB:db,POLZA_API_KEY:'configured-test-value'};context.DB=db;

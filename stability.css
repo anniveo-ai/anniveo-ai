@@ -1,4 +1,24 @@
 /* Stability controls share ANIS AI's restrained glass surfaces. */
+.format-field-heading{justify-content:flex-start!important;gap:3px!important;min-height:25px;margin-bottom:7px}
+.format-field-heading .format-help-trigger{width:28px;min-width:28px;height:25px;min-height:25px!important;display:inline-flex;align-items:center;justify-content:flex-start;font-size:0!important;position:relative}
+.format-help-trigger::after{content:'';position:absolute;inset:-9px -4px}.format-help-trigger>span{font-size:10px!important;width:16px;height:16px}
+.media-voice-note.mic-connecting{display:none!important}
+@keyframes anis-spin{to{transform:rotate(360deg)}}
+.project-variant-visual{width:100%;height:78px;position:relative;border-radius:13px;overflow:hidden;background:#20192e;display:grid;place-items:center}
+.project-variant-visual>img,.project-variant-visual>video{width:100%;height:100%;object-fit:cover}.project-variant-card{padding:5px!important;overflow:hidden}.project-variant-card>small{display:block;padding:6px 3px}
+.project-reveal-loading{position:relative;isolation:isolate;overflow:hidden;min-height:230px;background:#1b1428}
+.project-reveal-loading>.project-blurred-preview{position:absolute;inset:-5%;width:110%;height:110%;object-fit:cover;filter:blur(13px) brightness(.55);transform:scale(1.08)}
+.project-abstract-preview{background:radial-gradient(ellipse at 30% 30%,#8950bd88,transparent 65%),radial-gradient(ellipse at 75% 75%,#4e337daa,transparent 65%),#161222}
+.project-reveal-loading::after{content:'';position:absolute;inset:0;background:linear-gradient(120deg,transparent 20%,#d5b5ff24 49%,transparent 72%);transform:translateX(-120%);animation:anis-reveal 3.6s ease-in-out infinite;pointer-events:none}
+@keyframes anis-reveal{to{transform:translateX(120%)}}
+.project-reveal-overlay{position:relative;z-index:1;min-height:230px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;color:#fff;padding:22px}
+.project-reveal-overlay strong{font-size:16px}.project-reveal-overlay small{font-size:12px;color:#ded2ec}.project-reveal-spinner{display:block;width:34px;height:34px;border-radius:50%;border:2px solid #ddc4ff30;border-top-color:#ddc4ff;box-shadow:0 0 25px #b078ed33;animation:anis-spin 1.1s linear infinite}
+.project-variant-visual.project-reveal-loading{min-height:78px}.project-variant-visual .project-reveal-overlay{min-height:78px;padding:8px}.project-variant-visual .project-reveal-spinner{width:21px;height:21px}
+.project-video-tag{position:absolute;bottom:4px;right:5px;background:#13101bb3;color:#fff;border-radius:5px;font-size:14px;padding:1px 5px}
+.project-group-list{display:grid;gap:10px}.project-group-row{display:flex;align-items:center;gap:12px;text-align:left;width:100%;padding:10px;border:1px solid #8c6fa54d;border-radius:18px;color:inherit;background:#292032;font:inherit;cursor:pointer}
+.project-group-picture{width:64px;height:64px;flex:0 0 64px;border-radius:12px;overflow:hidden;display:grid;place-items:center;background:#3b284c;color:#dcbaff}.project-group-picture img,.project-group-picture video{width:100%;height:100%;object-fit:cover}.project-group-row>span:nth-child(2){flex:1;min-width:0}.project-group-row strong{font-size:13px;display:block;overflow-wrap:anywhere}.project-group-row small{display:block;font-size:11px;color:#baacc9;margin-top:6px}
+[data-theme="light"] .project-group-row{background:#f4ecfa;border-color:#c8b7d5}[data-theme="light"] .project-group-row small{color:#665273}
+@media(prefers-reduced-motion:reduce){.project-reveal-loading::after{animation:none}.project-reveal-spinner,.mic-connecting{animation-duration:2s}}
 .anis-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 16px}
 .anis-button{font:inherit;color:inherit;border:1px solid #77708666;background:#242131;border-radius:15px;padding:11px 14px;min-height:44px;cursor:pointer;transition:background .25s,transform .25s,border-color .25s}
 .anis-button:active{transform:scale(.97)}

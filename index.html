@@ -1808,7 +1808,7 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
   <h1 class="page-title">Профиль</h1>
   <p class="subtitle">Твоё пространство ANIS AI.</p>
   <div class="profile-identity">
-    <button class="profile-pro-badge" type="button" onclick="showProfilePanel('pro')" aria-label="Подписка ANIS AI Pro">✦ PRO</button><div class="profile-avatar-wrap"><div class="avatar" id="avatar">✦</div>
+    <div class="profile-avatar-wrap"><div class="avatar" id="avatar">✦</div>
       <button class="profile-edit" type="button" aria-label="Мои данные" onclick="showProfilePanel('data')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 14Z"/></svg></button>
     </div>
     <h2 id="profileName">Пользователь Telegram</h2>
@@ -4730,6 +4730,7 @@ function syncMediaMic(){
     $(kind+'PromptCancel').hidden=!active;$(kind+'PromptCancel').setAttribute('aria-hidden',String(!active));$(kind+'PromptCancel').tabIndex=active?0:-1;button.closest?.('.media-prompt-actions')?.classList.toggle('voice-active',!!active);
     const micIcon=button.querySelector('svg');if(micIcon)micIcon.style.opacity=phase==='recording'?'0':'1';
     button.classList.toggle('show-stop',phase==='recording');
+    const note=$(kind+'VoiceNote');note.classList.toggle('mic-connecting',phase==='opening'||phase==='transcribing');note.setAttribute('aria-label',phase==='opening'?'Подключаем микрофон':phase==='transcribing'?'Распознаём речь':'');
   }
 }
 function cancelMediaDictation(){
@@ -4747,7 +4748,7 @@ async function toggleMediaDictation(kind){
   if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){toast('Голосовой ввод недоступен в этом браузере.');return;}
   if(recording||openingMic||transcribing){toast('Сначала заверши запись в чате.');return;}
   const task={kind,token:++mediaVoiceEpoch,phase:'opening',chunks:[],cancelled:false};mediaVoiceTask=task;syncMediaMic();
-  $(kind+'VoiceNote').textContent='Подключаю микрофон…';
+  $(kind+'VoiceNote').textContent='';
   try{
     const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
     if(task.cancelled||mediaVoiceTask!==task){stream.getTracks().forEach(track=>track.stop());return;}
@@ -4762,7 +4763,7 @@ async function toggleMediaDictation(kind){
   }catch(error){if(mediaVoiceTask===task){cancelMediaDictation();toast(error.name==='NotAllowedError'?'Разреши доступ к микрофону в настройках Telegram.':readableMediaError(error));}}
 }
 async function transcribeMediaDictation(task){
-  task.phase='transcribing';syncMediaMic();$(task.kind+'VoiceNote').textContent='Распознаю описание…';
+  task.phase='transcribing';syncMediaMic();$(task.kind+'VoiceNote').textContent='';
   task.controller=new AbortController();task.timer=setTimeout(()=>task.controller.abort(),60000);
   try{
     const type=task.recorder.mimeType||'audio/webm',blob=new Blob(task.chunks,{type});if(!blob.size)throw Error('Запись пустая. Попробуй ещё раз.');
@@ -4783,13 +4784,14 @@ const projectWatchers=new Set();
 const PROJECT_TERMINAL=['completed','failed','unknown'];
 function studioProjectKey(){return 'anis-projects-v2:'+user?.id;}
 function persistStudioProjects(){
- try{localStorage.setItem(studioProjectKey(),JSON.stringify([...studioProjects.values()].slice(-24).map(p=>({id:p.id,kind:p.kind,status:p.status,prompt:p.prompt,quality:p.quality,ratio:p.ratio,duration:p.duration,resultUrl:p.resultUrl,error:p.error,created:p.created,order:p.order,hasSource:!!p.sourceFile||!!p.hasSource,hasIdentity:!!p.identityFile||!!p.hasIdentity}))));}catch{}
+ try{localStorage.setItem(studioProjectKey(),JSON.stringify([...studioProjects.values()].slice(-24).map(p=>({id:p.id,groupId:p.groupId||p.id,kind:p.kind,status:p.status,prompt:p.prompt,quality:p.quality,ratio:p.ratio,duration:p.duration,resultUrl:p.resultUrl,error:p.error,created:p.created,order:p.order,hasSource:!!p.sourceFile||!!p.hasSource,hasIdentity:!!p.identityFile||!!p.hasIdentity}))));}catch{}
 }
 function updateProjectDock(){
  const projects=[...studioProjects.values()],active=projects.filter(p=>!PROJECT_TERMINAL.includes(p.status)).length;
  const dock=$('projectDock');dock.hidden=!projects.length;$('projectDockLabel').textContent=active?'В работе · '+active:'Мои проекты · '+projects.length;dock.classList.toggle('working',active>0);
 }
 function projectLabel(project){return (project.kind==='video'?'Видео':'Фото')+' '+project.order;}
+function projectFamily(project){const groupId=project.groupId||project.id;return [...studioProjects.values()].filter(item=>(item.groupId||item.id)===groupId);}
 function projectStatusLabel(project){return {queued:'Ожидает своей очереди',submitting:'Отправляю материалы',creating:'Подтверждаю создание',pending:'В очереди у ИИ',processing:'Собираю твою идею',completed:'Готово',failed:'Не удалось создать',unknown:'Нужно проверить соединение'}[project.status]||'В работе';}
 function openProjectRoom(id){
  if(id&&studioProjects.has(id))selectedStudioProject=id;
@@ -4811,9 +4813,9 @@ function renderProjectRoom(){
  }
  $('projectReadyActions').hidden=!ready;$('mediaResultEdit').hidden=p.kind!=='image';
  $('mediaResultHelp').textContent=ready?'На iPhone: «Поделиться» → сохранить в Фото.':'Новый вариант создаётся отдельно: уже отправленный запрос продолжает работу.';
- $('projectAgentSend').disabled=!p.prompt;$('projectVariantCount').textContent=studioProjects.size+' '+(studioProjects.size===1?'вариант':'вариантов');
+ const family=projectFamily(p);$('projectAgentSend').disabled=!p.prompt;$('projectVariantCount').textContent=family.length+' '+(family.length===1?'вариант':'вариантов');
  const cards=$('projectVariantCards');cards.replaceChildren();
- for(const item of studioProjects.values()){
+ for(const item of projectFamily(p)){
   const card=document.createElement('button');card.type='button';card.className='project-variant-card';card.classList.toggle('selected',item.id===p.id);card.setAttribute('aria-label',projectLabel(item)+' · '+projectStatusLabel(item));
   if(item.media&&item.kind==='image'){const img=document.createElement('img');img.src=item.media.url;img.alt='';card.append(img);}else{const icon=document.createElement('span');icon.className=PROJECT_TERMINAL.includes(item.status)?'':'mini-project-loader';icon.textContent=item.status==='completed'?'✓':item.kind==='video'?'▷':'✦';card.append(icon);}
   const label=document.createElement('small');label.textContent=projectLabel(item);card.append(label);card.onclick=()=>openProjectRoom(item.id);cards.append(card);
@@ -4847,7 +4849,7 @@ async function watchMediaJob(kind,jobId,initial){
  try{
   for(;;){
    if(!data){try{data=await mediaJSON({action:'media-status',jobId});attempts=0;}catch(e){if(e.status===404||++attempts>=4)throw e;await new Promise(r=>setTimeout(r,5000));continue;}}
-   p.status=data.status;p.error=data.error;renderProjectRoom();
+   p.status=data.status;p.error=data.error;renderProjectRoom();void pumpStudioQueue();
    if(data.status==='failed'||data.status==='cancelled'){p.status='failed';break;}
    if(data.status==='completed'){p.resultUrl=data.url;await loadStudioProjectResult(p);if(!$('mediaResultDialog').open)toast(projectLabel(p)+' готово');break;}
    await new Promise(r=>setTimeout(r,kind==='image'?3500:6500));data=null;
@@ -4860,7 +4862,7 @@ async function launchStudioProject(p){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),60000);
  try{
   const file=p.sourceFile&&p.sourceFile.type.startsWith('image/')?await prepareStudioImage(p.sourceFile):p.sourceFile;
-  const payload={action:'media-create',kind:p.kind,requestId:p.id,prompt:p.providerPrompt||p.prompt,quality:p.quality,ratio:p.ratio,initData};if(p.kind==='video')payload.duration=p.duration;if(p.region)payload.region=JSON.stringify(p.region);
+  const payload={action:'media-create',kind:p.kind,requestId:p.id,prompt:p.providerPrompt||p.prompt,quality:p.quality,ratio:p.ratio,groupId:p.groupId||p.id,initData};if(p.kind==='video')payload.duration=p.duration;if(p.region)payload.region=JSON.stringify(p.region);
   let response;if(file||p.identityFile){const form=new FormData();for(const [key,value]of Object.entries(payload))form.append(key,String(value));if(file)form.append('file',file,file.name);if(p.identityFile)form.append('identityFile',p.identityFile,p.identityFile.name);response=await fetch(API_URL,{method:'POST',body:form,signal:controller.signal});}
   else response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});
   const data=await response.json();if(!response.ok){p.status='failed';const error=Error(data.error||'Не удалось создать проект.');error.status=response.status;throw error;}
@@ -4870,7 +4872,7 @@ async function launchStudioProject(p){
 }
 async function pumpStudioQueue(){
  if(projectPumpBusy)return;projectPumpBusy=true;const launched=[];
- try{let active=[...studioProjects.values()].filter(p=>['submitting','creating','pending','processing'].includes(p.status)).length;for(const p of studioProjects.values()){if(p.status==='queued'&&active<2){active++;launched.push(launchStudioProject(p));}}}finally{projectPumpBusy=false;}
+ try{let active=[...studioProjects.values()].filter(p=>['submitting','creating','pending','processing'].includes(p.status)).length;for(const p of studioProjects.values()){const root=p.groupId&&p.groupId!==p.id?studioProjects.get(p.groupId):null;if(root&&!['pending','processing','completed','failed'].includes(root.status))continue;if(p.status==='queued'&&active<2){active++;launched.push(launchStudioProject(p));}}}finally{projectPumpBusy=false;}
  await Promise.allSettled(launched);
 }
 async function createStudioVariant(snapshot){
@@ -4878,7 +4880,7 @@ async function createStudioVariant(snapshot){
  if([...studioProjects.values()].filter(p=>!PROJECT_TERMINAL.includes(p.status)).length>=8){toast('В очереди уже 8 вариантов. Дождись завершения.');return;}
  if((snapshot.sourceFile?.size||0)+(snapshot.identityFile?.size||0)>25*1024*1024){toast('Общий размер ролика и фото — до 25 МБ.');return;}
  const prompt=String(snapshot.prompt||'').trim();if(prompt.length<3||prompt.length>1200){toast('Опиши идею: от 3 до 1200 символов.');return;}
- const p={...snapshot,id:crypto.randomUUID(),prompt,status:'queued',created:Date.now(),order:++projectCounter};studioProjects.set(p.id,p);selectedStudioProject=p.id;openProjectRoom(p.id);return pumpStudioQueue();
+ const p={...snapshot,id:crypto.randomUUID(),prompt,status:'queued',created:Date.now(),order:++projectCounter};p.groupId=p.groupId||p.id;studioProjects.set(p.id,p);selectedStudioProject=p.id;openProjectRoom(p.id);return pumpStudioQueue();
 }
 async function generateMedia(kind){
  if(mediaVoiceTask){toast('Сначала заверши голосовой ввод.');return;}
@@ -4887,7 +4889,7 @@ async function generateMedia(kind){
 async function addAgentVariant(){
  const base=studioProjects.get(selectedStudioProject),idea=$('projectAgentIdea').value.trim();if(base&&(base.hasSource&&!base.sourceFile||base.hasIdentity&&!base.identityFile)){toast('Для нового варианта заново добавь исходные файлы в студии.');return;}if(!base||!idea){toast('Добавь идею для нового варианта.');return;}
  const prompt=base.prompt+'\nНовый вариант: '+idea;if(prompt.length>1200){toast('Сократи дополнительную идею.');return;}
- $('projectAgentIdea').value='';return createStudioVariant({kind:base.kind,prompt,sourceFile:base.sourceFile,identityFile:base.identityFile,region:base.region,regionOriginalFile:base.regionOriginalFile,quality:base.quality||'fast',ratio:base.ratio||'1:1',duration:base.duration||4});
+ $('projectAgentIdea').value='';return createStudioVariant({kind:base.kind,prompt,groupId:base.groupId||base.id,previewBlob:base.media?.blob||base.previewBlob,sourceFile:base.sourceFile,identityFile:base.identityFile,region:base.region,regionOriginalFile:base.regionOriginalFile,quality:base.quality||'fast',ratio:base.ratio||'1:1',duration:base.duration||4});
 }
 async function resumeMediaProjects(){
  if(!initData||!user)return;

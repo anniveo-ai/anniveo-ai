@@ -45,7 +45,7 @@
  const createOriginal=createStudioVariant;
  let lastCreation={fingerprint:'',time:0,id:null},creationLock=false;
  const fileStamp=f=>f?[f.name,f.size,f.lastModified].join(':'):'';
- function fingerprint(s){return JSON.stringify([s.kind,s.prompt.trim(),s.quality,s.ratio,s.duration,fileStamp(s.regionOriginalFile||s.sourceFile),fileStamp(s.identityFile),s.region?.points]);}
+ function fingerprint(s){return JSON.stringify([s.groupId,s.kind,s.prompt.trim(),s.quality,s.ratio,s.duration,fileStamp(s.regionOriginalFile||s.sourceFile),fileStamp(s.identityFile),s.region?.points]);}
  createStudioVariant=async function(snapshot){
   const stamp=fingerprint(snapshot),now=Date.now();
   if(creationLock||lastCreation.fingerprint===stamp&&now-lastCreation.time<2500){if(lastCreation.id)openProjectRoom(lastCreation.id);return;}
@@ -65,8 +65,36 @@
  };
  projectStatusLabel=p=>p.loading?'Загружаем готовый файл':({queued:'Ждём свободное место',submitting:p.sourceFile?'Загружаем твои материалы':'Отправляем описание',creating:'Подтверждаем приём заказа',pending:'Задание принято · ждём очередь ИИ',processing:p.kind==='video'?'ИИ создаёт твоё видео':p.sourceFile?'ИИ редактирует твоё фото':'ИИ создаёт твоё фото',completed:'Готово · можно сохранить',failed:'Не удалось создать',unknown:'Нужно проверить готовность'})[p.status]||'Проверяем проект';
  const renderRoomOriginal=renderProjectRoom;
+ const variantsText=n=>n+' '+(n%10===1&&n%100!==11?'вариант':n%10>=2&&n%10<=4&&(n%100<12||n%100>14)?'варианта':'вариантов');
+ const originalProjectDock=updateProjectDock;
+ updateProjectDock=function(){originalProjectDock();const groups=new Set(),active=new Set();for(const p of studioProjects.values()){const id=p.groupId||p.id;groups.add(id);if(!PROJECT_TERMINAL.includes(p.status))active.add(id);}$('projectDockLabel').textContent=active.size?'Проекты в работе · '+active.size:'Мои проекты · '+groups.size;};
+ const previewUrls=new Map();
+ function previewSource(p){
+  if(p.media?.url)return {url:p.media.url,type:p.kind==='video'?'video':'img'};
+  if(p.status==='completed')return p.resultUrl&&!p.region?{url:p.resultUrl,type:p.kind==='video'?'video':'img'}:null;
+  const blob=p.previewBlob||p.sourceFile;if(!blob||!/^image\/|^video\//.test(blob.type))return null;
+  const old=previewUrls.get(p.id);if(old?.blob===blob)return old;
+  if(old)URL.revokeObjectURL(old.url);const item={blob,url:URL.createObjectURL(blob),type:blob.type.startsWith('video/')?'video':'img'};previewUrls.set(p.id,item);return item;
+ }
+ function previewElement(source){const n=el(source.type,{src:source.url});if(source.type==='video'){n.muted=true;n.playsInline=true;n.preload='metadata';n.onloadedmetadata=()=>{if(n.duration>0)n.currentTime=Math.min(.1,n.duration/2);};}else n.alt='';return n;}
+ function addWorkingPreview(host,p,mini=false){
+  const source=previewSource(p);host.classList.add('project-reveal-loading');if(source){const image=previewElement(source);image.className='project-blurred-preview';host.prepend(image);}else host.classList.add('project-abstract-preview');
+  const layer=el('div',{className:'project-reveal-overlay'}),spinner=el('span',{className:'project-reveal-spinner','aria-hidden':'true'});layer.append(spinner);if(!mini)layer.append(el('strong',{},projectStatusLabel(p)),el('small',{},'Можно свернуть и вернуться позже'));host.append(layer);
+ }
  renderProjectRoom=function(){
   renderRoomOriginal();const p=studioProjects.get(selectedStudioProject);if(!p)return;
+  const family=projectFamily(p),stage=$('mediaResultPreview');
+  $('projectVariantCount').textContent=variantsText(family.length);
+  if(!PROJECT_TERMINAL.includes(p.status)){
+   const revealKey=p.id+':'+p.status;if(stage.dataset.revealKey!==revealKey){stage.replaceChildren();stage.classList.remove('project-abstract-preview');addWorkingPreview(stage,p);stage.dataset.revealKey=revealKey;}
+  }else{stage.classList.remove('project-reveal-loading','project-abstract-preview');delete stage.dataset.revealKey;}
+  const cards=$('projectVariantCards');cards.replaceChildren();
+  for(const item of family){
+   const card=button('',()=>{openProjectRoom(item.id);if(item.status==='completed'&&!item.media&&item.resultUrl)void loadStudioProjectResult(item);});card.className='project-variant-card';card.classList.toggle('selected',item.id===p.id);card.setAttribute('aria-label',projectLabel(item)+' · '+projectStatusLabel(item));
+   const visual=el('div',{className:'project-variant-visual'}),source=previewSource(item);
+   if(item.status==='completed'&&source)visual.append(previewElement(source));else if(!PROJECT_TERMINAL.includes(item.status))addWorkingPreview(visual,item,true);else visual.append(el('span',{},item.status==='completed'?'✓':'!'));
+   if(item.kind==='video')visual.append(el('b',{className:'project-video-tag'},'▷'));card.append(visual,el('small',{},projectLabel(item)));cards.append(card);
+  }
   $('mediaResultTitle').textContent=projectLabel(p)+(p.status==='completed'?' готово':p.status==='failed'?' · ошибка':p.status==='unknown'?' · проверка':' · в работе');
   let steps=$('anisProjectSteps');if(!steps){steps=el('div',{id:'anisProjectSteps',className:'anis-steps','aria-hidden':'true'});for(let i=0;i<4;i++)steps.append(el('span'));$('projectStageStatus').after(steps);}
   const step=p.status==='completed'?4:p.loading?3:['pending','processing'].includes(p.status)?2:['submitting','creating'].includes(p.status)?1:0;
@@ -81,6 +109,17 @@
    const action=$('mediaResultPreview').querySelector('button');if(action){action.textContent=p.status==='failed'?'Вернуться к описанию':'Проверить готовность';action.onclick=()=>{if(p.status==='failed'){closeGeneratedMedia();openView(p.kind==='image'?'studio':'video');$(p.kind+'Prompt').value=p.prompt||'';}else void recoverProject(p);};}
   }
  };
+ const projectList=dialog('anisProjectList','Мои проекты'),projectListBody=el('div',{className:'project-group-list'});projectList.append(projectListBody);
+ function openProjectList(){
+  projectListBody.replaceChildren();const groups=new Map();for(const p of studioProjects.values()){const id=p.groupId||p.id;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(p);}
+  for(const family of [...groups.values()].reverse()){
+   const first=family[0],last=family.at(-1),row=button('',()=>{projectList.close();openProjectRoom(last.id);});row.className='project-group-row';
+   const picture=el('div',{className:'project-group-picture'}),source=previewSource([...family].reverse().find(p=>p.media)||first);if(source)picture.append(previewElement(source));else picture.textContent=first.kind==='video'?'▷':'✦';
+   const copy=el('span');copy.append(el('strong',{},(first.kind==='video'?'Видео':'Фото')+' · '+(first.prompt||'Мой проект').slice(0,65)),el('small',{},variantsText(family.length)+' · '+projectStatusLabel(last)));row.append(picture,copy,el('span',{},'↗'));projectListBody.append(row);
+  }
+  if(!groups.size)projectListBody.append(el('p',{},'Здесь появятся твои проекты.'));projectList.showModal();
+ }
+ $('projectDock').onclick=openProjectList;
  loadStudioProjectResult=async function(p){
   if(p.loading)return;p.loading=true;renderProjectRoom();
   try{
@@ -107,7 +146,7 @@
    for(const kind of ['image','video']){
     try{const data=await mediaJSON({action:'media-history',kind});for(const row of data.items||[]){
      let p=studioProjects.get(row.jobId);if(!p){p={id:row.jobId,kind,order:++projectCounter,created:Date.parse(row.createdAt?.replace(' ','T')+'Z')||Date.now(),prompt:row.prompt,quality:row.quality,ratio:row.ratio,duration:row.duration};studioProjects.set(p.id,p);}
-     Object.assign(p,{status:row.status,resultUrl:row.url,expiresAt:row.expiresAt,error:row.error,region:p.region||row.region});
+     Object.assign(p,{groupId:row.groupId||p.groupId||p.id,status:row.status,resultUrl:row.url,expiresAt:row.expiresAt,error:row.error,region:p.region||row.region});
     }}catch(error){if(!navigator.onLine)break;console.warn('Project history unavailable');}
    }
    for(const p of studioProjects.values())if(['submitting','creating','pending','processing','unknown'].includes(p.status))void recoverProject(p);
@@ -144,7 +183,7 @@
  const historyThreads=button('Мои разговоры',()=>{openView('chat');threadSelect.focus();});$('historyList').before(historyThreads);
  state.decorateMediaHistoryCard=function(card,row){
    let p=studioProjects.get(row.jobId);
-   if(!p){p={id:row.jobId,kind:row.kind,status:row.status,prompt:row.prompt,quality:row.quality,ratio:row.ratio,duration:row.duration,created:Date.parse(row.createdAt?.replace(' ','T')+'Z')||Date.now(),expiresAt:row.expiresAt,resultUrl:row.url,region:row.region,order:++projectCounter};studioProjects.set(p.id,p);}
+   if(!p){p={id:row.jobId,groupId:row.groupId||row.jobId,kind:row.kind,status:row.status,prompt:row.prompt,quality:row.quality,ratio:row.ratio,duration:row.duration,created:Date.parse(row.createdAt?.replace(' ','T')+'Z')||Date.now(),expiresAt:row.expiresAt,resultUrl:row.url,region:row.region,order:++projectCounter};studioProjects.set(p.id,p);}
    const caption=card.querySelector('small');if(caption&&row.status==='completed')caption.textContent=p?.media?'Готово · сохранено на этом устройстве':row.expired?'Срок хранения у сервиса истёк':'Готово · доступно до '+new Date(row.expiresAt).toLocaleDateString('ru-RU');
    if(p){card.disabled=row.expired&&!p.media;card.onclick=()=>{openProjectRoom(p.id);if(p.status==='completed'&&!p.media&&p.resultUrl)void loadStudioProjectResult(p);else if(!['completed','failed'].includes(p.status))void recoverProject(p);};}
  };
