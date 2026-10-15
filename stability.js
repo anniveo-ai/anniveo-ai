@@ -342,26 +342,31 @@
  const keyboardBar=el('div',{id:'studioKeyboardBar',hidden:true}),keyboardDone=button('✓',()=>document.activeElement?.blur());
  keyboardDone.setAttribute('aria-label','Закрыть клавиатуру');keyboardDone.title='Готово';
  keyboardBar.append(keyboardDone);document.body.append(keyboardBar);
- let studioViewportHeight=window.innerHeight,studioKeyboardFrame=0;
- function keyboardLayout(){
+ let studioViewportHeight=window.innerHeight,studioKeyboardFrame=0,studioRevealPending=false,studioVisibleHeight=0;
+ function keyboardLayout(reveal=false){
   const field=document.activeElement,v=window.visualViewport,focused=['imagePrompt','videoPrompt','projectAgentIdea'].includes(field?.id);
   document.body.classList.toggle('studio-typing',focused);
-  if(!focused){studioViewportHeight=window.innerHeight;keyboardBar.hidden=true;document.documentElement.style.removeProperty('--studio-keyboard-inset');document.documentElement.style.removeProperty('--studio-visible-height');requestAnimationFrame(moveGlider);return;}
+  if(!focused){studioViewportHeight=window.innerHeight;studioVisibleHeight=0;keyboardBar.hidden=true;document.documentElement.style.removeProperty('--studio-keyboard-inset');document.documentElement.style.removeProperty('--studio-visible-height');requestAnimationFrame(moveGlider);return;}
   const top=v?.offsetTop||0,visibleHeight=Math.min(v?.height||window.innerHeight,tg?.viewportHeight||window.innerHeight),bottom=top+visibleHeight;
   const inset=Math.max(0,studioViewportHeight-visibleHeight,window.innerHeight-bottom);
   document.documentElement.style.setProperty('--studio-keyboard-inset',inset+'px');
   document.documentElement.style.setProperty('--studio-visible-height',visibleHeight+'px');
   keyboardBar.hidden=inset<80;
   keyboardBar.style.top=(bottom-52)+'px';
+  const resized=Math.abs(visibleHeight-studioVisibleHeight)>8;studioVisibleHeight=visibleHeight;
+  // Viewport panning follows the caret on iOS; it must not trigger another scroll.
+  if(!reveal&&!resized)return;
   const box=field.closest('.studio-prompt-box')||field,rect=box.getBoundingClientRect(),fieldRect=field.getBoundingClientRect();
   if(inset<80)return;
-  const available=Math.max(80,visibleHeight-144),target=rect.height<=available?rect:fieldRect;
-  // iOS can scroll the focused field too far up: correct in both directions.
-  const delta=Math.min(target.bottom-bottom+60,target.top-top-84);
+  const upper=top+16,lower=bottom-16,available=Math.max(80,lower-upper),target=rect.height<=available?rect:fieldRect;
+  // An already visible prompt stays exactly where the user placed it.
+  let delta=0;
+  if(target.top<upper)delta=target.top-upper;
+  else if(target.bottom>lower)delta=target.bottom-lower;
   if(Math.abs(delta)>8){const scroller=field.closest('dialog[open]')||$('app');scroller?.scrollBy({top:delta,behavior:'instant'});}
  }
- function scheduleStudioKeyboard(){cancelAnimationFrame(studioKeyboardFrame);studioKeyboardFrame=requestAnimationFrame(keyboardLayout);}
- document.addEventListener('focusin',()=>{scheduleStudioKeyboard();setTimeout(scheduleStudioKeyboard,250);setTimeout(scheduleStudioKeyboard,500);});document.addEventListener('focusout',()=>setTimeout(scheduleStudioKeyboard,0));document.addEventListener('input',scheduleStudioKeyboard);window.visualViewport?.addEventListener('resize',scheduleStudioKeyboard);window.visualViewport?.addEventListener('scroll',scheduleStudioKeyboard);window.addEventListener('resize',scheduleStudioKeyboard);tg?.onEvent?.('viewportChanged',scheduleStudioKeyboard);
+ function scheduleStudioKeyboard(reveal=false){studioRevealPending=studioRevealPending||reveal===true;cancelAnimationFrame(studioKeyboardFrame);studioKeyboardFrame=requestAnimationFrame(()=>{const pending=studioRevealPending;studioRevealPending=false;keyboardLayout(pending);});}
+ document.addEventListener('focusin',()=>{scheduleStudioKeyboard(true);setTimeout(()=>scheduleStudioKeyboard(true),250);setTimeout(()=>scheduleStudioKeyboard(true),500);});document.addEventListener('focusout',()=>setTimeout(scheduleStudioKeyboard,0));window.visualViewport?.addEventListener('resize',scheduleStudioKeyboard);window.visualViewport?.addEventListener('scroll',()=>scheduleStudioKeyboard());window.addEventListener('resize',scheduleStudioKeyboard);tg?.onEvent?.('viewportChanged',()=>scheduleStudioKeyboard());
  // Hidden navigation has zero-sized buttons; never collapse its selection into a border sliver.
  const originalMoveGlider=moveGlider;
  moveGlider=function(){const active=$('bottomNav')?.querySelector('button.active');if(active?.getBoundingClientRect().width>0)originalMoveGlider();};
