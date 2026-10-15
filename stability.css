@@ -1,11 +1,16 @@
 /* Stability controls share ANIS AI's restrained glass surfaces. */
-#projectDock.project-dock{position:fixed;left:8px;right:auto;top:64%;bottom:auto;transform:translateY(-50%);width:52px;min-width:52px;height:52px;min-height:52px;padding:12px;display:grid;place-items:center;border:1px solid #bd96e58a;border-radius:50%;background:linear-gradient(145deg,#43305aef,#21172ff5);color:#e2c8ff;box-shadow:0 5px 24px #0004,0 0 17px #a064ce25;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;z-index:999;transition:left .28s cubic-bezier(.2,.8,.2,1),top .28s cubic-bezier(.2,.8,.2,1),background .3s,box-shadow .3s}
-#projectDock[hidden]{display:none!important}#projectDock svg{width:27px;height:27px;pointer-events:none}#projectDock .projects-working-icon{display:none}#projectDock.working .projects-folder-icon{display:none}#projectDock.working .projects-working-icon{display:block}#projectDock.working{box-shadow:0 4px 24px #0004,0 0 22px #ac6ce94a}
-#projectDock .projects-progress-arc{transform-origin:14px 14px;animation:anis-spin 1.4s linear infinite}#projectDock.dragging{transition:none;cursor:grabbing;box-shadow:0 8px 25px #0006,0 0 23px #bb7cf777}#projectDock:focus-visible{outline:2px solid #b783e7;outline-offset:4px}
-#projectDockLabel{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-#projectDock .projects-icon-count{position:absolute;right:-2px;top:-3px;min-width:17px;height:17px;padding:0 4px;display:grid;place-items:center;border:1px solid #b78bd7;border-radius:10px;background:#744897;color:#fff;font:600 9px/1 system-ui;pointer-events:none;animation:none}
-html[data-theme="light"] #projectDock.project-dock{background:linear-gradient(145deg,#fff9ff,#e4d3f1);color:#744093;border-color:#b294c7;box-shadow:0 5px 18px #54306e22}
-@media(prefers-reduced-motion:reduce){#projectDock.project-dock{transition:none}#projectDock .projects-progress-arc{animation-duration:3s}}
+#bottomNav [data-tab="studio"] .studio-nav-icon{position:relative;flex:none;overflow:hidden;width:25px;height:25px;margin:0;transform:none;border-radius:7px;background:transparent;transition:width .65s cubic-bezier(.2,.8,.2,1),height .65s cubic-bezier(.2,.8,.2,1),margin .65s cubic-bezier(.2,.8,.2,1),border-radius .65s,background .45s,box-shadow .45s}
+#bottomNav [data-tab="studio"] .studio-nav-icon>svg{transition:opacity .35s,transform .65s;opacity:1;transform:scale(1)}
+#bottomNav [data-tab="studio"].studio-nav-working .studio-nav-icon{width:43px;height:5px;margin:10px 0;border-radius:20px;background:#b68ad63b;box-shadow:0 0 14px #b681e640}
+#bottomNav [data-tab="studio"].studio-nav-working .studio-nav-icon>svg{opacity:0;transform:scale(.2,.1)}
+.studio-nav-progress{position:absolute;inset:0;opacity:0;border-radius:inherit;background:linear-gradient(90deg,transparent,#cda4ff,#f0dfff,transparent);transform:translateX(-110%);transition:opacity .4s}
+.studio-nav-working .studio-nav-progress{opacity:1;animation:studio-nav-flow 1.8s ease-in-out infinite}
+@keyframes studio-nav-flow{to{transform:translateX(110%)}}
+#bottomNav .studio-nav-ready-badge{position:absolute;top:-2px;right:calc(50% - 24px);width:18px;height:18px;display:grid;place-items:center;border:2px solid #352a42;border-radius:50%;background:#bfa0e9;color:#281637;box-shadow:0 0 12px #ae79d83b;opacity:0;transform:translateY(5px) scale(.45);transition:opacity .35s,transform .5s cubic-bezier(.2,1.4,.3,1);pointer-events:none}
+#bottomNav .studio-nav-ready-badge svg{width:12px;height:12px}#bottomNav .studio-nav-ready .studio-nav-ready-badge{opacity:1;transform:translateY(0) scale(1)}
+html[data-theme="light"] #bottomNav .studio-nav-ready-badge{border-color:#f6effa;background:#8752b0;color:#fff}html[data-theme="light"] #bottomNav .studio-nav-working .studio-nav-icon{background:#9462bb40}
+.studio-projects-toolbar{margin:0 0 10px}.studio-projects-toolbar button[hidden]{display:none!important}.studio-projects-toolbar:has(button[hidden]){display:none}
+@media(prefers-reduced-motion:reduce){#bottomNav [data-tab="studio"] .studio-nav-icon,#bottomNav .studio-nav-ready-badge{transition:none}.studio-nav-working .studio-nav-progress{animation:none;transform:none;background:#cda4ff}}
 .format-field-heading{justify-content:flex-start!important;gap:3px!important;min-height:25px;margin-bottom:7px}
 .format-field-heading .format-help-trigger{width:28px;min-width:28px;height:25px;min-height:25px!important;display:inline-flex;align-items:center;justify-content:flex-start;font-size:0!important;position:relative}
 .format-help-trigger::after{content:'';position:absolute;inset:-9px -4px}.format-help-trigger>span{font-size:10px!important;width:16px;height:16px}
