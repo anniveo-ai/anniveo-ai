@@ -41,7 +41,7 @@ html[data-theme="light"] #mediaProjectSwitcher.studio-project-tabs .studio-tab-i
 .media-prompt-pencil svg{width:21px;height:21px}.media-prompt-pencil.anis-region-active{background:#9c52ce44;border-color:#c28ae9}
 html[data-theme="light"] .media-prompt-pencil{background:#f0e5f7;color:#86559e;border-color:#d9c4e7}
 @media(max-width:370px){#mediaProjectSwitcher>button{font-size:10px}.studio-prompt-box .studio-create-button{padding-left:10px;padding-right:10px;font-size:12px}.studio-prompt-box .media-prompt-actions{gap:6px}}
-#bottomNav{grid-template-columns:repeat(5,minmax(0,1fr))}
+#bottomNav{grid-template-columns:repeat(4,minmax(0,1fr))}
 #view-chat>.anis-toolbar{margin-top:0;margin-bottom:16px}
 .chat-conversations-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:6px 0 16px}.chat-conversations-heading h1{margin:0}.chat-conversations-heading button{white-space:nowrap}
 #view-chat .chat-picker-row{flex-wrap:nowrap;gap:8px}#view-chat .chat-picker-row select{max-width:none;min-width:0;width:100%;min-height:46px;font-size:14px}
