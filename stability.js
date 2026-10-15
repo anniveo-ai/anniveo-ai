@@ -9,6 +9,7 @@
  const button=(text,fn,primary=false)=>{const b=el('button',{type:'button',className:'anis-button'+(primary?' primary':'')},text);b.onclick=fn;return b;};
  function dialog(id,title){const d=el('dialog',{id,className:'anis-dialog'}),h=el('header');h.append(el('h2',{},title),button('×',()=>d.close()));d.append(h);document.body.append(d);return d;}
  function explain(error,retry,label='Повторить'){
+  if(error?.status===404&&/проект.*не найден/i.test(error?.message||''))return;
   const host=document.querySelector('dialog[open]')||$('view-'+currentView);if(!host)return;
   let note=host.querySelector('.anis-inline-error');if(!note){note=el('div',{className:'anis-inline-error',role:'status'});host.append(note);}note.replaceChildren(el('p',{},readableMediaError(error)));
   if(retry)note.append(button(label,()=>{note.remove();void retry();}));
@@ -109,16 +110,12 @@
   let steps=$('anisProjectSteps');if(!steps){steps=el('div',{id:'anisProjectSteps',className:'anis-steps','aria-hidden':'true'});for(let i=0;i<4;i++)steps.append(el('span'));$('projectStageStatus').after(steps);}
   const step=p.status==='completed'?4:p.loading?3:['pending','processing'].includes(p.status)?2:['submitting','creating'].includes(p.status)?1:0;
   [...steps.children].forEach((n,i)=>n.classList.toggle('done',i<step));
-  let expiry=$('anisProjectExpiry');if(!expiry){expiry=el('div',{id:'anisProjectExpiry',className:'anis-expiry'});$('projectReadyActions').after(expiry);}
-  const expires=p.expiresAt?Date.parse(p.expiresAt):p.created+7*86400000,remaining=expires-Date.now();
-  expiry.hidden=p.status!=='completed';expiry.classList.toggle('warning',remaining<86400000);
-  expiry.textContent=(remaining>0?'Файл у сервиса доступен до '+new Date(expires).toLocaleDateString('ru-RU')+'. ':'Срок хранения у сервиса истёк. ')+(p.media?'Копия доступна на этом устройстве. Сохрани её в Фото: очистка Telegram может удалить локальные файлы.':'Открой и сохрани файл на телефон.');
-  if(state.storageUnavailable&&p.media)expiry.textContent='Сохрани файл на телефон. Локальная копия после закрытия приложения может не сохраниться.';
-  if(p.region)expiry.textContent+=' Изменена только выделенная область.';
+  $('anisProjectExpiry')?.remove();
   const note=$('mediaResultDialog').lastElementChild;if(note?.textContent==='Сохрани результат: файл в сервисе доступен 7 дней.')note.hidden=true;
   if(['unknown','failed'].includes(p.status)){
    const action=$('mediaResultPreview').querySelector('button');if(action){action.textContent=p.status==='failed'?'Вернуться к описанию':'Проверить готовность';action.onclick=()=>{if(p.status==='failed'){closeGeneratedMedia();openView(p.kind==='image'?'studio':'video');$(p.kind+'Prompt').value=p.prompt||'';}else void recoverProject(p);};}
   }
+  if(/проект\s+не найден/i.test(p.error||'')){$('mediaResultPreview').replaceChildren();$('mediaResultTitle').textContent=projectLabel(p);$('projectStageStatus').textContent='';}
  };
  const projectList=dialog('anisProjectList','Мои проекты'),projectListBody=el('div',{className:'project-group-list'});projectList.append(projectListBody);
  function openProjectList(){

@@ -1,5 +1,6 @@
 /* Stability controls share ANIS AI's restrained glass surfaces. */
 .anis-banner{display:none!important}
+#anisProjectExpiry,.media-result-dialog .anis-expiry{display:none!important}
 .anis-inline-error{position:static;margin:12px 0;color:var(--muted);font-size:13px;line-height:1.45;overflow-wrap:anywhere}.anis-inline-error p{margin:0 0 8px}.anis-inline-error button{min-height:38px;padding:8px 12px;font-size:12px}
 #bottomNav [data-tab="studio"] .studio-nav-icon{position:relative;flex:none;overflow:hidden;width:25px;height:25px;margin:0;transform:none;border-radius:7px;background:transparent;transition:width .65s cubic-bezier(.2,.8,.2,1),height .65s cubic-bezier(.2,.8,.2,1),margin .65s cubic-bezier(.2,.8,.2,1),border-radius .65s,background .45s,box-shadow .45s}
 #bottomNav [data-tab="studio"] .studio-nav-icon>svg{transition:opacity .35s,transform .65s;opacity:1;transform:scale(1)}
