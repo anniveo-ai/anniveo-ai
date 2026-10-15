@@ -1,3 +1,34 @@
+async function recordMediaUsage(db,userId,kind){
+  if(!db)return;
+  try{await db.prepare('INSERT INTO usage_events(id,user_id,kind) VALUES(?,?,?)').bind(crypto.randomUUID(),userId,kind).run();}
+  catch{console.error('Usage event could not be recorded',{kind});}
+}
+
+async function getUsageStats(db, userId, requestedDays, requestedOffset, nowMs = Date.now()) {
+  const days = Number(requestedDays) === 30 ? 30 : 7;
+  const parsedOffset = Number(requestedOffset);
+  const offset = Number.isInteger(parsedOffset) && Math.abs(parsedOffset) <= 840 ? parsedOffset : 0;
+  const dayMs = 86400000;
+  const todayLocal = Math.floor((nowMs + offset * 60000) / dayMs) * dayMs;
+  const startLocal = todayLocal - (days - 1) * dayMs;
+  const startUTC = new Date(startLocal - offset * 60000).toISOString().slice(0,19).replace('T',' ');
+  const endUTC = new Date(todayLocal + dayMs - offset * 60000).toISOString().slice(0,19).replace('T',' ');
+  const rows = await db.prepare("SELECT date(created_at, ?) AS day, COUNT(*) AS questions FROM chat_messages WHERE user_id=? AND role='user' AND created_at>=? AND created_at<? GROUP BY day ORDER BY day")
+    .bind(offset + ' minutes', userId, startUTC, endUTC).all();
+  const events = await db.prepare("SELECT kind,COUNT(*) AS count FROM usage_events WHERE user_id=? AND created_at>=? AND created_at<? GROUP BY kind").bind(userId,startUTC,endUTC).all();
+  const media={image:0,video:0,voice:0};
+  for (const row of events.results||[]) if (Object.hasOwn(media,row.kind)) media[row.kind]=Number(row.count);
+  const counts = new Map((rows.results || []).map(row => [row.day, Number(row.questions)]));
+  const series = Array.from({length:days},(_,i)=>{
+    const date = new Date(startLocal + i * dayMs).toISOString().slice(0,10);
+    return {date,questions:counts.get(date)||0};
+  });
+  let streak=0, last=series.length-1;
+  if (!series[last].questions) last--;
+  for (;last>=0 && series[last].questions;last--) streak++;
+  return { days, series, media, questions:series.reduce((sum,d)=>sum+d.questions,0), activeDays:series.filter(d=>d.questions>0).length, streak };
+}
+
 // Server-owned prices; never accept coin quantities or prices from the client.
 const STAR_PACKS = Object.freeze([
   { id: 'coins100', coins: 100, stars: 99 },
@@ -1175,6 +1206,7 @@ export default {
             :await proxyVideo(form,env.POLLINATIONS_API_KEY);
           if(result.error) return json({error:result.error},result.status||400,headers);
           const upstream=result.response;
+          if(upstream.ok) await recordMediaUsage(env.DB,mediaUser,multipartAction==="video"?"video":"image");
           const mediaHeaders=new Headers(headers);
           mediaHeaders.set("Content-Type",multipartAction==="image-edit"
             ?"application/json; charset=utf-8"
@@ -1212,6 +1244,7 @@ export default {
           const data=await response.json();
           const text=typeof data.text==="string"?data.text.trim():"";
           if(!text) return json({error:"Речь не распознана. Попробуй ещё раз"},422,headers);
+          await recordMediaUsage(env.DB,voiceUser,"voice");
           return json({text},200,headers);
         }finally{clearTimeout(timer);}
       }
@@ -1235,6 +1268,10 @@ export default {
         );
       }
 
+      if (action === "usage-stats") {
+        if (!env.DB) return json({error:"Статистика временно недоступна"},503,headers);
+        return json(await getUsageStats(env.DB,userId,body.days,body.utcOffsetMinutes),200,headers);
+      }
       if (action === "wallet") return json(await readWallet(env.DB, userId), 200, headers);
       if (action === "wallet-invoice") {
         const result = await createWalletInvoice(env, userId, String(body.packId || ""));
@@ -1295,6 +1332,7 @@ export default {
           await response.body?.cancel();
           return json({error:mediaErrorMessage(response.status)},response.status===402?402:502,headers);
         }
+        await recordMediaUsage(env.DB,userId,"image");
         return new Response(response.body,{status:200,headers:{...headers,"Content-Type":"application/json; charset=utf-8"}});
       }
 
@@ -1304,6 +1342,7 @@ export default {
         for(const key of ["prompt","model","ratio","duration"]) videoForm.set(key,String(body[key]??""));
         const result=await proxyVideo(videoForm,env.POLLINATIONS_API_KEY);
         if(result.error) return json({error:result.error},result.status||400,headers);
+        if(result.response.ok) await recordMediaUsage(env.DB,userId,"video");
         const mediaHeaders=new Headers(headers);
         mediaHeaders.set("Content-Type",result.response.headers.get("content-type")||"video/mp4");
         return new Response(result.response.body,{status:result.response.status,headers:mediaHeaders});

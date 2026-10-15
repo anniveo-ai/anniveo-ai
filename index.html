@@ -1544,6 +1544,34 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
 .wallet-tools{margin-top:10px}.wallet-tools button{padding:12px 4px;gap:7px}
 @media(max-width:350px){.wallet-package strong{font-size:19px}.wallet-package strong .anium-coin{width:23px;height:23px}.wallet-package{min-height:81px}.wallet-art-action{width:82%}}
 
+
+.profile-usage{padding:16px 14px 12px;margin:0 0 12px;border:1px solid #a485c346;border-radius:22px;background:linear-gradient(145deg,#34264055,#171721 75%);box-shadow:inset 0 1px #ffffff09}
+.profile-usage-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px}
+.profile-usage-heading h2{margin:0;color:#e6dcef;font-size:14px;line-height:1.3;font-weight:600}
+.profile-usage-heading select{max-width:95px;padding:6px 8px;border:1px solid #b497d52b;border-radius:11px;background:#3c2e4e77;color:#dccde9;font-size:11px;flex:none}
+.usage-chart{height:91px;display:flex;align-items:stretch;gap:8px;padding:0 3px;margin:0 0 13px}
+.usage-day{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:7px}
+.usage-bar-track{display:flex;align-items:flex-end;justify-content:center;width:100%;height:70px}
+.usage-bar{display:block;width:min(100%,12px);min-width:2px;border-radius:7px;background:linear-gradient(0deg,#7846ae,#c08ae9);box-shadow:0 0 9px #ab67e92a,inset 1px 0 #ffffff22}
+.usage-day.empty .usage-bar{background:#57456155;box-shadow:none}
+.usage-day time{height:12px;font-size:9px;line-height:12px;color:#9f8bb3}
+.usage-chart.month{gap:3px}.usage-chart.month .usage-bar{width:min(100%,7px)}
+.usage-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.usage-metrics>div{display:flex;flex-direction:column;gap:4px;min-width:0;padding:10px 6px 8px;border-radius:12px;background:#5d3b7c14}
+.usage-metrics strong{font-size:25px;line-height:1.1;font-weight:600;color:#efe5f9}
+.usage-metrics span{font-size:10px;line-height:1.3;color:#b7a9c5}
+.usage-note{font-size:9px;line-height:1.4;color:#9786a7;margin:10px 1px 0}
+@media(max-width:350px){.profile-usage{padding:13px 11px 10px}.profile-usage-heading h2{font-size:12px}.usage-metrics strong{font-size:23px}.usage-chart{gap:6px}.usage-metrics span{font-size:9px}}
+
+
+.usage-title-button{border:0;background:none;text-align:left;padding:0;color:inherit;font:inherit;cursor:pointer}.usage-title-button span{color:#ae8bc6;margin-left:3px}
+.usage-open{cursor:pointer;border-radius:12px}.usage-open:focus-visible,.usage-title-button:focus-visible{outline:2px solid #bda0d8;outline-offset:5px}
+.statistics-page{max-width:560px;margin:0 auto}.statistics-heading{display:flex;align-items:center;gap:12px;margin:8px 0}.statistics-heading h1{font-size:25px;margin:0;flex:1}
+.statistics-heading button,.statistics-heading select{border:1px solid #b497d52b;border-radius:12px;background:#3c2e4e77;color:#dccde9;padding:8px 10px;font-size:12px}.statistics-heading button{font-size:26px;line-height:20px;width:36px}
+.usage-section-title{font-size:14px;font-weight:600;margin:0 0 15px;color:#e6dcef}.usage-full-chart{height:135px}.usage-full-chart .usage-bar-track{height:110px}
+.usage-media-metrics{margin:0 0 10px}.usage-media-metrics>div{padding:15px 10px;border:1px solid #a485c32b;border-radius:17px;background:#32293e44}
+.usage-daily{margin-top:16px}.usage-daily-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #ffffff09;font-size:12px;color:#af9fbe}.usage-daily-row:last-child{border:0}.usage-daily-row strong{font-weight:500;color:#d2c3df}
+
 </style>
 </head>
 
@@ -1792,17 +1820,32 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
     </div>
     <div class="profile-coins-art"><button class="coin-art-action" type="button" onclick="joltCoins(this)" aria-label="Пошевелить монеты"><img src="profile-coins-real-v1.webp" width="768" height="512" alt="Сияющие монеты ANIS AI" decoding="async"></button></div>
   </div>
+  <section class="profile-usage" aria-labelledby="usageTitle">
+    <div class="profile-usage-heading"><h2 id="usageTitle"><button class="usage-title-button" type="button" onclick="openUsageStats()">Статистика использования <span>›</span></button></h2><select id="usagePeriod" aria-label="Период статистики" onchange="loadUsageStats(this)"><option value="7">7 дней</option><option value="30">30 дней</option></select></div>
+    <div class="usage-open" role="button" tabindex="0" aria-label="Открыть полную статистику" onclick="openUsageStats()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openUsageStats()}">
+    <div class="usage-chart" id="usageChart" role="img" aria-label="Статистика ещё не загружена"></div>
+    <div class="usage-metrics"><div><strong id="usageQuestions">—</strong><span>Запросов</span></div><div><strong id="usageActiveDays">—</strong><span>Дней активности</span></div><div><strong id="usageStreak">—</strong><span>Дней подряд</span></div></div>
+    </div>
+    <p class="usage-note" id="usageNote" role="status">По сохранённым чатам</p>
+  </section>
   <div class="profile-shortcuts">
-    <button type="button" onclick="showProfilePanel('data')"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/></svg></span><b>Мои данные</b></button>
-    <button type="button" onclick="openView('history')"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7M12 7v5l3 2"/></svg></span><b>История чатов</b></button>
-    <button type="button" onclick="showProfilePanel('favorites')"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z"/></svg></span><b>Избранное</b></button>
     <button type="button" onclick="openProfileVoice()"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11v1a7 7 0 0 0 14 0v-1M12 19v3M8 22h8"/></svg></span><b>Голосовой ассистент</b></button>
-    <button type="button" onclick="showProfilePanel('settings')"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3-1 3-3 1-2 4 2 2v4l3 1 2 3h4l2-3 3-1v-4l2-2-2-4-3-1-1-3Z"/><circle cx="12" cy="12" r="3"/></svg></span><b>Настройки</b></button>
+    <button type="button" onclick="showProfilePanel('favorites')"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z"/></svg></span><b>Избранное</b></button>
     <button type="button" onclick="showProfilePanel('appearance')"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h2a2 2 0 0 0 0-4h-1a2 2 0 0 1 0-4h4a4 4 0 0 0 4-4c0-3-4-6-9-6Z"/><path d="M7 9h.01M10 6h.01M15 7h.01M6 13h.01"/></svg></span><b>Внешний вид</b></button>
   </div>
   <button class="profile-pro" type="button" onclick="showProfilePanel('pro')"><span class="profile-pro-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 6 5 5 4-7 4 7 5-5-2 13H5ZM5 22h14"/></svg></span><span><strong>ANIS AI Pro</strong><small>Больше возможностей</small></span><span class="profile-pro-arrow">→</span></button>
   <button class="profile-support" type="button" onclick="openProfileSupport()">Помощь и поддержка <span>↗</span></button>
   <div class="profile-id-line">Telegram ID <span id="telegramId">—</span></div>
+</section>
+
+<!-- ПОЛНАЯ СТАТИСТИКА -->
+<section id="view-statistics" class="view statistics-page">
+  <div class="statistics-heading"><button type="button" onclick="openView('profile')" aria-label="Вернуться в профиль">‹</button><h1>Статистика</h1><select id="usageFullPeriod" aria-label="Период полной статистики" onchange="loadUsageStats(this)"><option value="7">7 дней</option><option value="30">30 дней</option></select></div>
+  <p class="subtitle">Твоя активность в ANIS AI</p>
+  <div class="profile-usage"><h2 class="usage-section-title">Запросы в чате</h2><div class="usage-chart usage-full-chart" id="usageFullChart" role="img" aria-label="Статистика ещё не загружена"></div><div class="usage-metrics"><div><strong id="usageFullQuestions">—</strong><span>Запросов</span></div><div><strong id="usageFullActiveDays">—</strong><span>Дней активности</span></div><div><strong id="usageFullStreak">—</strong><span>Дней подряд</span></div></div></div>
+  <div class="usage-metrics usage-media-metrics"><div><strong id="usageImages">—</strong><span>Запросов фото</span></div><div><strong id="usageVideos">—</strong><span>Запросов видео</span></div><div><strong id="usageVoice">—</strong><span>Голосовых сообщений</span></div></div>
+  <p class="usage-note" id="usageFullNote" role="status">По сохранённым чатам</p>
+  <div class="profile-usage usage-daily"><h2 class="usage-section-title">По дням</h2><div id="usageDailyRows"></div></div>
 </section>
 
 <!-- БАЛАНС -->
@@ -2704,7 +2747,7 @@ function openView(name){
   if(!returnToTyping) endVoiceSession();
   $("messageInput").blur();
   currentView = name;
-  app.classList.toggle("profile-visible",name==="profile"||name==="balance");
+  app.classList.toggle("profile-visible",name==="profile"||name==="balance"||name==="statistics");
   updateWelcome();
 
   document.querySelectorAll(".view").forEach(el=>{
@@ -2715,13 +2758,14 @@ function openView(name){
   document.querySelectorAll("nav button").forEach(el=>{
     const tab = el.dataset.tab;
     const active =
-      tab===name || (tab==="profile"&&name==="balance") ||
+      tab===name || (tab==="profile"&&["balance","statistics"].includes(name)) ||
       (tab==="studio"&&["image","video"].includes(name));
     el.classList.toggle("active",active);
   });
   $("dock").classList.toggle("hidden",name!=="chat");
 
-  if(name==="profile"||name==="balance") void refreshWallet();
+  if(name==="profile"||name==="balance"||name==="statistics") void refreshWallet();
+  if(name==="profile"||name==="statistics") void loadUsageStats();
   if(name==="history") showHistory();
   if(name==="chat") renderChat();
 
@@ -3444,6 +3488,58 @@ function showProfilePanel(kind){
   $("profileDialog").showModal();
 }
 
+
+let usageLoadVersion=0;
+let usagePeriod=7;
+function openUsageStats(){
+  openView('statistics');
+}
+function renderUsageChart(container, data){
+  container.replaceChildren();container.classList.toggle('month',data.days===30);
+  const max=Math.max(1,...data.series.map(day=>day.questions));
+  container.setAttribute('aria-label','Запросы в чате за '+data.days+' дней: '+data.questions);
+  for(let i=0;i<data.series.length;i++){
+    const day=data.series[i],column=document.createElement('div');column.className='usage-day'+(day.questions?'':' empty');
+    const track=document.createElement('span');track.className='usage-bar-track';
+    const bar=document.createElement('span');bar.className='usage-bar';bar.style.height=(day.questions?Math.max(9,day.questions/max*100):4)+'%';
+    const date=document.createElement('time');date.dateTime=day.date;date.textContent=data.days===7||i%5===0||i===data.series.length-1?String(Number(day.date.slice(-2))):'';
+    column.title=day.date+': '+day.questions+' запросов';column.setAttribute('aria-hidden','true');track.append(bar);column.append(track,date);container.append(column);
+  }
+}
+async function loadUsageStats(source){
+  if(source)usagePeriod=Number(source.value)===30?30:7;
+  $('usagePeriod').value=String(usagePeriod);$('usageFullPeriod').value=String(usagePeriod);
+  const version=++usageLoadVersion;
+  if(!initData||!user){
+    for(const id of ['usageNote','usageFullNote'])$(id).textContent='Открой приложение через Telegram, чтобы увидеть свою статистику.';
+    return;
+  }
+  for(const id of ['usageNote','usageFullNote'])$(id).textContent='Загружаем статистику…';
+  try{
+    const data=await api({action:'usage-stats',days:usagePeriod,utcOffsetMinutes:-new Date().getTimezoneOffset()},15000);
+    if(version!==usageLoadVersion)return;
+    if(!Array.isArray(data.series)||data.series.length!==data.days)throw Error('Не удалось загрузить статистику');
+    renderUsageChart($('usageChart'),data);renderUsageChart($('usageFullChart'),data);
+    for(const prefix of ['usage','usageFull']){
+      $(prefix+'Questions').textContent=data.questions.toLocaleString('ru-RU');
+      $(prefix+'ActiveDays').textContent=data.activeDays;
+      $(prefix+'Streak').textContent=data.streak;
+    }
+    $('usageImages').textContent=data.media.image.toLocaleString('ru-RU');
+    $('usageVideos').textContent=data.media.video.toLocaleString('ru-RU');
+    $('usageVoice').textContent=data.media.voice.toLocaleString('ru-RU');
+    $('usageNote').textContent=(data.questions?'За выбранный период':'Пока нет запросов за этот период')+' · Подробнее ›';
+    $('usageFullNote').textContent='По сохранённым чатам; анонимные не учитываются. Фото, видео и голос учитываются с 15.10.2026. Все показатели — за выбранный период, по времени устройства.';
+    const rows=$('usageDailyRows');rows.replaceChildren();
+    for(const day of [...data.series].reverse()){
+      const row=document.createElement('div'),date=document.createElement('span'),count=document.createElement('strong');row.className='usage-daily-row';
+      date.textContent=day.date.split('-').reverse().join('.');count.textContent=day.questions+' запросов';row.append(date,count);rows.append(row);
+    }
+  }catch(error){
+    if(version!==usageLoadVersion)return;
+    for(const id of ['usageNote','usageFullNote'])$(id).textContent='Не удалось загрузить статистику. Открой раздел ещё раз.';
+  }
+}
 
 const WALLET_PACKS=Object.freeze([{id:"coins100",coins:100,stars:99},{id:"coins500",coins:500,stars:499},{id:"coins1000",coins:1000,stars:999}]);
 let selectedWalletPack=1;
