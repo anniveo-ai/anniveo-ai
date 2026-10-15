@@ -191,6 +191,21 @@
   })().finally(()=>resumePromise=null);
  };
 
+ // Scrolling from the landing content into messages is also entering the chat.
+ function syncChatScrollNavigation(){
+  const chat=currentView==='chat'&&!anonymous,hasMessages=$('messages').childElementCount>0;
+  const top=Math.max($('app').getBoundingClientRect().top,window.visualViewport?.offsetTop||0);
+  const inConversation=chat&&(!showWelcome||hasMessages&&$('welcome').getBoundingClientRect().bottom<=top+110);
+  $('collapseChatButton').classList.toggle('hidden',!inConversation);
+  $('returnToChatButton').classList.toggle('hidden',!(chat&&showWelcome&&returnToChatAvailable&&!inConversation));
+ }
+ const welcomeUpdateOriginal=updateWelcome;
+ updateWelcome=function(){welcomeUpdateOriginal();syncChatScrollNavigation();requestAnimationFrame(syncChatScrollNavigation);};
+ $('collapseChatButton').querySelector('span').textContent='Вернуться на главную';
+ let chatNavigationFrame=0;
+ function scheduleChatScrollNavigation(){cancelAnimationFrame(chatNavigationFrame);chatNavigationFrame=requestAnimationFrame(syncChatScrollNavigation);}
+ $('app').addEventListener('scroll',scheduleChatScrollNavigation,{passive:true});window.addEventListener('resize',scheduleChatScrollNavigation);window.visualViewport?.addEventListener('resize',scheduleChatScrollNavigation);
+
  // Each normal conversation has its own server context and per-account cache.
  // Conversation data stays intact; the main screen owns chat navigation again.
  const threadSelect=el('select');
