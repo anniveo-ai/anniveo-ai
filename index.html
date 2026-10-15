@@ -804,6 +804,14 @@ header{
 }
 #mic svg{display:block;pointer-events:none}
 #mic .mic-stop-icon{display:none}
+#mic .mic-cancel-icon{display:none}
+#mic.voice-cancel .mic-icon,#mic.voice-cancel .mic-stop-icon{display:none}
+#mic.voice-cancel .mic-cancel-icon{display:block}
+#mic.voice-cancel{
+  background:rgba(173,129,225,.22);color:#f3e5ff;
+  box-shadow:inset 0 0 0 1px rgba(216,177,255,.4),0 0 12px rgba(177,120,255,.24);
+  touch-action:manipulation;
+}
 #mic.recording{
   background:rgba(173,129,225,.32);
   box-shadow:0 0 0 2px rgba(202,164,255,.5),0 0 18px rgba(177,120,255,.55);
@@ -1720,6 +1728,9 @@ select{
       <svg class="mic-stop-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true" focusable="false">
         <rect x="6" y="6" width="12" height="12" rx="2"/>
       </svg>
+      <svg class="mic-cancel-icon" viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true" focusable="false">
+        <path d="m6 6 12 12M18 6 6 18"/>
+      </svg>
     </button>
     <div class="chat-orb-control">
       <div id="chatOrbHint" class="chat-orb-hint hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true" data-phase="idle">
@@ -1918,6 +1929,7 @@ function toast(message){
 
 function handleMicClick(){
   if(Date.now()<ignoreMicClickUntil) return;
+  if(orbVoiceActive){interruptVoiceInput();return;}
   void handleMic();
 }
 function resetCancelVisual(){
@@ -2365,6 +2377,10 @@ function setupMicGestures(){
       }
     };
     button.addEventListener("touchstart",event=>{
+      if(orbVoiceActive){
+        event.preventDefault();event.stopPropagation();
+        suppressClick();interruptVoiceInput();return;
+      }
       if(button.disabled||busy||transcribing||openingMic) return;
       const touch=event.changedTouches[0];
       if(!touch) return;
@@ -2393,6 +2409,10 @@ function setupMicGestures(){
     return;
   }
   button.addEventListener("pointerdown",event=>{
+    if(orbVoiceActive){
+      event.preventDefault();event.stopPropagation();
+      suppressClick();interruptVoiceInput();return;
+    }
     if(button.disabled||busy||transcribing||openingMic) return;
     const state={id:event.pointerId,x:event.clientX,y:event.clientY,started:recording,held:false,locked:false,cancelArmed:false,released:false,timer:null};
     micGesture=state;
@@ -3063,9 +3083,9 @@ function syncChatOrbUI(){
   if(voiceMode){
     send.setAttribute("aria-pressed",String(voiceActive));
     send.setAttribute("aria-label",voiceActive
-      ?"Выключить голосовой режим"
+      ?"Отправить сказанное"
       :"Говорить с ANNIVEO AI");
-    send.title=voiceActive?"Выключить голосовой режим":"Нажми на шар и скажи, что нужно";
+    send.title=voiceActive?"Нажми, чтобы отправить сказанное":"Нажми на шар и скажи, что нужно";
   }else send.removeAttribute("aria-pressed");
 }
 function syncOrbAppearance(){
@@ -3080,6 +3100,19 @@ function syncOrbAppearance(){
   $("voiceOrb").dataset.phase=phase;
   $("send").dataset.phase=phase;
   syncChatOrbUI();
+  syncVoiceCancelButton();
+}
+function syncVoiceCancelButton(){
+  const mic=$("mic");
+  mic.classList.toggle("voice-cancel",orbVoiceActive);
+  mic.disabled=!orbVoiceActive&&(busy||transcribing||(openingMic&&!micGesture));
+  if(orbVoiceActive){
+    mic.setAttribute("aria-label","Выключить разговор и отменить запись");
+    mic.title="Выключить разговор и отменить запись";
+  }else if(!recording){
+    mic.setAttribute("aria-label","Записать голосовое сообщение");
+    mic.title="Записать голосовое сообщение";
+  }
 }
 function setupOrbReaction(){
   const orb=$("voiceOrb"),input=$("messageInput");
@@ -3111,7 +3144,7 @@ function updateControls(){
   send.classList.toggle("planet",!hasText);
   send.setAttribute("aria-label",hasText?"Отправить сообщение":"Говорить с ANNIVEO AI");
   send.title=hasText?"Отправить сообщение":"Нажми на шар и скажи, что нужно";
-  send.disabled=(busy||transcribing||openingMic)&&!orbVoiceActive;
+  send.disabled=busy||transcribing||openingMic;
   $("anonToggle").disabled=locked;
   $("mic").disabled=busy||transcribing||(openingMic&&!micGesture);
   $("messageInput").disabled=
@@ -3365,12 +3398,8 @@ async function sendMessage(text,audioURL,spokenVoice=false){
 /* ФОРМА */
 $("chatForm").onsubmit=e=>{
   e.preventDefault();
-  if(orbVoiceActive&&!$("messageInput").value.trim()){
-    interruptVoiceInput();
-    return;
-  }
   if(recording){
-    if(recorder?.state==="recording") recorder.stop();
+    sendRecordedSpeech();
     return;
   }
   if(busy||transcribing||openingMic) return;
@@ -3540,9 +3569,16 @@ function endVoiceSession(){
   $("chatStatus").textContent="";
   updateControls();
 }
+function sendRecordedSpeech(){
+  if(!recording||recorder?.state!=="recording") return;
+  if(orbVoiceActive) voiceHeard=true;
+  recorder.stop();
+}
 async function handleOrbVoice(){
-  if(orbVoiceActive){interruptVoiceInput();return;}
-  if(recording){recorder?.stop();return;}
+  if(recording){sendRecordedSpeech();return;}
+  if(orbVoiceActive&&(voiceAudioSource||ttsRequestController||window.speechSynthesis?.speaking)){
+    stopSpokenReply();setVoiceChatStatus("Твой ход — слушаю","listening");void handleMic();return;
+  }
   if(busy||transcribing||openingMic){toast("Подожди, ANNIVEO готовит ответ");return;}
   if(!initData||!user){toast("Открой приложение через Telegram");return;}
   // Голосовой диалог из строки ввода остаётся внутри открытого чата.
@@ -3554,7 +3590,7 @@ async function handleOrbVoice(){
   const session=++voiceSessionVersion;
   orbVoiceActive=true;voiceHeard=false;
   setVoiceChatStatus("Слушаю тебя — говори в своём темпе","listening");
-  $("voiceOrb").setAttribute("aria-label","Выключить голосовой режим");
+  $("voiceOrb").setAttribute("aria-label","Отправить сказанное");
   try{if(voiceAudioContext.state==="suspended")await voiceAudioContext.resume();}catch{}
   if(session!==voiceSessionVersion||!orbVoiceActive) return;
   await handleMic();
