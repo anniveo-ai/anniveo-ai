@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 65785)
-Total output lines: 5126
-
 
 <!DOCTYPE html>
 <html lang="ru">
@@ -2252,7 +2249,76 @@ function cancelMicRecording({animateSwipeReturn=false}={}){
   stopVoiceMeter();
   releaseMicrophone();
   orbVoiceActive=false;
-  $("mic").classList.remove("recording","locked","cancel-armed"…785 tokens truncated…rding-mode")) return;
+  $("mic").classList.remove("recording","locked","cancel-armed","gesture-active");
+  $("mic").setAttribute("aria-label","Записать голосовое сообщение");
+  $("mic").title="Записать голосовое сообщение";
+  resetCancelVisual();
+  $("chatStatus").textContent="Запись отменена";
+  updateControls();
+  setTimeout(()=>{
+    if($("chatStatus").textContent==="Запись отменена") $("chatStatus").textContent="";
+  },1400);
+}
+function finishMicFromLock(event){
+  event?.preventDefault();
+  event?.stopPropagation();
+  if(micGesture){
+    clearTimeout(micGesture.timer);
+    micGesture=null;
+  }
+  if(recording&&recorder?.state==="recording"){
+    $("chatStatus").textContent="Завершаю запись и распознаю речь…";
+    recorder.stop();
+    return;
+  }
+  if(openingMic){
+    cancelMicStartRequested=true;
+    $("micSwipeHint")?.classList.remove("visible","locked","compact");
+    $("micSwipeHint")?.setAttribute("aria-hidden","true");
+    setComposerRecording(false);
+    $("chatStatus").textContent="Запуск микрофона отменён";
+  }
+}
+function setupMicGestures(){
+  const button=$("mic"),plus=$("attachButton");
+  if(!button||button.dataset.gesturesReady) return;
+  button.dataset.gesturesReady="1";
+  const cancelDistance=72;
+  const swipeHint=$("micSwipeHint"),swipeTrack=$("micSwipeTrack"),swipeShadow=$("micSwipeShadow"),lockButton=$("micLockButton");
+  let lockDistance=(()=>{
+    const trackHeight=swipeTrack?.clientHeight||154;
+    const shadowSize=swipeShadow?.offsetHeight||48;
+    const bottomTop=trackHeight-shadowSize/2;
+    const lockCenter=(lockButton?.offsetTop||8)+(lockButton?.offsetHeight||38)/2-(swipeTrack?.clientTop||1);
+    return Math.max(52,Math.round(bottomTop-Math.max(0,lockCenter-shadowSize/2)));
+  })();
+  let hintTimer=0;
+  let searchPreviewFrame=0,queuedSearchProgress=null,searchPreviewTimer=0;
+  let swipeTrackBottomY=0,swipeLockCenterY=0;
+  const queueSearchPreview=progress=>{
+    queuedSearchProgress=Math.max(0,Math.min(1,Number(progress)||0));
+    if(searchPreviewFrame) return;
+    searchPreviewFrame=requestAnimationFrame(()=>{
+      searchPreviewFrame=0;
+      const value=queuedSearchProgress??0;
+      queuedSearchProgress=null;
+      const dock=$("dock"),display=$("searchRecordingDisplay");
+      clearTimeout(searchPreviewTimer);
+      if(value>.005){
+        ensureSearchVoiceBars();
+        dock.classList.remove("swipe-settling");
+        dock.classList.add("swipe-preview");
+        dock.style.setProperty("--swipe-input-opacity",(1-value).toFixed(3));
+        dock.style.setProperty("--swipe-wave-opacity",(.96*value).toFixed(3));
+        dock.style.setProperty("--swipe-reveal",((1-value)*100).toFixed(1)+"%");
+        display?.setAttribute("aria-hidden","false");
+      }else if(dock.classList.contains("swipe-preview")){
+        dock.classList.add("swipe-settling");
+        dock.style.setProperty("--swipe-input-opacity","1");
+        dock.style.setProperty("--swipe-wave-opacity","0");
+        dock.style.setProperty("--swipe-reveal","100%");
+        searchPreviewTimer=setTimeout(()=>{
+          if(dock.classList.contains("recording-mode")) return;
           dock.classList.remove("swipe-preview","swipe-settling");
           ["--swipe-input-opacity","--swipe-wave-opacity","--swipe-reveal"].forEach(name=>dock.style.removeProperty(name));
           display?.setAttribute("aria-hidden","true");
