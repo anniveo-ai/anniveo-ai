@@ -1,3 +1,49 @@
+async function requireChatThread(db,userId,requested){
+ const id=String(requested||'legacy');
+ if(!/^[a-zA-Z0-9_-]{1,80}$/.test(id))throw Error('Выбери разговор из списка.');
+ if(id==='legacy')await db.prepare("INSERT OR IGNORE INTO chat_threads(user_id,id,title) VALUES(?,'legacy','Первый чат')").bind(userId).run();
+ const row=await db.prepare('SELECT id,title FROM chat_threads WHERE user_id=? AND id=?').bind(userId,id).first();
+ if(!row){const e=Error('Разговор не найден. Выбери другой чат.');e.status=404;throw e;}return id;
+}
+async function handleChatThreadAction(db,userId,body){
+ await requireChatThread(db,userId,'legacy');
+ if(body.action==='chat-thread-create'){
+  const id=crypto.randomUUID(),title=String(body.title||'Новый чат').trim().slice(0,80)||'Новый чат';
+  await db.prepare('INSERT INTO chat_threads(user_id,id,title) VALUES(?,?,?)').bind(userId,id,title).run();return {id,title};
+ }
+ if(body.action==='chat-thread-rename'){
+  const id=await requireChatThread(db,userId,body.threadId),title=String(body.title||'').trim().slice(0,80);if(!title)throw Error('Напиши название разговора.');
+  await db.prepare("UPDATE chat_threads SET title=?,updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND id=?").bind(title,userId,id).run();return {id,title};
+ }
+ const result=await db.prepare("SELECT t.id,t.title,t.updated_at,(SELECT COUNT(*) FROM chat_messages m WHERE m.user_id=t.user_id AND m.thread_id=t.id) AS messages FROM chat_threads t WHERE t.user_id=? ORDER BY t.updated_at DESC,t.id LIMIT 100").bind(userId).all();return {threads:result.results||[]};
+}
+async function readNotificationPreference(db,userId){
+ const row=await db.prepare('SELECT notify_media FROM user_preferences WHERE user_id=?').bind(userId).first();return {enabled:!!row?.notify_media};
+}
+async function setNotificationPreference(db,userId,enabled){
+ if(typeof enabled!=='boolean')throw Error('Выбери, нужны ли уведомления.');
+ await db.prepare("INSERT INTO user_preferences(user_id,notify_media) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET notify_media=excluded.notify_media,updated_at=CURRENT_TIMESTAMP").bind(userId,enabled?1:0).run();return {enabled};
+}
+async function notifyReadyMedia(env,row){
+ const reserved=await env.DB.prepare("UPDATE media_jobs SET notify_sent=1 WHERE id=? AND user_id=? AND status='completed' AND notify_sent=0 AND EXISTS(SELECT 1 FROM user_preferences WHERE user_id=? AND notify_media=1)").bind(row.id,row.user_id,row.user_id).run();
+ if(!reserved.meta?.changes)return;
+ try{await telegramPaymentAPI(env,'sendMessage',{chat_id:row.user_id,text:(row.kind==='video'?'Твоё видео готово':'Твоё фото готово')+' ✨\nОткрой ANIS AI, чтобы посмотреть и сохранить результат.',reply_markup:{inline_keyboard:[[{text:'Открыть результат',web_app:{url:'https://anniveo-ai-app.pages.dev/?project='+encodeURIComponent(row.id)}}]]}});}
+ catch{console.error('Ready notification could not be confirmed',{jobId:row.id});}
+}
+async function processMediaNotifications(env){
+ if(!env.DB||!env.POLZA_API_KEY||!env.TELEGRAM_BOT_TOKEN)return;
+ const pending=await env.DB.prepare("SELECT j.* FROM media_jobs j JOIN user_preferences p ON p.user_id=j.user_id AND p.notify_media=1 WHERE j.notify_sent=0 AND j.status IN ('pending','processing','completed') AND j.created_at>datetime('now','-7 days') ORDER BY j.created_at LIMIT 8").all();
+ const rows=pending.results||[];
+ for(let i=0;i<rows.length;i+=2)await Promise.allSettled(rows.slice(i,i+2).map(async row=>{
+  try{if(row.status!=='completed'){const data=await polzaMediaRequest(env,'/'+encodeURIComponent(row.provider_id));await updatePremiumJob(env,row,data);if(data.status!=='completed')return;}await notifyReadyMedia(env,row);}catch{console.error('Background project check failed',{jobId:row.id});}
+ }));
+}
+async function improveCreationPrompt(env,body){
+ const text=String(body.prompt||'').trim(),kind=body.kind==='video'?'видео':'фото';if(text.length<3||text.length>1200)throw Error('Напиши идею: от 3 до 1200 символов.');
+ const detail=String(body.details||'').trim().slice(0,800);
+ const prompt=await askPreferredAI([{role:'system',content:'Помоги составить запрос для создания '+kind+'. Сохрани замысел человека. Уточни композицию, свет и атмосферу, но не выдумывай личные факты и не добавляй бренды. Если приложено фото, попроси сохранить внешность. Для видео добавь естественное движение и стабильность деталей. Верни только готовое описание на русском, без заголовка и кавычек, не длиннее 1100 символов.'},{role:'user',content:text+(detail?'\nПожелания: '+detail:'')}],env,'prompt-helper');
+ if(!prompt||prompt.length>1200)throw Error('Описание получилось слишком длинным. Попробуй уточнить идею короче.');return {prompt};
+}
 const PREMIUM_MEDIA_MODELS=Object.freeze({
  'google/gemini-3.1-flash-image-preview':{kind:'image',resolution:'1K'},
  'google/gemini-3-pro-image-preview':{kind:'image',resolution:'2K'},
@@ -13,7 +59,7 @@ async function polzaMediaRequest(env,path,body){
   return await response.json();
  }finally{clearTimeout(timer);}
 }
-function publicMediaJob(row){return {jobId:row.id,kind:row.kind,status:row.status,...(row.status==='completed'?{url:row.result_url}:{}),...(row.error?{error:row.error}:{})};}
+function publicMediaJob(row){return {jobId:row.id,kind:row.kind,status:row.status,prompt:row.prompt||'',quality:row.quality||'fast',ratio:row.ratio||'1:1',duration:row.duration||4,createdAt:row.created_at||null,expiresAt:row.created_at?new Date(Date.parse(row.created_at.replace(' ','T')+'Z')+7*86400000).toISOString():null,region:row.region_json?JSON.parse(row.region_json):null,...(row.status==='completed'?{url:row.result_url}:{}),...(row.error?{error:row.error}:{})};}
 function providerResultUrl(data){const value=data?.data?.url||data?.data?.[0]?.url||data?.output?.url;try{const u=new URL(value);return u.protocol==='https:'?u.href:null;}catch{return null;}}
 async function updatePremiumJob(env,row,data){
  const status=['pending','processing','completed','failed','cancelled'].includes(data.status)?data.status:'processing';
@@ -40,8 +86,8 @@ function choosePremiumMedia(body,file){
 }
 async function getMediaHistory(db,userId,kind){
  if(!['image','video'].includes(kind))throw Error('Выбери фото или видео.');
- const result=await db.prepare('SELECT id,kind,status,result_url,created_at FROM media_jobs WHERE user_id=? AND kind=? ORDER BY created_at DESC,id DESC LIMIT 50').bind(userId,kind).all();
- return {items:(result.results||[]).map(row=>{const expired=Date.now()-Date.parse(row.created_at.replace(' ','T')+'Z')>7*86400000;return {jobId:row.id,kind:row.kind,status:row.status,createdAt:row.created_at,expired,...(row.status==='completed'&&!expired?{url:row.result_url}:{})};})};
+ const result=await db.prepare('SELECT * FROM media_jobs WHERE user_id=? AND kind=? ORDER BY created_at DESC,id DESC LIMIT 50').bind(userId,kind).all();
+ return {items:(result.results||[]).map(row=>{const expired=Date.now()-Date.parse(row.created_at.replace(' ','T')+'Z')>7*86400000;const data=publicMediaJob(row);if(expired)delete data.url;return {...data,expired};})};
 }
 async function createPremiumMedia(env,userId,body,file,identityFile=null){
  if(!env.POLZA_API_KEY||!env.DB)throw Error('Платный сервис ИИ пока недоступен.');
@@ -62,6 +108,10 @@ async function createPremiumMedia(env,userId,body,file,identityFile=null){
  if(!reserve.meta?.changes){const row=await env.DB.prepare('SELECT * FROM media_jobs WHERE id=? AND user_id=?').bind(id,userId).first();if(row)return publicMediaJob(row);throw Error('Уже обрабатываются два проекта. Дождись готовности.');}
  const row={id,user_id:userId,kind,model,status:'creating'};
  try{
+  let region=null;
+  if(body.region){try{region=typeof body.region==='string'?JSON.parse(body.region):body.region;}catch{throw Error('Заново выдели область фотографии.');}if(kind!=='image'||!Array.isArray(region.points)||region.points.length<3||region.points.length>300||region.points.some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x<0||p.x>1||p.y<0||p.y>1))throw Error('Заново выдели область фотографии.');}
+  row.prompt=prompt;row.quality=String(body.quality||'fast');row.ratio=ratio;row.duration=duration;row.region_json=region?JSON.stringify(region):null;
+  await env.DB.prepare('UPDATE media_jobs SET prompt=?,quality=?,ratio=?,duration=?,region_json=? WHERE id=? AND user_id=?').bind(prompt,row.quality,ratio,duration,row.region_json,id,userId).run();
   const input={prompt,aspect_ratio:ratio};
   if(kind==='image'){input.image_resolution=selection.resolution||config.resolution;input.output_format='png';}
   else{input.duration=String(duration);input.resolution=selection.resolution||config.resolution;input.generate_audio=false;}
@@ -362,11 +412,11 @@ function cleanHistory(items, limit = 12) {
     }));
 }
 
-async function getHistory(db, userId, limit = 40) {
+async function getHistory(db, userId, limit = 40, threadId = 'legacy') {
   const rows = await db.prepare(
     "SELECT role, content FROM chat_messages " +
-    "WHERE user_id = ? ORDER BY id DESC LIMIT ?"
-  ).bind(userId, limit).all();
+    "WHERE user_id = ? AND thread_id = ? ORDER BY id DESC LIMIT ?"
+  ).bind(userId, threadId, limit).all();
 
   return (rows.results || []).reverse();
 }
@@ -376,20 +426,23 @@ async function saveConversation(
   userId,
   requestId,
   message,
-  answer
+  answer,
+  threadId = 'legacy'
 ) {
   await db.batch([
     db.prepare(
       "INSERT INTO chat_messages " +
-      "(user_id, role, content) " +
-      "VALUES (?, 'user', ?)"
-    ).bind(userId, message),
+      "(user_id, role, content, thread_id) " +
+      "VALUES (?, 'user', ?, ?)"
+    ).bind(userId, message, threadId),
 
     db.prepare(
       "INSERT INTO chat_messages " +
-      "(user_id, role, content) " +
-      "VALUES (?, 'assistant', ?)"
-    ).bind(userId, answer),
+      "(user_id, role, content, thread_id) " +
+      "VALUES (?, 'assistant', ?, ?)"
+    ).bind(userId, answer, threadId),
+
+    db.prepare("UPDATE chat_threads SET updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND id=?").bind(userId,threadId),
 
     db.prepare(
       "UPDATE chat_requests " +
@@ -999,7 +1052,8 @@ function makeStreamResponse(
     userId,
     requestId,
     message,
-    started
+    started,
+    threadId
   } = options;
 
   const output = new TransformStream();
@@ -1062,7 +1116,8 @@ function makeStreamResponse(
           userId,
           requestId,
           message,
-          answer
+          answer,
+          threadId
         );
 
         saved = true;
@@ -1260,6 +1315,7 @@ async function proxyVideo(form, apiKey) {
 }
 
 export default {
+  async scheduled(controller,env,ctx){ctx.waitUntil(processMediaNotifications(env));},
   async fetch(request, env, ctx) {
     if (new URL(request.url).pathname === "/telegram/payments") return handlePaymentWebhook(request, env);
     const headers = {
@@ -1380,6 +1436,13 @@ export default {
         );
       }
 
+      if(['chat-thread-list','chat-thread-create','chat-thread-rename','notification-get','notification-set','prompt-improve'].includes(action)){
+        if(!env.DB)return json({error:'Сервис временно недоступен. Попробуй позже.'},503,headers);
+        try{
+          const data=action.startsWith('chat-thread-')?await handleChatThreadAction(env.DB,userId,body):action==='notification-get'?await readNotificationPreference(env.DB,userId):action==='notification-set'?await setNotificationPreference(env.DB,userId,body.enabled):await improveCreationPrompt(env,body);
+          return json(data,200,headers);
+        }catch(error){return json({error:error.message},error.status||400,headers);}
+      }
       if(action==="media-history"){
         if(!env.DB)return json({error:'История временно недоступна'},503,headers);
         try{return json(await getMediaHistory(env.DB,userId,body.kind),200,headers);}catch(error){return json({error:error.message},400,headers);}
@@ -1484,7 +1547,8 @@ export default {
         const messages = await getHistory(
           env.DB,
           userId,
-          40
+          40,
+          await requireChatThread(env.DB,userId,body.threadId)
         );
 
         return json(
@@ -1543,6 +1607,7 @@ export default {
       const streaming = body.stream === true;
 
       let history = [];
+      const threadId=anonymous?'legacy':await requireChatThread(env.DB,userId,body.threadId);
 
       if (anonymous) {
         history = cleanHistory(
@@ -1609,7 +1674,8 @@ export default {
         history = await getHistory(
           db,
           userId,
-          12
+          12,
+          threadId
         );
       }
 
@@ -1659,7 +1725,8 @@ export default {
             userId,
             requestId,
             message,
-            started
+            started,
+            threadId
           },
           headers,
           ctx
@@ -1684,7 +1751,8 @@ export default {
           userId,
           requestId,
           message,
-          answer
+          answer,
+          threadId
         );
 
         saved = true;

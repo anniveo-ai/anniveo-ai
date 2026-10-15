@@ -5,6 +5,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#101119">
+<meta name="anis-build" content="__ANIS_BUILD__">
+<link rel="stylesheet" href="stability.css?v=__ANIS_BUILD__">
 <title>ANIS AI</title><script>try{document.documentElement.dataset.theme=localStorage.getItem("anis-theme")==="light"?"light":"dark";}catch{}</script>
 <link rel="preconnect" href="https://anniveo-ai-api.yaylaevismail.workers.dev" crossorigin>
 <link rel="preload" as="image" href="orb20-real.webp">
@@ -3160,12 +3162,12 @@ async function api(payload,timeout=90000,onToken=null,requestController=null){
       method:"POST",
       headers:{"Content-Type":"application/json"},
       signal:controller.signal,
-      body:JSON.stringify({...payload,...(onToken?{stream:true}:{}),initData})
+      body:JSON.stringify({...payload,threadId:window.anisStability?.activeChatId||'legacy',...(onToken?{stream:true}:{}),initData})
     },message=>{
       if(orbVoiceActive) setVoiceChatStatus(message,"thinking");
     });
     if(!response.ok){
-      throw Error(data.error||"Ошибка сервера ANIS AI");
+      const error=Error(data.error||"Ошибка сервера ANIS AI");error.status=response.status;throw error;
     }
     if(response.headers.get("content-type")?.includes("text/event-stream")){
       const reader=response.body.getReader();
@@ -4858,7 +4860,7 @@ async function launchStudioProject(p){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),60000);
  try{
   const file=p.sourceFile&&p.sourceFile.type.startsWith('image/')?await prepareStudioImage(p.sourceFile):p.sourceFile;
-  const payload={action:'media-create',kind:p.kind,requestId:p.id,prompt:p.prompt,quality:p.quality,ratio:p.ratio,initData};if(p.kind==='video')payload.duration=p.duration;
+  const payload={action:'media-create',kind:p.kind,requestId:p.id,prompt:p.providerPrompt||p.prompt,quality:p.quality,ratio:p.ratio,initData};if(p.kind==='video')payload.duration=p.duration;if(p.region)payload.region=JSON.stringify(p.region);
   let response;if(file||p.identityFile){const form=new FormData();for(const [key,value]of Object.entries(payload))form.append(key,String(value));if(file)form.append('file',file,file.name);if(p.identityFile)form.append('identityFile',p.identityFile,p.identityFile.name);response=await fetch(API_URL,{method:'POST',body:form,signal:controller.signal});}
   else response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});
   const data=await response.json();if(!response.ok){p.status='failed';throw Error(data.error||'Не удалось создать проект.');}
@@ -5192,13 +5194,12 @@ applyAppTheme(document.documentElement.dataset.theme);
 showWelcome=true;
 renderChat();
 updateControls();
-loadHistory();
 void refreshWallet();
 void prefetchUsageStats();
 setupMediaMicGestures();
 syncMediaMic();
-void resumeMediaProjects();
 </script>
+<script src="stability.js?v=__ANIS_BUILD__"></script>
 
 </body>
 </html>

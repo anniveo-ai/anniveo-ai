@@ -1,0 +1,30 @@
+/* Stability controls share ANIS AI's restrained glass surfaces. */
+.anis-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 16px}
+.anis-button{font:inherit;color:inherit;border:1px solid #77708666;background:#242131;border-radius:15px;padding:11px 14px;min-height:44px;cursor:pointer;transition:background .25s,transform .25s,border-color .25s}
+.anis-button:active{transform:scale(.97)}
+.anis-button.primary{background:linear-gradient(115deg,#9b54e7,#7137bd);border-color:#bc88ed;color:#fff}
+.anis-toolbar select{flex:1;min-width:120px;max-width:260px;min-height:44px;color:inherit;background:#211e2c;border:1px solid #77708666;border-radius:14px;padding:8px;font:inherit}
+.anis-dialog{width:min(94vw,540px);max-height:88dvh;overflow:auto;padding:22px;color:#f4effb;background:#191722;border:1px solid #8e6bb166;border-radius:26px;box-shadow:0 20px 90px #0009}
+.anis-dialog::backdrop{background:#090613b8;backdrop-filter:blur(10px)}
+.anis-dialog header{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}
+.anis-dialog h2{font-size:22px;margin:0}.anis-dialog p,.anis-note{color:#c2b9cf;line-height:1.5;font-size:14px}
+.anis-dialog input,.anis-dialog textarea{font:inherit;width:100%;padding:13px;border-radius:15px;background:#262132;color:#f5f0fc;border:1px solid #76638977;margin:6px 0 14px;min-height:46px;box-sizing:border-box}
+.anis-dialog textarea{min-height:110px;resize:vertical}.anis-dialog label{display:block;font-size:14px}
+.anis-banner{position:fixed;top:calc(env(safe-area-inset-top,0px) + 74px);left:50%;transform:translateX(-50%);width:min(92vw,560px);z-index:2100;border:1px solid #9b76c5;background:#282131f5;color:#fff;border-radius:18px;padding:10px 14px;box-shadow:0 8px 35px #0005;display:flex;align-items:center;gap:12px;font-size:14px}
+.anis-banner[hidden],#studioKeyboardBar[hidden]{display:none!important}.anis-banner span{flex:1}
+#studioKeyboardBar{position:fixed;z-index:2200;left:12px;right:12px;height:52px;display:flex;align-items:center;gap:8px;padding:4px 8px;background:#201a2ff5;border:1px solid #ab80cd77;border-radius:17px;box-shadow:0 -6px 35px #0005}
+#studioKeyboardBar .primary{flex:1;min-height:42px}#studioKeyboardBar button{padding:8px 12px;min-height:42px}
+.anis-expiry{padding:12px 14px;border:1px solid #9878b455;border-radius:16px;margin:12px 0;color:#cdbde0;font-size:13px;line-height:1.45}.anis-expiry.warning{border-color:#d9ae63;color:#f4cd8e}
+.anis-steps{display:flex;gap:5px;margin:10px 0 16px}.anis-steps span{flex:1;height:4px;border-radius:4px;background:#76658c44}.anis-steps .done{background:#ba80ef}
+.anis-notify{display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #86739855;border-radius:16px;margin:12px 0;font-size:14px}.anis-notify input{width:22px;height:22px;accent-color:#965ad0;flex-shrink:0}
+#regionCanvas{width:100%;display:block;touch-action:none;border-radius:16px;background:#111;cursor:crosshair}.anis-region-active{border-color:#bd88ef!important}
+[data-theme="light"] .anis-button,[data-theme="light"] .anis-toolbar select{background:#f3edf9;color:#2f2240;border-color:#c8b8d9}
+[data-theme="light"] .anis-button.primary{background:linear-gradient(115deg,#8840cf,#682aa8);color:#fff}
+[data-theme="light"] .anis-dialog{color:#281e34;background:#fffafF;border-color:#c7b5d8}
+[data-theme="light"] .anis-dialog p,[data-theme="light"] .anis-note,[data-theme="light"] .anis-expiry{color:#5c486e}
+[data-theme="light"] .anis-dialog input,[data-theme="light"] .anis-dialog textarea{color:#30203d;background:#f5eef9;border-color:#bfaccf}
+[data-theme="light"] input::placeholder,[data-theme="light"] textarea::placeholder{color:#74637f!important;opacity:1}
+[data-theme="light"] .anis-banner,[data-theme="light"] #studioKeyboardBar{background:#fbf7fff8;color:#30203d;border-color:#b49bc7}
+[data-theme="light"] .anis-notify{border-color:#c7b4d6}[data-theme="light"] .anis-expiry.warning{color:#744c12;border-color:#ad7c32}
+@media(max-width:480px){.anis-toolbar{gap:6px}.anis-button{font-size:13px;padding:10px 12px}.anis-dialog{padding:18px}.format-help-trigger{min-height:44px}.anis-toolbar select{max-width:none}}
+@media(prefers-reduced-motion:reduce){.anis-button{transition:none}}
