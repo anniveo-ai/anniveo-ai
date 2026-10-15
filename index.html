@@ -1694,7 +1694,7 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
 
 <div id="mediaProjectSwitcher" class="studio-project-tabs" role="group" aria-label="Тип проекта" hidden><span class="studio-tab-highlight" aria-hidden="true"></span><button type="button" data-media-tab="studio" aria-pressed="true" onclick="openView('studio')"><svg class="studio-tab-icon" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="20" height="20" rx="5"/><circle cx="18.5" cy="9.5" r="1.3" fill="currentColor" stroke="none"/><path d="m5 19 6-7 5 5 3-3 5 5"/></svg><span class="studio-tab-caption">Создать фото</span></button><button type="button" data-media-tab="video" aria-pressed="false" onclick="openView('video')"><svg class="studio-tab-icon" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="15" height="16" rx="4"/><path d="m18 11 7-4v14l-7-4Z"/><path d="m9 11 5 3-5 3Z"/></svg><span class="studio-tab-caption">Создать видео</span></button><button type="button" data-media-tab="templates" aria-pressed="false" onclick="openView('templates')"><svg class="studio-tab-icon" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 5 2.2 6.8L21 14l-6.8 2.2L12 23l-2.2-6.8L3 14l6.8-2.2Z"/><path d="m22 3 1 3 3 1-3 1-1 3-1-3-3-1 3-1Z"/></svg><span class="studio-tab-caption">Шаблоны</span></button><button type="button" data-media-tab="ready" aria-pressed="false" onclick="window.anisStability?.openReadyProjects()"><svg class="studio-tab-icon" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 3 11 6-11 6L3 9Z"/><path d="m3 14 11 6 11-6M3 19l11 6 11-6"/></svg><span class="studio-tab-caption">Готовые</span></button></div>
 <!-- ЧАТ -->
-<section id="view-home" class="view active">
+<section id="view-chat" class="view active">
 <div id="welcome" class="welcome">
   <h1 id="greeting">Привет 👋🏻</h1>
   <h2>С чего начнём?</h2>
@@ -1747,9 +1747,6 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
   </div>
 </div>
 
-</section>
-<section id="view-chat" class="view">
-<h1 class="page-title">Чат</h1>
 <div class="mode">
   <span class="shield">♢</span>
   <div>
@@ -2020,10 +2017,9 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
 <!-- НАВИГАЦИЯ -->
 <nav id="bottomNav">
   <div id="navGlider"></div>
-  <button class="active" data-tab="home" onclick="openView('home')"><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></svg></span>Главное</button>
-  <button data-tab="chat"
+  <button class="active" data-tab="chat"
     onclick="openView('chat')">
-    <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 2v-6.5A7.5 7.5 0 1 1 20 11.5Z"/><path d="M8 10h8M8 14h5"/></svg></span>Чат
+    <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 2v-6.5A7.5 7.5 0 1 1 20 11.5Z"/><path d="M8 10h8M8 14h5"/></svg></span>Главное
   </button>
   <button data-tab="studio"
     onclick="openView('studio')">
@@ -2076,7 +2072,7 @@ try{
 const initData = tg?.initData || "";
 const user = tg?.initDataUnsafe?.user || null;
 
-let currentView = "home";
+let currentView = "chat";
 let anonymous = false;
 let busy = false;
 let activeRequestTask = null;
@@ -2741,6 +2737,7 @@ function scrollAppToBottom(){
 
 /* РАЗДЕЛЫ */
 function openView(name){
+  if(name==="home"){name="chat";showWelcome=true;returnToChatAvailable=normalHistory.length>0;newestFirstChat=true;}
   if(mediaVoiceTask)cancelMediaDictation();
   if(name==="image")name="studio";
   closeAttachmentMenu();
@@ -2793,10 +2790,10 @@ function openView(name){
 
 /* ГЛАВНЫЙ ЭКРАН */
 function updateWelcome(){
-  const landingVisible=currentView==='home';showWelcome=landingVisible;
+  const landingVisible=showWelcome&&!anonymous;
   $("welcome").classList.toggle("hidden",!landingVisible);
   $("collapseChatButton")?.classList.toggle("hidden",landingVisible||anonymous||currentView!=="chat");
-  const showReturn=landingVisible&&returnToChatAvailable&&!anonymous;
+  const showReturn=landingVisible&&returnToChatAvailable&&!anonymous&&currentView==="chat";
   $("returnToChatButton")?.classList.toggle("hidden",!showReturn);
   $("app")?.classList.toggle("has-return-to-chat",showReturn);
   syncChatOrbUI();
@@ -2809,8 +2806,8 @@ function collapseChat(){
   }
   endVoiceSession();
   returnToChatAvailable=normalHistory.length>0;
-  showWelcome=true;newestFirstChat=false;
-  openView('home');
+  showWelcome=true;newestFirstChat=true;
+  updateWelcome();renderChat();
   app.scrollTo({top:0,behavior:"smooth"});
   tg?.HapticFeedback?.impactOccurred("light");
 }
@@ -2823,7 +2820,7 @@ function returnToChat(){
   if(orbVoiceActive) endVoiceSession();
   returnToChatAvailable=false;
   showWelcome=false;newestFirstChat=false;
-  openView('chat');
+  updateWelcome();renderChat();
   scrollAppToBottom();
   tg?.HapticFeedback?.impactOccurred("light");
 }
@@ -3091,7 +3088,7 @@ function cancelActiveRequest(event){
 function renderChat(){
   updateWelcome();
   $("messages").replaceChildren();
-  if(showWelcome&&!anonymous&&!returnToChatAvailable){
+  if(showWelcome&&!anonymous&&!normalHistory.length){
     renderVoiceProgress();
     return;
   }

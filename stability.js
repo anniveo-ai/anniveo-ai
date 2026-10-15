@@ -142,7 +142,7 @@
  const readyView=el('section',{id:'view-ready',className:'view photo-studio'}),readyHeading=el('div',{className:'studio-heading'}),readyHeadingCopy=el('div'),readyGrid=el('div',{id:'studioReadyList',className:'studio-template-list studio-ready-list'});
  readyHeadingCopy.append(el('h1',{className:'page-title'},'Твои готовые работы'),el('p',{className:'subtitle'},'Фото, видео и новые варианты — всё в одном месте.'));readyHeading.append(readyHeadingCopy);readyView.append(readyHeading,readyGrid);$('view-templates').after(readyView);
  const originalOpenStudioView=openView;
- openView=function(name){originalOpenStudioView(name);if(currentView==='chat')document.querySelector('#bottomNav [data-tab="home"]').classList.add('active');const tabs=$('mediaProjectSwitcher'),ready=currentView==='ready';tabs.classList.toggle('ready-selected',ready);if(ready){tabs.hidden=false;tabs.classList.remove('video-selected','templates-selected');tabs.querySelectorAll('[data-media-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mediaTab==='ready')));studioNav.classList.add('active');state.ackStudioResults();renderReadyProjects();requestAnimationFrame(moveGlider);}};
+ openView=function(name){originalOpenStudioView(name);const tabs=$('mediaProjectSwitcher'),ready=currentView==='ready';tabs.classList.toggle('ready-selected',ready);if(ready){tabs.hidden=false;tabs.classList.remove('video-selected','templates-selected');tabs.querySelectorAll('[data-media-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mediaTab==='ready')));studioNav.classList.add('active');state.ackStudioResults();renderReadyProjects();requestAnimationFrame(moveGlider);}};
  state.openReadyProjects=()=>openView('ready');
  let readyRenderKey='';
  function renderReadyProjects(){
@@ -193,8 +193,6 @@
 
  // Each normal conversation has its own server context and per-account cache.
  // Conversation data stays intact; the main screen owns chat navigation again.
- document.querySelector('#bottomNav [data-tab="chat"]')?.remove();
- $('view-chat').querySelector('h1')?.remove();
  const threadSelect=el('select');
  function chatLocked(){return busy||recording||openingMic||transcribing||orbVoiceActive;}
  function renderThreads(){threadSelect.replaceChildren();const rows=state.threads.length?state.threads:[{id:'legacy',title:'Первый чат'}];for(const t of rows)threadSelect.append(el('option',{value:t.id},t.title));threadSelect.value=state.activeChatId;}
@@ -203,7 +201,7 @@
  loadHistory=async function(){
   if(!initData||!user||anonymous||busy||historyLoading)return;
   const id=state.activeChatId;historyLoading=true;
-  try{const data=await api({action:'history',threadId:id},20000);if(id===state.activeChatId&&!busy){normalHistory=cleanHistory(data.messages);saveCache();historyLoaded=true;updateWelcome();if(!anonymous&&!showWelcome)renderChat();}}
+  try{const data=await api({action:'history',threadId:id},20000);if(id===state.activeChatId&&!busy){normalHistory=cleanHistory(data.messages);saveCache();historyLoaded=true;updateWelcome();if(!anonymous)renderChat();}}
   catch(error){explain(error,()=>loadHistory(),'Загрузить разговор');}finally{historyLoading=false;}
  };
  async function switchThread(id){
@@ -325,9 +323,7 @@
   }catch{storageWarning();}
   state.restoring=false;updateRegionButton();updateProjectDock();
   state.threads=read('threads',[]);renderThreads();normalHistory=cleanHistory(read('chat:'+state.activeChatId,normalHistory));renderChat();
-  const firstSeparateHome=!read('separate-home',false);write('separate-home',true);
-  if(firstSeparateHome&&drafts?.view==='chat')openView('home');
-  else if(drafts?.view&&['home','chat','studio','video','profile','history','statistics','templates'].includes(drafts.view))openView(drafts.view);
+  if(drafts?.view&&['home','chat','studio','video','profile','history','statistics','templates','ready'].includes(drafts.view))openView(drafts.view);
   void refreshThreads().then(()=>loadHistory()).catch(()=>{});
   if(initData&&user)void mediaJSON({action:'notification-get'}).then(data=>notifyToggle.checked=data.enabled).catch(()=>{});
   void resumeMediaProjects();void checkRelease();
