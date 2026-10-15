@@ -1555,7 +1555,7 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
   <div class="logo">✦ ANNIVEO <span>AI</span></div>
   <button class="credit" onclick="openView('balance')">
     <span class="balance-label">Баланс</span>
-    <span class="balance-number">0</span>
+    <span class="balance-number" data-wallet-balance>0</span>
     <span class="balance-star">✦</span>
   </button>
   <button class="gear" onclick="openView('profile')">⚙</button>
@@ -1760,7 +1760,7 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
     <button class="profile-settings" type="button" aria-label="Настройки профиля" onclick="showProfilePanel('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3-1 3-3 1-2 4 2 2v4l3 1 2 3h4l2-3 3-1v-4l2-2-2-4-3-1-1-3Z"/><circle cx="12" cy="12" r="3"/></svg></button>
   </div>
   <div class="profile-wallet">
-    <div class="profile-wallet-copy"><button class="profile-balance-value" type="button" aria-label="Открыть баланс" onclick="openView('balance')"><strong>0 <span>✦</span></strong></button><span class="profile-wallet-label">Баланс ANNIVEO</span>
+    <div class="profile-wallet-copy"><button class="profile-balance-value" type="button" aria-label="Открыть баланс" onclick="openView('balance')"><strong><b data-wallet-balance style="font:inherit">0</b> <span>✦</span></strong></button><span class="profile-wallet-label">Баланс ANNIVEO</span>
       <button type="button" onclick="openView('balance')">＋ Пополнить</button>
     </div>
     <div class="profile-coins-art"><button class="coin-art-action" type="button" onclick="joltCoins(this)" aria-label="Пошевелить монеты"><img src="profile-coins-real-v1.webp" width="768" height="512" alt="Сияющие монеты ANNIVEO" decoding="async"></button></div>
@@ -1783,16 +1783,16 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
   <div class="balance-page-heading"><h1>Баланс</h1><button type="button" onclick="showWalletNotice('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7M12 7v5l3 2"/></svg>История</button></div>
   <p class="balance-page-subtitle">Твои монеты — больше возможностей.</p>
   <div class="balance-hero">
-    <div class="balance-total"><strong>0 <span>✦</span></strong><span>ANNIVEO</span></div>
+    <div class="balance-total"><strong><b data-wallet-balance style="font:inherit">0</b> <span>✦</span></strong><span>ANNIVEO</span></div>
     <button class="coin-art-action wallet-art-action" type="button" aria-label="Пошевелить монеты на балансе" onclick="joltCoins(this)"><img src="wallet-coins-real-v1.webp" width="1152" height="768" alt="Объёмные сияющие монеты с фиолетовым разломом" decoding="async"></button>
   </div>
   <div class="wallet-packages" role="group" aria-label="Выбери пакет монет">
-    <button type="button" class="wallet-package" aria-pressed="false" data-wallet-pack="0" onclick="selectWalletPack(0)"><strong>100</strong><span>249 ₽</span></button>
-    <button type="button" class="wallet-package selected" aria-pressed="true" data-wallet-pack="1" onclick="selectWalletPack(1)"><small>Выгодно</small><strong>500</strong><span>799 ₽</span></button>
-    <button type="button" class="wallet-package" aria-pressed="false" data-wallet-pack="2" onclick="selectWalletPack(2)"><strong>1000</strong><span>1490 ₽</span></button>
+    <button type="button" class="wallet-package" aria-pressed="false" data-wallet-pack="0" onclick="selectWalletPack(0)"><strong>100</strong><span>99 ⭐</span></button>
+    <button type="button" class="wallet-package selected" aria-pressed="true" data-wallet-pack="1" onclick="selectWalletPack(1)"><strong>500</strong><span>499 ⭐</span></button>
+    <button type="button" class="wallet-package" aria-pressed="false" data-wallet-pack="2" onclick="selectWalletPack(2)"><strong>1000</strong><span>999 ⭐</span></button>
   </div>
-  <button class="wallet-topup" type="button" onclick="showWalletNotice('checkout')">Пополнить</button>
-  <p class="wallet-payment-note">Приём оплаты пока не подключён</p>
+  <button class="wallet-topup" type="button" onclick="startWalletTopup()">Пополнить</button>
+  <p class="wallet-payment-note">Оплата через Telegram Stars · монеты начисляются после оплаты</p>
   <button class="wallet-bonus" type="button" onclick="showWalletNotice('bonus')"><span class="wallet-bonus-icon">✦</span><span><strong>Получить монеты</strong><small>Бонусы и новые возможности</small></span><span class="wallet-bonus-arrow">›</span></button>
   <div class="wallet-tools"><button type="button" onclick="showWalletNotice('history')"><span>◷</span>История</button><button type="button" onclick="showWalletNotice('promo')"><span>✧</span>Промокод</button><button type="button" onclick="showWalletNotice('gift')"><span>♧</span>Подарить</button></div>
 </section>
@@ -2695,6 +2695,7 @@ function openView(name){
   });
   $("dock").classList.toggle("hidden",name!=="chat");
 
+  if(name==="profile"||name==="balance") void refreshWallet();
   if(name==="history") showHistory();
   if(name==="chat") renderChat();
 
@@ -3418,8 +3419,100 @@ function showProfilePanel(kind){
 }
 
 
-const WALLET_PACKS=Object.freeze([{coins:100,rubles:249},{coins:500,rubles:799},{coins:1000,rubles:1490}]);
+const WALLET_PACKS=Object.freeze([{id:"coins100",coins:100,stars:99},{id:"coins500",coins:500,stars:499},{id:"coins1000",coins:1000,stars:999}]);
 let selectedWalletPack=1;
+let walletData=null;
+let walletLoad=null;
+let walletPaymentBusy=false;
+let walletPolling=false;
+function walletNote(message){
+  document.querySelector('.wallet-payment-note').textContent=message;
+}
+async function refreshWallet(){
+  if(!initData||!user)return null;
+  if(walletLoad)return walletLoad;
+  walletLoad=(async()=>{
+    const data=await api({action:'wallet'},15000);
+    if(!Number.isSafeInteger(data.balance)||data.balance<0)throw Error('Не удалось получить баланс');
+    walletData=data;
+    document.querySelectorAll('[data-wallet-balance]').forEach(el=>el.textContent=data.balance.toLocaleString('ru-RU'));
+    return data;
+  })();
+  try{return await walletLoad;}
+  catch(error){walletNote(error.message);return null;}
+  finally{walletLoad=null;}
+}
+function setWalletPaymentBusy(value){
+  walletPaymentBusy=value;
+  const button=document.querySelector('.wallet-topup');
+  button.disabled=value;
+  button.textContent=value?'Ожидаем оплату…':'Пополнить';
+  button.style.opacity=value?'.65':'';
+}
+async function awaitWalletCredit(orderId){
+  walletPolling=true;
+  try{
+    for(let attempt=0;attempt<12;attempt++){
+      if(attempt)await new Promise(resolve=>setTimeout(resolve,1500));
+      const data=await refreshWallet();
+      const receipt=data?.history?.find(item=>item.order_id===orderId);
+      if(receipt&&!receipt.refunded_at){
+        walletNote('Готово! На баланс зачислено '+receipt.coins+' монет.');
+        toast('Баланс пополнен на '+receipt.coins+' монет');
+        tg?.HapticFeedback?.notificationOccurred?.('success');
+        return;
+      }
+    }
+    walletNote('Telegram обрабатывает платёж. Баланс обновится после подтверждения. Помощь: @ISMAILCHIIK');
+  }finally{walletPolling=false;setWalletPaymentBusy(false);}
+}
+async function startWalletTopup(){
+  if(walletPaymentBusy)return;
+  if(!initData||!user){toast('Открой приложение через Telegram для оплаты');return;}
+  if(typeof tg?.openInvoice!=='function'){toast('Обнови Telegram, чтобы оплатить звёздами');return;}
+  setWalletPaymentBusy(true);
+  walletNote('Создаём счёт в Telegram…');
+  try{
+    const pack=WALLET_PACKS[selectedWalletPack];
+    const invoice=await api({action:'wallet-invoice',packId:pack.id},20000);
+    if(typeof invoice.url!=='string'||!invoice.url.startsWith('https://t.me/'))throw Error('Не удалось открыть счёт');
+    let closed=false;
+    tg.openInvoice(invoice.url,status=>{
+      if(closed)return;closed=true;
+      // Client status never credits coins. Only the verified server receipt does.
+      if(status==='paid'||status==='pending'){
+        walletNote('Проверяем подтверждение платежа…');
+        void awaitWalletCredit(invoice.orderId);
+      }else{
+        setWalletPaymentBusy(false);
+        walletNote(status==='cancelled'?'Оплата отменена. Можно выбрать пакет и попробовать снова.':'Платёж не завершён. Попробуй ещё раз или напиши в поддержку.');
+        void refreshWallet();
+      }
+    });
+  }catch(error){
+    setWalletPaymentBusy(false);walletNote(error.message);toast(error.message);
+  }
+}
+async function showWalletHistory(){
+  const body=$('profileDialogBody'),title=$('profileDialogTitle');
+  body.replaceChildren();title.textContent='История пополнений';
+  const loading=document.createElement('p');loading.textContent='Загружаем операции…';body.append(loading);
+  if(!$('profileDialog').open)$('profileDialog').showModal();
+  const data=await refreshWallet();body.replaceChildren();
+  if(!data){const p=document.createElement('p');p.textContent=initData?'Не удалось загрузить историю. Попробуй ещё раз.':'Открой приложение через Telegram, чтобы увидеть свои операции.';body.append(p);return;}
+  if(!data.history.length){const p=document.createElement('p');p.textContent='Пополнений пока нет.';body.append(p);return;}
+  for(const item of data.history){
+    const row=document.createElement('p');row.style.cssText='padding:12px 0;border-bottom:1px solid #ffffff14;line-height:1.6';
+    const label=document.createElement('strong');label.textContent=(item.refunded_at?'Возврат: ':'+')+item.coins+' монет · '+item.stars+' ⭐';
+    const details=document.createElement('small');details.style.cssText='display:block;overflow-wrap:anywhere;opacity:.7';
+    details.textContent=new Date(item.paid_at*1000).toLocaleString('ru-RU')+' · Заказ '+item.order_id;
+    row.append(label,details);body.append(row);
+  }
+}
+window.addEventListener('focus',()=>{if(!walletPolling)void refreshWallet();});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!walletPolling)void refreshWallet();});
+
+
 function selectWalletPack(index){
   if(!Number.isInteger(index)||!WALLET_PACKS[index])return;
   selectedWalletPack=index;
@@ -3437,13 +3530,14 @@ function joltCoins(button){
   tg?.HapticFeedback?.impactOccurred("light");
 }
 function showWalletNotice(kind){
+  if(kind==="history"){void showWalletHistory();return;}
+  if(kind==="checkout"){void startWalletTopup();return;}
   const body=$("profileDialogBody"),title=$("profileDialogTitle");body.replaceChildren();
   const pack=WALLET_PACKS[selectedWalletPack];
   const notices={
     history:["История операций","Операций пока нет. Здесь появятся пополнения и списания монет."],
-    checkout:["Пополнение баланса",`Выбран пакет: ${pack.coins} монет за ${pack.rubles} ₽. Приём оплаты пока не подключён. Пополнить баланс сейчас нельзя.`],
     bonus:["Получить монеты","Бонусы и задания готовятся к запуску. Начисление монет пока недоступно."],
-    promo:["Промокод","Активация промокодов появится после подключения баланса."],
+    promo:["Промокод","Промокоды пока недоступны."],
     gift:["Подарить монеты","Подарки и переводы монет пока недоступны."]
   };
   const notice=notices[kind];if(!notice)return;
@@ -4649,6 +4743,7 @@ showWelcome=true;
 renderChat();
 updateControls();
 loadHistory();
+void refreshWallet();
 </script>
 
 </body>

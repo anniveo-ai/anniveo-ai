@@ -1,3 +1,119 @@
+// Server-owned prices; never accept coin quantities or prices from the client.
+const STAR_PACKS = Object.freeze([
+  { id: 'coins100', coins: 100, stars: 99 },
+  { id: 'coins500', coins: 500, stars: 499 },
+  { id: 'coins1000', coins: 1000, stars: 999 }
+]);
+const PAYMENT_WEBHOOK_URL = 'https://anniveo-ai-api.yaylaevismail.workers.dev/telegram/payments';
+
+async function telegramPaymentAPI(env, method, data = {}) {
+  const response = await fetch('https://api.telegram.org/bot' + env.TELEGRAM_BOT_TOKEN + '/' + method, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data), signal: AbortSignal.timeout(7000)
+  });
+  const result = await response.json();
+  if (!response.ok || !result.ok) throw new Error('Telegram payment API failed: ' + method);
+  return result.result;
+}
+
+async function paymentWebhookSecret(env) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.TELEGRAM_BOT_TOKEN),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const bytes = new Uint8Array(await crypto.subtle.sign('HMAC', key,
+    new TextEncoder().encode('ANNIVEO payment webhook v1')));
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function readWallet(db, userId) {
+  const balance = await db.prepare('SELECT COALESCE(SUM(CASE WHEN COALESCE(r.refunded_at,f.refunded_at) IS NULL THEN r.coins ELSE 0 END),0) AS balance FROM payment_receipts r LEFT JOIN payment_refunds f ON f.charge_id=r.charge_id AND f.order_id=r.order_id WHERE r.user_id=?').bind(userId).first();
+  const history = await db.prepare('SELECT r.order_id,r.coins,r.stars,r.paid_at,COALESCE(r.refunded_at,f.refunded_at) AS refunded_at FROM payment_receipts r LEFT JOIN payment_refunds f ON f.charge_id=r.charge_id AND f.order_id=r.order_id WHERE r.user_id=? ORDER BY r.paid_at DESC LIMIT 30').bind(userId).all();
+  return { balance: Number(balance.balance), packs: STAR_PACKS, history: history.results };
+}
+
+async function createWalletInvoice(env, userId, packId) {
+  const pack = STAR_PACKS.find(p => p.id === packId);
+  if (!pack) return { error: 'Выбери пакет монет', status: 400 };
+  const webhook = await telegramPaymentAPI(env, 'getWebhookInfo');
+  if (webhook.url !== PAYMENT_WEBHOOK_URL) return { error: 'Приём платежей временно недоступен. Напиши в поддержку.', status: 503 };
+  const now = Math.floor(Date.now() / 1000);
+  // Limit accidental double taps without trusting browser state.
+  const recent = await env.DB.prepare('SELECT COUNT(*) AS n FROM payment_orders WHERE user_id=? AND created_at>?').bind(userId, now - 60).first();
+  if (recent.n >= 5) return { error: 'Подожди минуту перед новым счётом', status: 429 };
+  const id = 'av1_' + crypto.randomUUID();
+  await env.DB.prepare('INSERT INTO payment_orders(id,user_id,coins,stars,created_at,expires_at) VALUES(?,?,?,?,?,?)')
+    .bind(id, userId, pack.coins, pack.stars, now, now + 1800).run();
+  const url = await telegramPaymentAPI(env, 'createInvoiceLink', {
+    title: pack.coins + ' монет ANNIVEO', description: 'Пополнение баланса ANNIVEO AI на ' + pack.coins + ' монет. Поддержка: @ISMAILCHIIK.',
+    payload: id, provider_token: '', currency: 'XTR', prices: [{ label: pack.coins + ' монет', amount: pack.stars }]
+  });
+  return { url, orderId: id, coins: pack.coins, stars: pack.stars };
+}
+
+async function handlePaymentUpdate(update, env) {
+  const db = env.DB;
+  if (update.pre_checkout_query) {
+    const q = update.pre_checkout_query;
+    const order = await db.prepare('SELECT * FROM payment_orders WHERE id=?').bind(q.invoice_payload).first();
+    let ok = !!order && order.user_id === String(q.from.id) && q.currency === 'XTR' && q.total_amount === order.stars && order.expires_at > Date.now()/1000 && order.status !== 'paid';
+    if (ok) {
+      const reserve = await db.prepare("UPDATE payment_orders SET precheckout_id=?,status='checking' WHERE id=? AND (precheckout_id IS NULL OR precheckout_id=?) AND status!='paid'")
+        .bind(q.id, order.id, q.id).run();
+      ok = reserve.meta.changes === 1;
+    }
+    await telegramPaymentAPI(env, 'answerPreCheckoutQuery', {
+      pre_checkout_query_id: q.id, ok,
+      ...(!ok ? { error_message: 'Счёт уже использован или устарел. Открой баланс и создай новый.' } : {})
+    });
+    return;
+  }
+  const message = update.message;
+  if (!message) return;
+  const payment = message.successful_payment;
+  if (payment) {
+    const order = await db.prepare('SELECT * FROM payment_orders WHERE id=?').bind(payment.invoice_payload).first();
+    if (!order || order.user_id !== String(message.from?.id) || payment.currency !== 'XTR' || payment.total_amount !== order.stars || !payment.telegram_payment_charge_id) {
+      console.error('Rejected mismatched payment update', { updateId: update.update_id });
+      return;
+    }
+    // One atomic batch. Unique charge AND unique order prevent repeat crediting.
+    await db.batch([
+      db.prepare('INSERT INTO payment_receipts(charge_id,order_id,user_id,coins,stars,paid_at) VALUES(?,?,?,?,?,?) ON CONFLICT(charge_id) DO NOTHING')
+        .bind(payment.telegram_payment_charge_id, order.id, order.user_id, order.coins, order.stars, message.date || Math.floor(Date.now()/1000)),
+      db.prepare("UPDATE payment_orders SET status='paid' WHERE id=?").bind(order.id)
+    ]);
+    return;
+  }
+  const refund = message.refunded_payment;
+  if (refund && refund.currency === 'XTR') {
+    // Refunds may arrive before the successful-payment retry; retain them independently.
+    await db.prepare('INSERT INTO payment_refunds(charge_id,order_id,refunded_at) SELECT ?,id,? FROM payment_orders WHERE id=? AND stars=? ON CONFLICT(charge_id) DO NOTHING')
+      .bind(refund.telegram_payment_charge_id, message.date || Math.floor(Date.now()/1000), refund.invoice_payload, refund.total_amount).run();
+    return;
+  }
+  if (/^\/paysupport(?:@\w+)?(?:\s|$)/i.test(message.text || '') && message.chat?.type === 'private') {
+    await telegramPaymentAPI(env, 'sendMessage', {
+      chat_id: message.chat.id,
+      text: 'Помощь с оплатой ANNIVEO: @ISMAILCHIIK. Пришли номер заказа из истории баланса и описание проблемы. Не присылай пароли или коды. По вопросам возврата также напиши в поддержку.'
+    });
+  }
+}
+
+async function handlePaymentWebhook(request, env) {
+  const expected = await paymentWebhookSecret(env);
+  const supplied = request.headers.get('X-Telegram-Bot-Api-Secret-Token') || '';
+  let diff = supplied.length ^ expected.length;
+  for (let i=0;i<expected.length;i++) diff |= expected.charCodeAt(i) ^ (supplied.charCodeAt(i)||0);
+  if (diff || request.method !== 'POST') return new Response('Forbidden', { status: 403 });
+  try {
+    await handlePaymentUpdate(await request.json(), env);
+    return Response.json({ ok: true });
+  } catch {
+    console.error('Payment webhook processing failed');
+    return Response.json({ ok: false }, { status: 500 }); // Telegram retries; never acknowledge an uncommitted credit.
+  }
+}
+
+
 
 const json = (data, status, headers) =>
   new Response(JSON.stringify(data), {
@@ -1007,6 +1123,7 @@ async function proxyVideo(form, apiKey) {
 
 export default {
   async fetch(request, env, ctx) {
+    if (new URL(request.url).pathname === "/telegram/payments") return handlePaymentWebhook(request, env);
     const headers = {
       "Access-Control-Allow-Origin":
         "https://anniveo-ai-app.pages.dev",
@@ -1116,6 +1233,12 @@ export default {
           401,
           headers
         );
+      }
+
+      if (action === "wallet") return json(await readWallet(env.DB, userId), 200, headers);
+      if (action === "wallet-invoice") {
+        const result = await createWalletInvoice(env, userId, String(body.packId || ""));
+        return json(result, result.status || 200, headers);
       }
 
       if (action === "speak") {
