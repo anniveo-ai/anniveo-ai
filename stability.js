@@ -11,6 +11,7 @@
  const errorBar=el('div',{className:'anis-banner',hidden:true,role:'status'}),errorText=el('span');
  const errorAction=button('Повторить',()=>{});errorBar.append(errorText,errorAction,button('×',()=>errorBar.hidden=true));document.body.append(errorBar);
  function explain(error,retry,label='Повторить'){
+  (document.querySelector('dialog[open]')||document.body).append(errorBar);
   errorText.textContent=readableMediaError(error);errorAction.textContent=label;errorAction.onclick=()=>{errorBar.hidden=true;void retry?.();};errorAction.hidden=!retry;errorBar.hidden=false;
  }
  readableMediaError=error=>!navigator.onLine?'Нет интернета. Уже отправленный проект не нужно заказывать заново.':error?.status===401?'Открой приложение заново через бота ANIS AI в Telegram.':error?.status===429?'Сервис занят. Подожди немного и проверь готовность.':error?.status===402?'У сервиса ИИ закончились средства. Мы сохранили задание; обратись в поддержку.':error?.name==='AbortError'||error instanceof TypeError||/load failed|failed to fetch|networkerror/i.test(error?.message||'')?'Соединение прервалось. Проверь уже отправленное задание — новый заказ не создан.':error?.message||'Не удалось выполнить действие. Попробуй позже.';
@@ -141,17 +142,11 @@
  }
  threadSelect.onchange=()=>void switchThread(threadSelect.value);
  const historyThreads=button('Мои разговоры',()=>{openView('chat');threadSelect.focus();});$('historyList').before(historyThreads);
- const showHistoryOriginal=showHistory;
- showHistory=async function(){
-  await showHistoryOriginal();if(historyCategory==='chat')return;
-  const cards=[...$('historyList').querySelectorAll('.media-history-card')];
-  let rows;try{rows=await mediaJSON({action:'media-history',kind:historyCategory});}catch{return;}
-  if(historyCategory==='chat')return;
-  for(const [i,row]of (rows.items||[]).entries()){
-   const card=cards[i],p=studioProjects.get(row.jobId);if(!card)continue;
+ state.decorateMediaHistoryCard=function(card,row){
+   let p=studioProjects.get(row.jobId);
+   if(!p){p={id:row.jobId,kind:row.kind,status:row.status,prompt:row.prompt,quality:row.quality,ratio:row.ratio,duration:row.duration,created:Date.parse(row.createdAt?.replace(' ','T')+'Z')||Date.now(),expiresAt:row.expiresAt,resultUrl:row.url,region:row.region,order:++projectCounter};studioProjects.set(p.id,p);}
    const caption=card.querySelector('small');if(caption&&row.status==='completed')caption.textContent=p?.media?'Готово · сохранено на этом устройстве':row.expired?'Срок хранения у сервиса истёк':'Готово · доступно до '+new Date(row.expiresAt).toLocaleDateString('ru-RU');
    if(p){card.disabled=row.expired&&!p.media;card.onclick=()=>{openProjectRoom(p.id);if(p.status==='completed'&&!p.media&&p.resultUrl)void loadStudioProjectResult(p);else if(!['completed','failed'].includes(p.status))void recoverProject(p);};}
-  }
  };
 
  // Ready notifications are off by default and require the user's explicit toggle.
@@ -173,7 +168,7 @@
  };
 
  // The helper proposes a draft only. It never starts a paid generation.
- const helper=dialog('anisPromptHelper','Давай уточним идею'),helperIdea=el('textarea',{maxLength:1200}),helperDetails=el('textarea',{maxLength:800,placeholder:'Например: чёрный кабриолет, вечерний свет, город на фоне'}),helperOutput=el('textarea',{maxLength:1200,hidden:true});
+ const helper=dialog('anisPromptHelper','Давай уточним идею'),helperIdea=el('textarea',{maxLength:1200,'aria-label':'Твоя идея'}),helperDetails=el('textarea',{maxLength:800,'aria-label':'Место, свет, стиль и движение',placeholder:'Например: чёрный кабриолет, вечерний свет, город на фоне'}),helperOutput=el('textarea',{maxLength:1200,'aria-label':'Готовое описание — можно изменить',hidden:true});
  let helperKind='image';helper.append(el('label',{},'Твоя идея'),helperIdea,el('label',{},'Что важно: место, свет, стиль'+'. Для видео — ещё движение.'),helperDetails);
  const improveButton=button('Подготовить описание',async()=>{
   improveButton.disabled=true;improveButton.textContent='Уточняем идею…';
@@ -206,7 +201,7 @@
   if(kind!=='image'||!state.region)return generateOriginal(kind);
   if(mediaVoiceTask)return toast('Сначала заверши голосовой ввод.');
   const original=studioImageFile,region=structuredClone(state.region),prompt=$('imagePrompt').value.trim();if(prompt.length<3)return toast('Напиши, что изменить в выделенной области.');
-  try{const crop=await cropRegion(original,region);return createStudioVariant({kind:'image',prompt,providerPrompt:'Измени только этот фрагмент по описанию. Сохрани композицию и положение объектов: '+prompt,sourceFile:crop,regionOriginalFile:original,region,quality:$('imageQuality').value,ratio:$('imageRatio').value});}catch(error){explain(error);}
+  try{const crop=await cropRegion(original,region);return createStudioVariant({kind:'image',prompt,providerPrompt:prompt.length<1100?'Измени только этот фрагмент по описанию. Сохрани композицию и положение объектов: '+prompt:prompt,sourceFile:crop,regionOriginalFile:original,region,quality:$('imageQuality').value,ratio:$('imageRatio').value});}catch(error){explain(error);}
  };
 
  // A reachable action bar follows the actual visual viewport above the phone keyboard.

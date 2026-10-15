@@ -10,8 +10,10 @@
 .anis-dialog h2{font-size:22px;margin:0}.anis-dialog p,.anis-note{color:#c2b9cf;line-height:1.5;font-size:14px}
 .anis-dialog input,.anis-dialog textarea{font:inherit;width:100%;padding:13px;border-radius:15px;background:#262132;color:#f5f0fc;border:1px solid #76638977;margin:6px 0 14px;min-height:46px;box-sizing:border-box}
 .anis-dialog textarea{min-height:110px;resize:vertical}.anis-dialog label{display:block;font-size:14px}
+.anis-dialog [hidden]{display:none!important}.anis-dialog input::placeholder,.anis-dialog textarea::placeholder{color:#b1a2c2;opacity:1}
 .anis-banner{position:fixed;top:calc(env(safe-area-inset-top,0px) + 74px);left:50%;transform:translateX(-50%);width:min(92vw,560px);z-index:2100;border:1px solid #9b76c5;background:#282131f5;color:#fff;border-radius:18px;padding:10px 14px;box-shadow:0 8px 35px #0005;display:flex;align-items:center;gap:12px;font-size:14px}
 .anis-banner[hidden],#studioKeyboardBar[hidden]{display:none!important}.anis-banner span{flex:1}
+dialog>.anis-banner{position:sticky;top:0;left:auto;transform:none;width:100%;margin:12px 0}
 #studioKeyboardBar{position:fixed;z-index:2200;left:12px;right:12px;height:52px;display:flex;align-items:center;gap:8px;padding:4px 8px;background:#201a2ff5;border:1px solid #ab80cd77;border-radius:17px;box-shadow:0 -6px 35px #0005}
 #studioKeyboardBar .primary{flex:1;min-height:42px}#studioKeyboardBar button{padding:8px 12px;min-height:42px}
 .anis-expiry{padding:12px 14px;border:1px solid #9878b455;border-radius:16px;margin:12px 0;color:#cdbde0;font-size:13px;line-height:1.45}.anis-expiry.warning{border-color:#d9ae63;color:#f4cd8e}

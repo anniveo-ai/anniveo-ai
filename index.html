@@ -4579,7 +4579,7 @@ async function showHistory(){
    if(category==='image'&&item.url&&!item.expired){const image=document.createElement('img');image.src=item.url;image.alt='Созданное фото';image.loading='lazy';thumb.append(image);}else thumb.textContent=category==='image'?'▧':'▷';
    const copy=document.createElement('span'),title=document.createElement('strong'),caption=document.createElement('small');title.textContent=(category==='image'?'Фото':'Видео')+' · '+new Date(item.createdAt.replace(' ','T')+'Z').toLocaleDateString('ru-RU');
    caption.textContent=item.expired?'Срок хранения файла истёк':item.status==='completed'?'Готово · открыть результат':item.status==='failed'?'Не удалось создать':item.status==='cancelled'?'Отменено':'В обработке · проверить';copy.append(title,caption);row.append(thumb,copy);
-   row.disabled=item.expired||['failed','cancelled'].includes(item.status);row.onclick=()=>void openHistoryMedia(item);list.append(row);
+   row.disabled=item.expired||['failed','cancelled'].includes(item.status);row.onclick=()=>void openHistoryMedia(item);list.append(row);window.anisStability?.decorateMediaHistoryCard?.(row,item);
   }
   const retention=document.createElement('p');retention.className='note';retention.textContent='Файлы доступны 7 дней. Сохраняй готовые результаты на устройство.';list.append(retention);
  }catch(error){if(version!==historyViewVersion)return;note.textContent=error.message;list.replaceChildren(note);}
@@ -4887,7 +4887,7 @@ async function generateMedia(kind){
 async function addAgentVariant(){
  const base=studioProjects.get(selectedStudioProject),idea=$('projectAgentIdea').value.trim();if(base&&(base.hasSource&&!base.sourceFile||base.hasIdentity&&!base.identityFile)){toast('Для нового варианта заново добавь исходные файлы в студии.');return;}if(!base||!idea){toast('Добавь идею для нового варианта.');return;}
  const prompt=base.prompt+'\nНовый вариант: '+idea;if(prompt.length>1200){toast('Сократи дополнительную идею.');return;}
- $('projectAgentIdea').value='';return createStudioVariant({kind:base.kind,prompt,sourceFile:base.sourceFile,identityFile:base.identityFile,quality:base.quality||'fast',ratio:base.ratio||'1:1',duration:base.duration||4});
+ $('projectAgentIdea').value='';return createStudioVariant({kind:base.kind,prompt,sourceFile:base.sourceFile,identityFile:base.identityFile,region:base.region,regionOriginalFile:base.regionOriginalFile,quality:base.quality||'fast',ratio:base.ratio||'1:1',duration:base.duration||4});
 }
 async function resumeMediaProjects(){
  if(!initData||!user)return;
