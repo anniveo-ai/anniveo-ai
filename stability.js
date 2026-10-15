@@ -8,23 +8,19 @@
  const el=(tag,props={},text)=>{const n=document.createElement(tag);for(const [k,v]of Object.entries(props)){if(k.includes('-')||k==='role')n.setAttribute(k,v);else n[k]=v;}if(text!==undefined)n.textContent=text;return n;};
  const button=(text,fn,primary=false)=>{const b=el('button',{type:'button',className:'anis-button'+(primary?' primary':'')},text);b.onclick=fn;return b;};
  function dialog(id,title){const d=el('dialog',{id,className:'anis-dialog'}),h=el('header');h.append(el('h2',{},title),button('×',()=>d.close()));d.append(h);document.body.append(d);return d;}
- const errorBar=el('div',{className:'anis-banner',hidden:true,role:'status'}),errorText=el('span');
- const errorAction=button('Повторить',()=>{});errorBar.append(errorText,errorAction,button('×',()=>errorBar.hidden=true));document.body.append(errorBar);
  function explain(error,retry,label='Повторить'){
-  (document.querySelector('dialog[open]')||document.body).append(errorBar);
-  errorText.textContent=readableMediaError(error);errorAction.textContent=label;errorAction.onclick=()=>{errorBar.hidden=true;void retry?.();};errorAction.hidden=!retry;errorBar.hidden=false;
+  const host=document.querySelector('dialog[open]')||$('view-'+currentView);if(!host)return;
+  let note=host.querySelector('.anis-inline-error');if(!note){note=el('div',{className:'anis-inline-error',role:'status'});host.append(note);}note.replaceChildren(el('p',{},readableMediaError(error)));
+  if(retry)note.append(button(label,()=>{note.remove();void retry();}));
  }
  readableMediaError=error=>!navigator.onLine?'Нет интернета. Уже отправленный проект не нужно заказывать заново.':error?.status===401?'Открой приложение заново через бота ANIS AI в Telegram.':error?.status===429?'Сервис занят. Подожди немного и проверь готовность.':error?.status===402?'У сервиса ИИ закончились средства. Мы сохранили задание; обратись в поддержку.':error?.name==='AbortError'||error instanceof TypeError||/load failed|failed to fetch|networkerror/i.test(error?.message||'')?'Соединение прервалось. Проверь уже отправленное задание — новый заказ не создан.':error?.message||'Не удалось выполнить действие. Попробуй позже.';
- window.addEventListener('offline',()=>explain(Error('Нет интернета'),()=>resumeMediaProjects(),'Проверить соединение'));
- window.addEventListener('online',()=>{errorBar.hidden=true;void resumeMediaProjects();});
- const apiOriginal=api;
- api=async function(...args){try{return await apiOriginal(...args);}catch(error){explain(error,()=>{if(error.status===401)tg?.close?.();else $('messageInput')?.focus();},error.status===401?'Закрыть и открыть через бота':'Вернуться к вводу');throw error;}};
+ window.addEventListener('online',()=>{void resumeMediaProjects();});
 
  // IndexedDB stores originals and completed files, not just temporary object URLs.
- let databasePromise,storageWarned=false,persistTimer;
+ let databasePromise,persistTimer;
  function database(){return databasePromise??=new Promise((resolve,reject)=>{if(!window.indexedDB)return reject(Error('Хранилище недоступно'));const req=indexedDB.open('anis-stability-v1',1);req.onupgradeneeded=()=>req.result.createObjectStore('records');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
  async function dbRecord(name,value){const db=await database();return new Promise((resolve,reject)=>{const tx=db.transaction('records',value===undefined?'readonly':'readwrite'),req=value===undefined?tx.objectStore('records').get(key(name)):tx.objectStore('records').put(value,key(name));tx.oncomplete=()=>resolve(req.result);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('Не удалось сохранить'));});}
- function storageWarning(){if(storageWarned)return;storageWarned=true;explain(Error('На устройстве не удалось сохранить файлы. Уже отправленные задания останутся на сервере. Сохрани готовые файлы на телефон.'),()=>navigator.storage?.persist?.(),'Разрешить хранение');}
+ function storageWarning(){state.storageUnavailable=true;}
  const metadataPersist=persistStudioProjects;
  function projectRecord(p){const {media,loading,...row}=p;return {...row,hasSource:!!p.sourceFile||!!p.hasSource,hasIdentity:!!p.identityFile||!!p.hasIdentity,mediaBlob:media?.blob||p.mediaBlob};}
  async function saveDurable(){try{await dbRecord('projects',[...studioProjects.values()].map(projectRecord));return true;}catch{storageWarning();return false;}}
@@ -117,6 +113,7 @@
   const expires=p.expiresAt?Date.parse(p.expiresAt):p.created+7*86400000,remaining=expires-Date.now();
   expiry.hidden=p.status!=='completed';expiry.classList.toggle('warning',remaining<86400000);
   expiry.textContent=(remaining>0?'Файл у сервиса доступен до '+new Date(expires).toLocaleDateString('ru-RU')+'. ':'Срок хранения у сервиса истёк. ')+(p.media?'Копия доступна на этом устройстве. Сохрани её в Фото: очистка Telegram может удалить локальные файлы.':'Открой и сохрани файл на телефон.');
+  if(state.storageUnavailable&&p.media)expiry.textContent='Сохрани файл на телефон. Локальная копия после закрытия приложения может не сохраниться.';
   if(p.region)expiry.textContent+=' Изменена только выделенная область.';
   const note=$('mediaResultDialog').lastElementChild;if(note?.textContent==='Сохрани результат: файл в сервисе доступен 7 дней.')note.hidden=true;
   if(['unknown','failed'].includes(p.status)){
@@ -141,7 +138,7 @@
    let blob=await response.blob();if(!blob.size||!blob.type.startsWith(p.kind==='image'?'image/':'video/'))throw Error('Сервис ещё не отдал готовый файл. Проверь позже.');
    if(p.region){if(!p.regionOriginalFile)throw Error('Чтобы собрать результат без изменения остального фото, нужен оригинал с этого устройства. Не создавай заказ заново.');blob=await compositeRegion(p,blob);}
    p.media=mediaFromBlob(p.kind,blob);p.mediaBlob=blob;generatedMedia[p.kind]=p.media;invalidateUsageStats();await saveDurable();
-  }catch(error){p.error=readableMediaError(error);explain(error,()=>loadStudioProjectResult(p),'Открыть готовый файл');}
+  }catch(error){p.error=readableMediaError(error);if(selectedStudioProject===p.id&&$('mediaResultDialog').open)explain(error,()=>loadStudioProjectResult(p),'Открыть готовый файл');}
   finally{p.loading=false;workroomRenderKey='';renderProjectRoom();}
  };
  async function recoverProject(p){
@@ -150,7 +147,7 @@
    const data=await mediaJSON({action:'media-status',jobId:p.id});Object.assign(p,{expiresAt:data.expiresAt});void watchMediaJob(p.kind,p.id,data);
   }catch(error){
    if(error.status===404&&(!p.hasSource||p.sourceFile)&&(!p.hasIdentity||p.identityFile)){p.status='queued';renderProjectRoom();void pumpStudioQueue();}
-   else{p.status='unknown';p.error=readableMediaError(error);renderProjectRoom();explain(error,()=>recoverProject(p),'Проверить готовность');}
+   else{p.status='unknown';p.error=readableMediaError(error);renderProjectRoom();}
   }
  }
  let resumePromise;
@@ -266,11 +263,10 @@
  keyboardBar.addEventListener('pointerdown',e=>e.preventDefault());
 
  // Version checks are cheap and never reload while a user is composing or uploading.
- const releaseBanner=el('div',{className:'anis-banner',hidden:true}),releaseText=el('span',{},'Обновление готово. Текст и проекты сохранятся.');let nextVersion=null,updating=false;
- const updateButton=button('Обновить',()=>void applyRelease());releaseBanner.append(releaseText,updateButton);document.body.append(releaseBanner);
+ let nextVersion=null,updating=false;
  function safeToUpdate(){return !state.restoring&&![...studioProjects.values()].some(p=>['submitting','creating'].includes(p.status))&&!busy&&!recording&&!openingMic&&!transcribing&&!mediaVoiceTask&&!stagedMediaAttachment&&!document.querySelector('dialog[open]')&&!['TEXTAREA','INPUT','SELECT'].includes(document.activeElement?.tagName);}
- async function applyRelease(){if(updating||!nextVersion)return;if(!safeToUpdate()){releaseBanner.hidden=false;return;}updating=true;saveDrafts();try{await saveFileDrafts();await saveDurable();const url=new URL(location.href);url.searchParams.set('v',nextVersion);location.replace(url.href);}catch{updating=false;storageWarning();}}
- async function checkRelease(){try{const response=await fetch('/release.json?t='+Date.now(),{cache:'no-store'});if(!response.ok)return;const data=await response.json(),current=document.querySelector('meta[name="anis-build"]')?.content;if(/^[a-f0-9]{12,64}$/.test(data.version)&&data.version!==current){nextVersion=data.version;if(safeToUpdate())void applyRelease();else releaseBanner.hidden=false;}}catch{}}
+ async function applyRelease(){if(updating||!nextVersion||!safeToUpdate())return;updating=true;saveDrafts();try{if(studioImageFile||studioVideoFile||studioVideoIdentityFile)await saveFileDrafts();await saveDurable();const url=new URL(location.href);url.searchParams.set('v',nextVersion);location.replace(url.href);}catch{updating=false;storageWarning();}}
+ async function checkRelease(){try{const response=await fetch('/release.json?t='+Date.now(),{cache:'no-store'});if(!response.ok)return;const data=await response.json(),current=document.querySelector('meta[name="anis-build"]')?.content;if(/^[a-f0-9]{12,64}$/.test(data.version)&&data.version!==current){nextVersion=data.version;if(safeToUpdate())void applyRelease();}}catch{}}
  window.addEventListener('focus',()=>void checkRelease());document.addEventListener('visibilitychange',()=>{if(!document.hidden)void checkRelease();});setInterval(()=>void checkRelease(),60000);
 
  async function start(){
@@ -282,7 +278,7 @@
   state.restoring=false;updateRegionButton();updateProjectDock();
   state.threads=read('threads',[]);renderThreads();normalHistory=cleanHistory(read('chat:'+state.activeChatId,normalHistory));renderChat();
   if(drafts?.view&&['chat','studio','video','profile','history','statistics','templates'].includes(drafts.view))openView(drafts.view);
-  void refreshThreads().then(()=>loadHistory()).catch(error=>explain(error,()=>refreshThreads(),'Загрузить разговоры'));
+  void refreshThreads().then(()=>loadHistory()).catch(()=>{});
   if(initData&&user)void mediaJSON({action:'notification-get'}).then(data=>notifyToggle.checked=data.enabled).catch(()=>{});
   void resumeMediaProjects();void checkRelease();
  }
