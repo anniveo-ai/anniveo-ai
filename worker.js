@@ -32,7 +32,7 @@ async function readWallet(db, userId) {
 
 async function createWalletInvoice(env, userId, packId) {
   const pack = STAR_PACKS.find(p => p.id === packId);
-  if (!pack) return { error: 'Выбери пакет Аниумов', status: 400 };
+  if (!pack) return { error: 'Выбери пакет Аниксов', status: 400 };
   const webhook = await telegramPaymentAPI(env, 'getWebhookInfo');
   if (webhook.url !== PAYMENT_WEBHOOK_URL) return { error: 'Приём платежей временно недоступен. Напиши в поддержку.', status: 503 };
   const now = Math.floor(Date.now() / 1000);
@@ -43,8 +43,8 @@ async function createWalletInvoice(env, userId, packId) {
   await env.DB.prepare('INSERT INTO payment_orders(id,user_id,coins,stars,created_at,expires_at) VALUES(?,?,?,?,?,?)')
     .bind(id, userId, pack.coins, pack.stars, now, now + 1800).run();
   const url = await telegramPaymentAPI(env, 'createInvoiceLink', {
-    title: 'Аниумы: ' + pack.coins, description: 'Пополнение баланса ANNIVEO AI. Пакет «Аниумы»: ' + pack.coins + '. Поддержка: @ISMAILCHIIK.',
-    payload: id, provider_token: '', currency: 'XTR', prices: [{ label: 'Аниумы: ' + pack.coins, amount: pack.stars }]
+    title: 'Аниксы: ' + pack.coins, description: 'Пополнение баланса ANIS AI. Пакет «Аниксы»: ' + pack.coins + '. Поддержка: @ISMAILCHIIK.',
+    payload: id, provider_token: '', currency: 'XTR', prices: [{ label: 'Аниксы: ' + pack.coins, amount: pack.stars }]
   });
   return { url, orderId: id, coins: pack.coins, stars: pack.stars };
 }
@@ -93,7 +93,7 @@ async function handlePaymentUpdate(update, env) {
   if (/^\/paysupport(?:@\w+)?(?:\s|$)/i.test(message.text || '') && message.chat?.type === 'private') {
     await telegramPaymentAPI(env, 'sendMessage', {
       chat_id: message.chat.id,
-      text: 'Помощь с оплатой ANNIVEO: @ISMAILCHIIK. Пришли номер заказа из истории баланса и описание проблемы. Не присылай пароли или коды. По вопросам возврата также напиши в поддержку.'
+      text: 'Помощь с оплатой ANIS AI: @ISMAILCHIIK. Пришли номер заказа из истории баланса и описание проблемы. Не присылай пароли или коды. По вопросам возврата также напиши в поддержку.'
     });
   }
 }
@@ -277,7 +277,7 @@ async function cleanupRequest(
     ).bind(userId, requestId).run();
   } catch (error) {
     console.error(
-      "ANNIVEO AI cleanup error",
+      "ANIS AI cleanup error",
       error.message
     );
   }
@@ -550,7 +550,7 @@ async function askAI(messages, apiKey, mode) {
     );
 
     try {
-      console.log("ANNIVEO AI request", {
+      console.log("ANIS AI request", {
         mode,
         attempt,
         messageCount: messages.length,
@@ -576,7 +576,7 @@ async function askAI(messages, apiKey, mode) {
         throw new Error("ИИ вернул пустой ответ");
       }
 
-      console.log("ANNIVEO AI success", {
+      console.log("ANIS AI success", {
         mode,
         attempt,
         durationMs: Date.now() - started
@@ -587,7 +587,7 @@ async function askAI(messages, apiKey, mode) {
     } catch (error) {
       lastError = error;
 
-      console.error("ANNIVEO AI failure", {
+      console.error("ANIS AI failure", {
         mode,
         attempt,
         durationMs: Date.now() - started,
@@ -631,7 +631,7 @@ async function openAIStream(
     );
 
     try {
-      console.log("ANNIVEO AI request", {
+      console.log("ANIS AI request", {
         mode,
         attempt,
         messageCount: messages.length,
@@ -680,7 +680,7 @@ async function openAIStream(
       controller.abort();
       lastError = error;
 
-      console.error("ANNIVEO AI failure", {
+      console.error("ANIS AI failure", {
         mode,
         attempt,
         durationMs: Date.now() - started,
@@ -932,7 +932,7 @@ function makeStreamResponse(
 
       const totalDuration = Date.now() - started;
 
-      console.log("ANNIVEO AI completed", {
+      console.log("ANIS AI completed", {
         mode: anonymous ? "anonymous" : "normal",
         aiDurationMs: Date.now() - aiStarted,
         totalDurationMs: totalDuration,
@@ -947,7 +947,7 @@ function makeStreamResponse(
       });
 
     } catch (error) {
-      console.error("ANNIVEO AI stream error", {
+      console.error("ANIS AI stream error", {
         name: error.name,
         message: error.message,
         durationMs: Date.now() - started
@@ -1142,7 +1142,7 @@ export default {
 
     if (request.method !== "POST") {
       return json(
-        { status: "ANNIVEO AI работает" },
+        { status: "ANIS AI работает" },
         200,
         headers
       );
@@ -1162,13 +1162,13 @@ export default {
         if(length>26*1024*1024) return json({error:"Файл слишком большой (максимум 25 МБ)"},413,headers);
         const form=await request.formData();
         const voiceUser=await verifyTelegram(String(form.get("initData")||""),env.TELEGRAM_BOT_TOKEN);
-        if(!voiceUser) return json({error:"Открой ANNIVEO AI через Telegram"},401,headers);
+        if(!voiceUser) return json({error:"Открой ANIS AI через Telegram"},401,headers);
         const multipartAction=String(form.get("action")||"");
         if(!env.POLLINATIONS_API_KEY) return json({error:"Ключ ИИ не настроен"},503,headers);
         const file=form.get("file");
         if(multipartAction==="image-edit"||multipartAction==="video"){
           const mediaUser=await verifyTelegram(String(form.get("initData")||""),env.TELEGRAM_BOT_TOKEN);
-          if(!mediaUser) return json({error:"Открой ANNIVEO AI через Telegram"},401,headers);
+          if(!mediaUser) return json({error:"Открой ANIS AI через Telegram"},401,headers);
           if(multipartAction==="image-edit"&&(!file||typeof file==="string"||!file.size)) return json({error:"Добавь фото для изменения"},400,headers);
           const result=multipartAction==="image-edit"
             ?await proxyImageEdit(form,env.POLLINATIONS_API_KEY)
@@ -1190,7 +1190,7 @@ export default {
         upload.append("file",file,file.name||"voice.webm");
         upload.append("model","openai/whisper-large-v3");
         upload.append("language","ru");
-        upload.append("prompt","ANNIVEO AI.");
+        upload.append("prompt","ANIS AI.");
         upload.append("response_format","json");
         const controller=new AbortController();
         const timer=setTimeout(()=>controller.abort(),60000);
@@ -1201,7 +1201,7 @@ export default {
           });
           if(!response.ok){
             await response.body?.cancel();
-            console.error("ANNIVEO transcription failed",{providerStatus:response.status});
+            console.error("ANIS AI transcription failed",{providerStatus:response.status});
             return json({error:response.status===403
               ?"Голосовой режим пока не подключён"
               :response.status===402
@@ -1228,7 +1228,7 @@ export default {
         return json(
           {
             error:
-              "Открой ANNIVEO AI через Telegram"
+              "Открой ANIS AI через Telegram"
           },
           401,
           headers
@@ -1268,7 +1268,7 @@ export default {
           });
           if (!response.ok) {
             await response.body?.cancel();
-            console.error("ANNIVEO speech failed", { providerStatus: response.status });
+            console.error("ANIS AI speech failed", { providerStatus: response.status });
             return json({ error: "Не удалось озвучить ответ" }, 502, headers);
           }
           const audioHeaders = new Headers(headers);
@@ -1457,7 +1457,7 @@ export default {
         {
           role: "system",
           content:
-            "Ты ANNIVEO AI — точный, внимательный и " +
+            "Ты ANIS AI — точный, внимательный и " +
             "дружелюбный помощник. Сначала пойми, " +
             "что именно нужно человеку, и сразу дай " +
             "полезный ответ. Отвечай на языке " +
@@ -1532,7 +1532,7 @@ export default {
 
       const totalDuration = Date.now() - started;
 
-      console.log("ANNIVEO AI completed", {
+      console.log("ANIS AI completed", {
         mode: anonymous ? "anonymous" : "normal",
         aiDurationMs: aiDuration,
         totalDurationMs: totalDuration,
@@ -1550,7 +1550,7 @@ export default {
       );
 
     } catch (error) {
-      console.error("ANNIVEO AI error", {
+      console.error("ANIS AI error", {
         name: error.name,
         message: error.message,
         durationMs: Date.now() - started
