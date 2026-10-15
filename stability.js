@@ -164,15 +164,16 @@
  };
 
  // Each normal conversation has its own server context and per-account cache.
- const threadBar=el('div',{className:'anis-toolbar'}),threadSelect=el('select',{'aria-label':'Выбрать разговор',title:'Выбрать разговор'});
- threadBar.append(threadSelect,button('＋ Новый чат',()=>openThreadDialog(false)),button('Переименовать',()=>openThreadDialog(true)));$('view-chat').prepend(threadBar);
- const threadDialog=dialog('anisThreadDialog','Отдельный разговор'),threadName=el('input',{maxLength:80,placeholder:'Например: Учёба'}),threadNote=el('p',{},'У каждого разговора своя история. Учёба, работа и личное не смешиваются.');
+ const threadBar=el('div',{className:'anis-toolbar chat-picker-row'}),threadSelect=el('select',{'aria-label':'Выбрать чат',title:'Мои чаты'}),chatHeading=el('div',{className:'chat-conversations-heading'}),chatTitle=$('view-chat').querySelector('h1'),newChat=button('＋ Новый чат',()=>openThreadDialog(false),true),renameChat=button('',()=>openThreadDialog(true));
+ renameChat.classList.add('chat-rename-button');renameChat.title='Переименовать чат';renameChat.setAttribute('aria-label','Переименовать чат');renameChat.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 14Z"/></svg>';
+ chatTitle.textContent='Чаты';chatHeading.append(chatTitle,newChat);threadBar.append(threadSelect,renameChat);$('view-chat').prepend(chatHeading,threadBar);
+ const threadDialog=dialog('anisThreadDialog','Новый чат'),threadName=el('input',{maxLength:80,placeholder:'Название чата','aria-label':'Название чата'}),threadNote=el('p',{},'Например: Работа, Учёба или Личное. У каждого чата своя переписка.');
  let renaming=false;const threadSubmit=button('Создать чат',async()=>{
   if(!threadName.value.trim())return threadName.focus();threadSubmit.disabled=true;
   try{const data=await mediaJSON({action:renaming?'chat-thread-rename':'chat-thread-create',threadId:state.activeChatId,title:threadName.value.trim()});threadDialog.close();await refreshThreads();if(!renaming)await switchThread(data.id);}catch(error){explain(error,()=>threadSubmit.click());}finally{threadSubmit.disabled=false;}
  },true);threadDialog.append(threadNote,threadName,threadSubmit);
  function chatLocked(){return busy||recording||openingMic||transcribing||orbVoiceActive;}
- function openThreadDialog(rename){if(chatLocked())return toast('Сначала заверши текущий ответ или голосовой ввод.');renaming=rename;threadName.value=rename?state.threads.find(t=>t.id===state.activeChatId)?.title||'':'';threadSubmit.textContent=rename?'Сохранить название':'Создать чат';threadDialog.showModal();threadName.focus();}
+ function openThreadDialog(rename){if(chatLocked())return toast('Сначала заверши текущий ответ или голосовой ввод.');renaming=rename;threadDialog.querySelector('h2').textContent=rename?'Название чата':'Новый чат';threadName.value=rename?state.threads.find(t=>t.id===state.activeChatId)?.title||'':'';threadSubmit.textContent=rename?'Сохранить':'Создать чат';threadDialog.showModal();threadName.focus();}
  function renderThreads(){threadSelect.replaceChildren();const rows=state.threads.length?state.threads:[{id:'legacy',title:'Первый чат'}];for(const t of rows)threadSelect.append(el('option',{value:t.id},t.title));threadSelect.value=state.activeChatId;}
  async function refreshThreads(){if(!initData||!user)return;const data=await mediaJSON({action:'chat-thread-list'});state.threads=data.threads||[];write('threads',state.threads);if(!state.threads.some(t=>t.id===state.activeChatId))state.activeChatId='legacy';renderThreads();}
  saveCache=function(){write('chat:'+state.activeChatId,cleanHistory(normalHistory));};
@@ -274,7 +275,9 @@
   }catch{storageWarning();}
   state.restoring=false;updateRegionButton();updateProjectDock();
   state.threads=read('threads',[]);renderThreads();normalHistory=cleanHistory(read('chat:'+state.activeChatId,normalHistory));renderChat();
-  if(drafts?.view&&['chat','studio','video','profile','history','statistics','templates'].includes(drafts.view))openView(drafts.view);
+  const firstSeparateHome=!read('separate-home',false);write('separate-home',true);
+  if(firstSeparateHome&&drafts?.view==='chat')openView('home');
+  else if(drafts?.view&&['home','chat','studio','video','profile','history','statistics','templates'].includes(drafts.view))openView(drafts.view);
   void refreshThreads().then(()=>loadHistory()).catch(()=>{});
   if(initData&&user)void mediaJSON({action:'notification-get'}).then(data=>notifyToggle.checked=data.enabled).catch(()=>{});
   void resumeMediaProjects();void checkRelease();

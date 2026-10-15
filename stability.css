@@ -1,4 +1,11 @@
 /* Stability controls share ANIS AI's restrained glass surfaces. */
+#bottomNav{grid-template-columns:repeat(5,minmax(0,1fr))}
+#view-chat>.anis-toolbar{margin-top:0;margin-bottom:16px}
+.chat-conversations-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:6px 0 16px}.chat-conversations-heading h1{margin:0}.chat-conversations-heading button{white-space:nowrap}
+#view-chat .chat-picker-row{flex-wrap:nowrap;gap:8px}#view-chat .chat-picker-row select{max-width:none;min-width:0;width:100%;min-height:46px;font-size:14px}
+.chat-rename-button{flex:0 0 46px;width:46px;height:46px;padding:12px;display:grid;place-items:center}.chat-rename-button svg{width:21px;height:21px}
+#view-chat .messages:empty::before{content:'Выбери разговор или начни новый. Напиши сообщение — ANIS AI ответит здесь.';display:block;margin:22px 4px;color:var(--muted);font-size:14px;line-height:1.6}
+@media(max-width:420px){#bottomNav button{font-size:10px;padding-left:0;padding-right:0}}
 .anis-banner{display:none!important}
 #anisProjectExpiry,.media-result-dialog .anis-expiry{display:none!important}
 .anis-inline-error{position:static;margin:12px 0;color:var(--muted);font-size:13px;line-height:1.45;overflow-wrap:anywhere}.anis-inline-error p{margin:0 0 8px}.anis-inline-error button{min-height:38px;padding:8px 12px;font-size:12px}

@@ -959,7 +959,7 @@ nav{
   bottom:calc(12px + env(safe-area-inset-bottom));
   width:min(720px,calc(100% - 32px));
   display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
+  grid-template-columns:repeat(5,minmax(0,1fr));
   gap:2px;
   padding:7px;
   border:1px solid rgba(225,205,255,.22);
@@ -1694,7 +1694,7 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
 
 <div id="mediaProjectSwitcher" class="studio-project-tabs" role="group" aria-label="Тип проекта" hidden><span class="studio-tab-highlight" aria-hidden="true"></span><button type="button" data-media-tab="studio" aria-pressed="true" onclick="openView('studio')">Создать фото</button><button type="button" data-media-tab="video" aria-pressed="false" onclick="openView('video')">Создать видео</button><button type="button" data-media-tab="templates" aria-pressed="false" onclick="openView('templates')">Шаблоны</button></div>
 <!-- ЧАТ -->
-<section id="view-chat" class="view active">
+<section id="view-home" class="view active">
 <div id="welcome" class="welcome">
   <h1 id="greeting">Привет 👋🏻</h1>
   <h2>С чего начнём?</h2>
@@ -1747,6 +1747,9 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
   </div>
 </div>
 
+</section>
+<section id="view-chat" class="view">
+<h1 class="page-title">Чат</h1>
 <div class="mode">
   <span class="shield">♢</span>
   <div>
@@ -2016,7 +2019,8 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
 <!-- НАВИГАЦИЯ -->
 <nav id="bottomNav">
   <div id="navGlider"></div>
-  <button class="active" data-tab="chat"
+  <button class="active" data-tab="home" onclick="openView('home')"><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></svg></span>Главное</button>
+  <button data-tab="chat"
     onclick="openView('chat')">
     <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 2v-6.5A7.5 7.5 0 1 1 20 11.5Z"/><path d="M8 10h8M8 14h5"/></svg></span>Чат
   </button>
@@ -2071,7 +2075,7 @@ try{
 const initData = tg?.initData || "";
 const user = tg?.initDataUnsafe?.user || null;
 
-let currentView = "chat";
+let currentView = "home";
 let anonymous = false;
 let busy = false;
 let activeRequestTask = null;
@@ -2771,7 +2775,7 @@ function openView(name){
       (tab==="studio"&&["image","video","templates"].includes(name));
     el.classList.toggle("active",active);
   });
-  $("dock").classList.toggle("hidden",name!=="chat");
+  $("dock").classList.toggle("hidden",name!=="chat"&&name!=="home");
 
   if(name==="profile"||name==="balance"||name==="statistics") void refreshWallet();
   if(name==="profile"||name==="statistics") void loadUsageStats();
@@ -2788,10 +2792,10 @@ function openView(name){
 
 /* ГЛАВНЫЙ ЭКРАН */
 function updateWelcome(){
-  const landingVisible=showWelcome&&!anonymous;
+  const landingVisible=currentView==='home';showWelcome=landingVisible;
   $("welcome").classList.toggle("hidden",!landingVisible);
   $("collapseChatButton")?.classList.toggle("hidden",landingVisible||anonymous||currentView!=="chat");
-  const showReturn=landingVisible&&returnToChatAvailable&&!anonymous&&currentView==="chat";
+  const showReturn=landingVisible&&returnToChatAvailable&&!anonymous;
   $("returnToChatButton")?.classList.toggle("hidden",!showReturn);
   $("app")?.classList.toggle("has-return-to-chat",showReturn);
   syncChatOrbUI();
@@ -2804,8 +2808,8 @@ function collapseChat(){
   }
   endVoiceSession();
   returnToChatAvailable=normalHistory.length>0;
-  showWelcome=true;newestFirstChat=true;
-  updateWelcome();renderChat();
+  showWelcome=true;newestFirstChat=false;
+  openView('home');
   app.scrollTo({top:0,behavior:"smooth"});
   tg?.HapticFeedback?.impactOccurred("light");
 }
@@ -2818,7 +2822,7 @@ function returnToChat(){
   if(orbVoiceActive) endVoiceSession();
   returnToChatAvailable=false;
   showWelcome=false;newestFirstChat=false;
-  updateWelcome();renderChat();
+  openView('chat');
   scrollAppToBottom();
   tg?.HapticFeedback?.impactOccurred("light");
 }
@@ -3826,7 +3830,7 @@ function tryHandleAppCommand(input){
     return finish("studio","Открыл студию");
   }
   if(/^(?:домой|на главную|главная|главную|главный экран|домашний экран)$/.test(targetText)){
-    return finish("chat","Вернул на главный экран",{home:true});
+    return finish("home","Вернул на главный экран",{home:true});
   }
   return false;
 }
@@ -3848,6 +3852,7 @@ async function sendMessage(text,audioURL,spokenVoice=false){
   }
 
   clearVoiceProgress();
+  if(!spokenVoice&&currentView!=="chat")openView('chat');
   const isAnonymous=anonymous;
   const reorderForChat=newestFirstChat;
   if(!spokenVoice){
