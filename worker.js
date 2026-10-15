@@ -52,7 +52,7 @@ async function createPremiumMedia(env,userId,body,file){
  if(prompt.length<3||prompt.length>1200)throw Error('Описание должно содержать от 3 до 1200 символов.');
  if(!['1:1','9:16','16:9'].includes(ratio))throw Error('Выбери формат изображения.');
  const duration=Number(body.duration||4);if(kind==='video'&&![4,6,8].includes(duration))throw Error('Выбери длительность видео.');
- if(file&&(typeof file==='string'||!file.size||file.size>(kind==='image'?20:25)*1024*1024||!(kind==='image'?['image/jpeg','image/png','image/webp']:['video/mp4','video/quicktime','video/webm']).includes(file.type)))throw Error('Файл не поддерживается или слишком большой.');
+ if(file&&(typeof file==='string'||!file.size||file.size>(kind==='image'?20:25)*1024*1024||!(kind==='image'?['image/jpeg','image/png','image/webp']:['image/jpeg','image/png','image/webp','video/mp4','video/quicktime','video/webm']).includes(file.type)))throw Error('Файл не поддерживается или слишком большой.');
  const existing=await env.DB.prepare('SELECT * FROM media_jobs WHERE id=? AND user_id=?').bind(id,userId).first();
  if(existing)return publicMediaJob(existing);
  // Reserve before the paid request. Repeated clicks never create another provider job.
@@ -63,7 +63,7 @@ async function createPremiumMedia(env,userId,body,file){
   const input={prompt,aspect_ratio:ratio};
   if(kind==='image'){input.image_resolution=selection.resolution||config.resolution;input.output_format='png';}
   else{input.duration=String(duration);input.resolution=selection.resolution||config.resolution;input.generate_audio=false;}
-  if(file){const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));input[kind==='image'?'images':'videos']=[{type:'base64',data:'data:'+file.type+';base64,'+btoa(binary)}];}
+  if(file){const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));input[file.type.startsWith('image/')?'images':'videos']=[{type:'base64',data:'data:'+file.type+';base64,'+btoa(binary)}];}
   const data=await polzaMediaRequest(env,'',{model,input,async:true,user:'anis-'+userId});
   if(typeof data.id!=='string'||!/^[\w-]{1,200}$/.test(data.id))throw Error('Сервис не подтвердил номер проекта.');
   await env.DB.prepare('UPDATE media_jobs SET provider_id=? WHERE id=? AND user_id=?').bind(data.id,id,userId).run();
