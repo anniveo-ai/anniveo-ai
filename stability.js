@@ -256,9 +256,10 @@
  };
 
  // A reachable action bar follows the actual visual viewport above the phone keyboard.
- const keyboardBar=el('div',{id:'studioKeyboardBar',hidden:true}),keyboardCreate=button('Создать',()=>{const target=document.activeElement?.id;if(target==='projectAgentIdea')void addAgentVariant();else void generateMedia(target==='videoPrompt'?'video':'image');},true);
- keyboardBar.append(keyboardCreate,button('Готово',()=>document.activeElement?.blur()));document.body.append(keyboardBar);
- function keyboardLayout(){const id=document.activeElement?.id,v=window.visualViewport,focused=['imagePrompt','videoPrompt','projectAgentIdea'].includes(id);keyboardBar.hidden=!focused||!!v&&window.innerHeight-v.height<100;if(!keyboardBar.hidden){keyboardBar.style.top=((v?.offsetTop||0)+(v?.height||innerHeight)-58)+'px';keyboardCreate.textContent=id==='projectAgentIdea'?'Добавить вариант':id==='videoPrompt'?'Создать видео':'Создать фото';}}
+ const keyboardBar=el('div',{id:'studioKeyboardBar',hidden:true}),keyboardDone=button('✓',()=>document.activeElement?.blur());
+ keyboardDone.setAttribute('aria-label','Закрыть клавиатуру');keyboardDone.title='Готово';
+ keyboardBar.append(keyboardDone);document.body.append(keyboardBar);
+ function keyboardLayout(){const id=document.activeElement?.id,v=window.visualViewport,focused=['imagePrompt','videoPrompt','projectAgentIdea'].includes(id);keyboardBar.hidden=!focused||!!v&&window.innerHeight-v.height<100;if(!keyboardBar.hidden){keyboardBar.style.top=((v?.offsetTop||0)+(v?.height||innerHeight)-52)+'px';}}
  document.addEventListener('focusin',()=>{keyboardLayout();setTimeout(keyboardLayout,250);});document.addEventListener('focusout',()=>setTimeout(keyboardLayout,0));window.visualViewport?.addEventListener('resize',keyboardLayout);window.visualViewport?.addEventListener('scroll',keyboardLayout);
  // Keep focus until click: otherwise blur would hide the action before pointerup.
  keyboardBar.addEventListener('pointerdown',e=>e.preventDefault());
