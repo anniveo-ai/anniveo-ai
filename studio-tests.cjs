@@ -2,7 +2,7 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 const html=fs.readFileSync('index.html','utf8');
 const nodes=new Map(),requests=[],toasts=[],revoked=[];
 let id=0;
-function node(){return{value:'',disabled:false,hidden:false,textContent:'',children:[],attrs:{},classList:{add(){},remove(){},toggle(){}},setAttribute(k,v){this.attrs[k]=v},removeAttribute(k){delete this[k]},replaceChildren(...children){this.children=children},append(...children){this.children.push(...children)},click(){},showModal(){this.open=true},close(){this.open=false},querySelector(){return null},focus(){},remove(){}}}
+function node(){return{value:'',disabled:false,hidden:false,textContent:'',children:[],attrs:{},dataset:{},listeners:{},addEventListener(k,fn){this.listeners[k]=fn},setPointerCapture(){},classList:{add(){},remove(){},toggle(){}},setAttribute(k,v){this.attrs[k]=v},removeAttribute(k){delete this[k]},replaceChildren(...children){this.children=children},append(...children){this.children.push(...children)},click(){},showModal(){this.open=true},close(){this.open=false},querySelector(){return null},focus(){},remove(){}}}
 const getNode=key=>{if(!nodes.has(key))nodes.set(key,node());return nodes.get(key)};
 getNode('imageModel').value='google/gemini-3.1-flash-image-preview';getNode('imageRatio').value='1:1';
 const tools=['improve','background','style','details'].map(key=>({...node(),dataset:{studioTool:key}}));
@@ -35,5 +35,9 @@ vm.runInContext(source,ctx);const run=code=>vm.runInContext(code,ctx);
  assert.equal(getNode('mediaResultDialog').open,true);assert.equal(getNode('imageResult').children[0].textContent,'Открыть готовый результат ↗');
  let resolvePermission,stopped=0;ctx.navigator.mediaDevices={getUserMedia:()=>new Promise(r=>resolvePermission=r)};
  const opening=run("toggleMediaDictation('image')");run('cancelMediaDictation()');resolvePermission({getTracks:()=>[{stop(){stopped++}}]});await opening;assert.equal(stopped,1,'late microphone permission cannot reopen recording');assert.equal(run('mediaVoiceTask'),null);
+ run('setupMediaMicGestures()');const mic=getNode('imagePromptMic');
+ ctx.cancelled=0;run("mediaVoiceTask={kind:'image',phase:'recording',stream:{getTracks:()=>[{stop(){cancelled++}}]}};syncMediaMic()");assert.equal(getNode('imagePromptCancel').hidden,false);
+ mic.listeners.pointerdown({pointerId:1,button:0,clientX:140,clientY:50});mic.listeners.pointermove({pointerId:1,clientX:60,clientY:55});mic.listeners.pointerup({pointerId:1});assert.equal(run('mediaVoiceTask'),null);assert.equal(ctx.cancelled,1);assert.equal(getNode('imagePromptCancel').hidden,true);
+ const promptStart=html.indexOf('<div class="studio-prompt-box">'),toolsStart=html.indexOf('<div class="studio-tools"');assert.ok(html.indexOf('id="makeImage"')>promptStart&&html.indexOf('id="makeImage"')<toolsStart,'create button lives inside prompt');assert.equal((html.match(/id="makeImage"/g)||[]).length,1);
  console.log('PASS: preview lifecycle, editing reference upload, tool + user instructions, model restoration, creation routing, invalid file rejection and unique controls');
 })().catch(error=>{console.error(error);process.exitCode=1});
