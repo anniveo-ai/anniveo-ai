@@ -1,3 +1,69 @@
+const PREMIUM_MEDIA_MODELS=Object.freeze({
+ 'google/gemini-3.1-flash-image-preview':{kind:'image',resolution:'1K'},
+ 'google/gemini-3-pro-image-preview':{kind:'image',resolution:'2K'},
+ 'bytedance/seedance-2-fast':{kind:'video',resolution:'720p'},
+ 'bytedance/seedance-2':{kind:'video',resolution:'720p'}
+});
+function premiumError(status){return status===402?'На балансе сервиса ИИ недостаточно средств. Пополни баланс Polza.':status===401||status===403?'Платный сервис ИИ недоступен: проверь доступ API-ключа.':status===429?'Сервис ИИ занят. Подожди немного.':'Сервис ИИ не смог обработать запрос. Повтори позже.';}
+async function polzaMediaRequest(env,path,body){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);
+ try{
+  const response=await fetch('https://polza.ai/api/v1/media'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+env.POLZA_API_KEY,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:controller.signal});
+  if(!response.ok){await response.body?.cancel();const error=Error(premiumError(response.status));error.status=response.status===402?402:502;throw error;}
+  return await response.json();
+ }finally{clearTimeout(timer);}
+}
+function publicMediaJob(row){return {jobId:row.id,kind:row.kind,status:row.status,...(row.status==='completed'?{url:row.result_url}:{}),...(row.error?{error:row.error}:{})};}
+function providerResultUrl(data){const value=data?.data?.url||data?.data?.[0]?.url||data?.output?.url;try{const u=new URL(value);return u.protocol==='https:'?u.href:null;}catch{return null;}}
+async function updatePremiumJob(env,row,data){
+ const status=['pending','processing','completed','failed','cancelled'].includes(data.status)?data.status:'processing';
+ const url=status==='completed'?providerResultUrl(data):null;
+ if(status==='completed'&&!url)throw Error('Сервис не вернул файл результата. Проверь готовность позже.');
+ const error=status==='failed'||status==='cancelled'?'Сервис не завершил генерацию. Попробуй другой запрос.':null;
+ await env.DB.prepare('UPDATE media_jobs SET status=?,result_url=?,error=? WHERE id=? AND user_id=?').bind(status,url,error,row.id,row.user_id).run();
+ if(status==='completed')await env.DB.prepare('INSERT OR IGNORE INTO usage_events(id,user_id,kind) VALUES(?,?,?)').bind('media:'+row.id,row.user_id,row.kind).run();
+ return publicMediaJob({...row,status,result_url:url,error});
+}
+async function createPremiumMedia(env,userId,body,file){
+ if(!env.POLZA_API_KEY||!env.DB)throw Error('Платный сервис ИИ пока недоступен.');
+ const model=String(body.model||''),config=PREMIUM_MEDIA_MODELS[model],kind=body.kind;
+ if(!config||config.kind!==kind)throw Error('Выбери доступную модель фото или видео.');
+ const prompt=String(body.prompt||'').trim(),ratio=String(body.ratio||'1:1'),id=String(body.requestId||'');
+ if(!/^[a-zA-Z0-9-]{16,80}$/.test(id))throw Error('Неверный номер запроса.');
+ if(prompt.length<3||prompt.length>1200)throw Error('Описание должно содержать от 3 до 1200 символов.');
+ if(!['1:1','9:16','16:9'].includes(ratio))throw Error('Выбери формат изображения.');
+ const duration=Number(body.duration||4);if(kind==='video'&&![4,6,8].includes(duration))throw Error('Выбери длительность видео.');
+ if(file&&(typeof file==='string'||!file.size||file.size>(kind==='image'?20:25)*1024*1024||!(kind==='image'?['image/jpeg','image/png','image/webp']:['video/mp4','video/quicktime','video/webm']).includes(file.type)))throw Error('Файл не поддерживается или слишком большой.');
+ const existing=await env.DB.prepare('SELECT * FROM media_jobs WHERE id=? AND user_id=?').bind(id,userId).first();
+ if(existing)return publicMediaJob(existing);
+ // Reserve before the paid request. Repeated clicks never create another provider job.
+ const reserve=await env.DB.prepare("INSERT OR IGNORE INTO media_jobs(id,user_id,kind,model,status) SELECT ?,?,?,?,'creating' WHERE (SELECT COUNT(*) FROM media_jobs WHERE user_id=? AND status IN ('creating','pending','processing') AND created_at>datetime('now','-1 day'))<2").bind(id,userId,kind,model,userId).run();
+ if(!reserve.meta?.changes){const row=await env.DB.prepare('SELECT * FROM media_jobs WHERE id=? AND user_id=?').bind(id,userId).first();if(row)return publicMediaJob(row);throw Error('Уже обрабатываются два проекта. Дождись готовности.');}
+ const row={id,user_id:userId,kind,model,status:'creating'};
+ try{
+  const input={prompt,aspect_ratio:ratio};
+  if(kind==='image'){input.image_resolution=config.resolution;input.output_format='png';}
+  else{input.duration=String(duration);input.resolution=config.resolution;input.generate_audio=false;}
+  if(file){const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));input[kind==='image'?'images':'videos']=[{type:'base64',data:'data:'+file.type+';base64,'+btoa(binary)}];}
+  const data=await polzaMediaRequest(env,'',{model,input,async:true,user:'anis-'+userId});
+  if(typeof data.id!=='string'||!/^[\w-]{1,200}$/.test(data.id))throw Error('Сервис не подтвердил номер проекта.');
+  await env.DB.prepare('UPDATE media_jobs SET provider_id=? WHERE id=? AND user_id=?').bind(data.id,id,userId).run();
+  return await updatePremiumJob(env,row,data);
+ }catch(error){
+  // A network timeout can occur after the provider accepted a paid request. Never retry it automatically.
+  const message=error.name==='AbortError'||error instanceof TypeError?'Не удалось подтвердить создание. Новый платный запрос автоматически не отправлен. Проверь историю Polza.':error.message;
+  await env.DB.prepare("UPDATE media_jobs SET status='failed',error=? WHERE id=? AND user_id=?").bind(message,id,userId).run();
+  error.message=message;throw error;
+ }
+}
+async function readPremiumMedia(env,userId,id){
+ const row=await env.DB.prepare('SELECT * FROM media_jobs WHERE id=? AND user_id=?').bind(String(id||''),userId).first();
+ if(!row){const error=Error('Проект не найден. Можно создать новый.');error.status=404;throw error;}
+ if(['completed','failed','cancelled'].includes(row.status))return publicMediaJob(row);
+ if(!row.provider_id)return {...publicMediaJob(row),error:'Подтверждаем создание проекта. Не запускай его повторно.'};
+ const data=await polzaMediaRequest(env,'/'+encodeURIComponent(row.provider_id));return updatePremiumJob(env,row,data);
+}
+
 async function recordMediaUsage(db,userId,kind){
   if(!db)return;
   try{await db.prepare('INSERT INTO usage_events(id,user_id,kind) VALUES(?,?,?)').bind(crypto.randomUUID(),userId,kind).run();}
@@ -1215,6 +1281,10 @@ export default {
         const voiceUser=await verifyTelegram(String(form.get("initData")||""),env.TELEGRAM_BOT_TOKEN);
         if(!voiceUser) return json({error:"Открой ANIS AI через Telegram"},401,headers);
         const multipartAction=String(form.get("action")||"");
+        if(multipartAction==="media-create"){
+          try{return json(await createPremiumMedia(env,voiceUser,Object.fromEntries(form),form.get('file')),200,headers);}
+          catch(error){return json({error:error.message},error.status||400,headers);}
+        }
         if(!env.POLLINATIONS_API_KEY) return json({error:"Ключ ИИ не настроен"},503,headers);
         const file=form.get("file");
         if(multipartAction==="image-edit"||multipartAction==="video"){
@@ -1288,6 +1358,11 @@ export default {
         );
       }
 
+      if(action==="media-config")return json({premium:!!env.POLZA_API_KEY},200,headers);
+      if(action==="media-status"||action==="media-create"){
+        try{return json(action==="media-status"?await readPremiumMedia(env,userId,body.jobId):await createPremiumMedia(env,userId,body,null),200,headers);}
+        catch(error){return json({error:error.message},error.status||400,headers);}
+      }
       if (action === "usage-stats") {
         if (!env.DB) return json({error:"Статистика временно недоступна"},503,headers);
         return json(await getUsageStats(env.DB,userId,body.days,body.utcOffsetMinutes),200,headers);

@@ -8,6 +8,7 @@
 <title>ANIS AI</title>
 <link rel="preconnect" href="https://anniveo-ai-api.yaylaevismail.workers.dev" crossorigin>
 <link rel="preload" as="image" href="orb20-real.webp">
+<link rel="preload" as="image" href="anium-coin-v1.webp">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
@@ -1609,6 +1610,8 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
 @media(max-width:350px){.studio-heading .page-title{font-size:24px}.studio-heading .subtitle{font-size:11px}.studio-video-link{padding:7px 8px}.studio-upload-stage{height:222px}.studio-upload-square{width:180px;height:174px}.studio-upload-stage.has-photo .studio-upload-square{height:208px}.studio-tools{gap:6px}.studio-tools button{min-height:70px}.studio-create-button{font-size:16px;min-height:54px}}
 @media(prefers-reduced-motion:reduce){.studio-upload-square,.studio-tools button,.studio-create-button{transition:none}}
 
+
+.studio-project-tabs{display:flex;padding:5px;gap:5px;background:#1b1727;border:1px solid #ffffff17;border-radius:19px;margin:8px 0 18px}.studio-project-tabs button{flex:1;border:0;border-radius:14px;background:transparent;padding:13px 8px;color:#b5a9c7;font:inherit;font-weight:600}.studio-project-tabs button[aria-pressed=true]{color:white;background:linear-gradient(130deg,#9d50dc,#6430a2);box-shadow:0 3px 15px #a551ef36}.media-prompt-actions{display:flex;align-items:center;gap:10px;justify-content:space-between}.media-prompt-mic{flex:0 0 42px;width:42px;height:42px;border-radius:14px;background:#a86be51a;border:1px solid #c197ef4d;color:#d8baf4;display:grid;place-items:center}.media-prompt-mic svg{width:22px;height:22px}.media-prompt-mic.recording{background:#9d37d8;color:white;animation:orbPulse 1.5s infinite}.media-prompt-mic.working{opacity:.6}.media-voice-note{font-size:11px;color:#b9a6ca;line-height:1.4}.media-result-dialog{box-sizing:border-box;width:min(94vw,570px);max-height:90dvh;padding:20px;border:1px solid #ad74db80;border-radius:26px;background:#181320;color:#f6f0ff;overflow:auto;box-shadow:0 15px 90px #0009}.media-result-dialog::backdrop{background:#07040bd9;backdrop-filter:blur(12px)}.media-result-dialog header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.media-result-dialog h2{margin:4px 0 0;font-size:23px}.media-result-dialog header small{color:#bd9cda}.media-close{border:1px solid #ffffff24;background:#ffffff08;color:white;font-size:27px;width:40px;height:40px;border-radius:50%}.media-result-preview{background:#0b0810;border-radius:17px;overflow:hidden;display:grid;place-items:center}.media-result-preview img,.media-result-preview video{display:block;max-width:100%;max-height:55dvh;object-fit:contain}.media-result-actions{display:flex;gap:10px;margin-top:16px}.media-result-actions button,.media-edit-again,.media-reopen-result{font:inherit;padding:13px;border:1px solid #b88ed84d;border-radius:14px;color:#f5eaff;background:#3a264b}.media-result-actions button{flex:1}.media-result-actions .primary{margin:0;background:linear-gradient(120deg,#a552e3,#7036b2)}.media-edit-again{width:100%;margin-top:10px;background:transparent}.media-reopen-result{width:100%;cursor:pointer}
 </style>
 </head>
 
@@ -1723,7 +1726,7 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
 
 <!-- СТУДИЯ -->
 <section id="view-studio" class="view photo-studio">
-  <div class="studio-heading"><div><h1 class="page-title">Создай фото</h1><p class="subtitle">Загрузи фото и опиши, что изменить.</p></div><button class="studio-video-link" type="button" onclick="openView('video')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="5" width="12" height="14" rx="3"/><path d="m15 10 6-4v12l-6-4Z"/></svg>Видео</button></div>
+<div class="studio-project-tabs" role="group" aria-label="Тип проекта"><button type="button" aria-pressed="true" onclick="openView('studio')">Создать фото</button><button type="button" aria-pressed="false" onclick="openView('video')">Создать видео</button></div><div class="studio-heading"><div><h1 class="page-title">Создай фото</h1><p class="subtitle">Загрузи фото или начни с идеи.</p></div></div>
   <div class="studio-upload-stage" id="studioUploadStage" ondragover="studioDragOver(event)" ondragleave="studioDragLeave(event)" ondrop="studioDropPhoto(event)">
     <div class="studio-upload-decor" aria-hidden="true"><span class="studio-backplate"></span><span class="studio-sample-card sample-one"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=240&q=80" alt="" decoding="async" loading="lazy"></span><span class="studio-sample-card sample-two"><img src="https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=240&q=80" alt="" decoding="async" loading="lazy"></span><span class="studio-upload-spark spark-one"></span><span class="studio-upload-spark spark-two"></span></div>
     <button id="studioUploadButton" class="studio-upload-square" type="button" onclick="pickStudioPhoto()" aria-label="Добавить фото">
@@ -1733,7 +1736,7 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
     <button class="studio-remove-photo" id="studioRemovePhoto" type="button" onclick="clearStudioPhoto()" aria-label="Убрать выбранное фото" hidden>×</button>
     <input id="imageFile" type="file" accept="image/jpeg,image/png,image/webp" onchange="studioPhotoPicked(this)" hidden>
   </div>
-  <div class="studio-prompt-box"><label for="imagePrompt">Напиши, что хочешь сделать</label><textarea id="imagePrompt" maxlength="1200" placeholder="Например: сделай свет мягче, замени фон на закат…"></textarea></div>
+  <div class="studio-prompt-box"><label for="imagePrompt">Напиши, что хочешь сделать</label><textarea id="imagePrompt" maxlength="1200" placeholder="Например: сделай свет мягче, замени фон на закат…"></textarea><div class="media-prompt-actions"><span id="imageVoiceNote" class="media-voice-note" role="status"></span><button id="imagePromptMic" class="media-prompt-mic" type="button" aria-label="Продиктовать описание" aria-pressed="false" onclick="toggleMediaDictation('image')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg></button></div></div>
   <div class="studio-tools" role="group" aria-label="Действие с фото">
     <button type="button" data-studio-tool="improve" aria-pressed="false" onclick="selectStudioTool('improve')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 20 11-11 3 3L7 23ZM14 4l1-3 1 3 3 1-3 1-1 3-1-3-3-1ZM5 8l1-3 1 3 3 1-3 1-1 3-1-3-3-1M20 17l1-2 1 2 2 1-2 1-1 2-1-2-2-1"/></svg><span>Улучшить</span></button>
     <button type="button" data-studio-tool="background" aria-pressed="false" onclick="selectStudioTool('background')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" stroke-dasharray="3 3"/><path d="m4 17 5-5 4 4 3-3 4 5"/><circle cx="15" cy="8" r="2"/></svg><span>Фон</span></button>
@@ -1741,20 +1744,20 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
     <button type="button" data-studio-tool="details" aria-pressed="false" onclick="selectStudioTool('details')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M21 15v4a2 2 0 0 1-2 2h-4M9 21H5a2 2 0 0 1-2-2v-4"/><circle cx="12" cy="12" r="4"/><path d="M12 10v4M10 12h4"/></svg><span>Детали</span></button>
   </div>
   <p id="studioToolHint" class="studio-tool-hint" role="status">Без фото можно создать изображение по описанию.</p>
-  <div class="fields studio-fields"><div><label for="imageModel">Модель</label><select id="imageModel"><option value="flux">Flux</option><option value="gptimage">GPT Image</option><option value="seedream5">Seedream</option><option value="kontext">Flux Kontext · правка фото</option></select></div><div><label for="imageRatio">Формат</label><select id="imageRatio"><option value="1:1">1:1</option><option value="9:16">9:16</option><option value="16:9">16:9</option></select></div></div>
+  <div class="fields studio-fields"><div><label for="imageModel">Модель</label><select id="imageModel"><option value="google/gemini-3.1-flash-image-preview">Nano Banana 2 · быстро</option><option value="google/gemini-3-pro-image-preview">Nano Banana Pro · качество 2K</option></select></div><div><label for="imageRatio">Формат</label><select id="imageRatio"><option value="1:1">1:1</option><option value="9:16">9:16</option><option value="16:9">16:9</option></select></div></div>
   <button id="makeImage" class="studio-create-button" type="button" onclick="generateMedia('image')"><span id="studioCreateLabel">Создать фото</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"/></svg></button>
   <div id="imageStatus" class="status studio-result-status" role="status" aria-live="polite"></div><div id="imageResult" class="result studio-result"></div>
 </section>
 
 <!-- ВИДЕО -->
-<section id="view-video" class="view">
-  <h1 class="page-title">Редактор видео</h1>
+<section id="view-video" class="view photo-studio"><div class="studio-project-tabs" role="group" aria-label="Тип проекта"><button type="button" aria-pressed="false" onclick="openView('studio')">Создать фото</button><button type="button" aria-pressed="true" onclick="openView('video')">Создать видео</button></div>
+  <h1 class="page-title">Создай видео</h1>
   <p class="subtitle">Создай ролик по описанию или подготовь новую версию исходного видео.</p>
   <div class="panel">
     <label for="videoPrompt">Описание видео</label>
     <textarea id="videoPrompt" class="prompt"
       maxlength="1200"
-      placeholder="Ночной город, неон, плавное движение камеры..."></textarea>
+      placeholder="Ночной город, неон, плавное движение камеры..."></textarea><div class="media-prompt-actions"><span id="videoVoiceNote" class="media-voice-note" role="status"></span><button id="videoPromptMic" class="media-prompt-mic" type="button" aria-label="Продиктовать описание" aria-pressed="false" onclick="toggleMediaDictation('video')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg></button></div>
     <div style="margin-top:14px">
       <label for="videoFile">Исходное видео для изменения (необязательно)</label>
       <input id="videoFile" class="media-upload" type="file"
@@ -1764,12 +1767,7 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
     <div class="fields">
       <div>
         <label for="videoModel">Модель</label>
-        <select id="videoModel">
-          <option value="bytedance/seedance-2.5">Seedance 2.5 (референс-видео)</option>
-          <option value="google/veo-3.1-fast">Veo 3.1 Fast</option>
-          <option value="bytedance/seedance-2.0-fast">Seedance 2.0 Fast</option>
-          <option value="alibaba/wan-2.2-fast">Wan Fast</option>
-        </select>
+        <select id="videoModel"><option value="bytedance/seedance-2-fast">Seedance 2 Fast · быстро</option><option value="bytedance/seedance-2">Seedance 2 · качество</option></select>
       </div>
       <div>
         <label for="videoRatio">Формат</label>
@@ -1788,7 +1786,7 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
         <option value="8">8 секунд</option>
       </select>
     </div>
-    <button id="makeVideo" class="primary"
+    <button id="makeVideo" class="studio-create-button"
       onclick="generateMedia('video')">
       Создать видео
     </button>
@@ -1870,6 +1868,12 @@ body[data-ui-glow="soft"] .profile-wallet,body[data-ui-glow="soft"] .profile-ava
 </div>
 
 <div id="attachmentBackdrop" class="attachment-backdrop hidden" onclick="closeAttachmentMenu()" aria-hidden="true"></div>
+<dialog id="mediaResultDialog" class="media-result-dialog" aria-labelledby="mediaResultTitle" oncancel="closeGeneratedMedia()">
+ <header><div><small>ANIS AI · Студия</small><h2 id="mediaResultTitle">Фото готово</h2></div><button type="button" class="media-close" onclick="closeGeneratedMedia()" aria-label="Закрыть результат">×</button></header>
+ <div id="mediaResultPreview" class="media-result-preview"></div>
+ <div class="media-result-actions"><button type="button" class="primary" onclick="saveGeneratedMedia()">↓ Сохранить</button><button type="button" onclick="shareGeneratedMedia()">Поделиться ↗</button></div>
+ <button id="mediaResultEdit" class="media-edit-again" type="button" onclick="editGeneratedMedia()">Изменить ещё</button><p id="mediaResultHelp" class="note"></p><p class="note">Сохрани результат: файл в сервисе доступен 7 дней.</p>
+</dialog>
 <dialog id="profileDialog" class="profile-dialog" aria-labelledby="profileDialogTitle">
   <div class="profile-dialog-heading"><h2 id="profileDialogTitle"></h2><button type="button" aria-label="Закрыть" onclick="document.getElementById('profileDialog').close()">×</button></div>
   <div id="profileDialogBody"></div>
@@ -2735,6 +2739,7 @@ function scrollAppToBottom(){
 
 /* РАЗДЕЛЫ */
 function openView(name){
+  if(mediaVoiceTask)cancelMediaDictation();
   if(name==="image")name="studio";
   closeAttachmentMenu();
   const returnToTyping=name==="chat"&&(
@@ -4558,7 +4563,7 @@ async function showHistory(){
 /* ФОТО И ВИДЕО */
 let studioImageFile=null;
 let studioPreviewUrl=null;
-let studioPreviousModel='flux';
+let studioPreviousModel='google/gemini-3.1-flash-image-preview';
 let selectedStudioTool=null;
 const STUDIO_TOOLS=Object.freeze({
   improve:{label:'Улучшить',prompt:'Улучши качество и чёткость фото, аккуратно скорректируй свет и цвета. Сохрани внешность, пропорции и естественную текстуру.'},
@@ -4601,7 +4606,7 @@ function setStudioPhoto(file){
   $('studioRemovePhoto').hidden=false;
   $('studioUploadButton').setAttribute('aria-label','Заменить фото');
   $('studioUploadLabel').textContent='Заменить фото';$('studioUploadCaption').textContent=file.name||'Выбрано фото';
-  $('imageModel').value='kontext';$('imageModel').disabled=true;
+  $('imageModel').disabled=false;
   syncStudioTool();return true;
 }
 function studioPhotoPicked(input){setStudioPhoto(input.files?.[0]);input.value='';}
@@ -4621,156 +4626,191 @@ function studioDragLeave(event){if(!event.currentTarget.contains(event.relatedTa
 function studioDropPhoto(event){event.preventDefault();$('studioUploadStage').classList.remove('drag-over');setStudioPhoto(event.dataTransfer?.files?.[0]);}
 function setStudioBusy(value){
   $('studioUploadButton').disabled=value;$('studioRemovePhoto').disabled=value;
-  $('imagePrompt').disabled=value;$('imageRatio').disabled=value;$('imageModel').disabled=value||!!studioImageFile;
+  $('imagePrompt').disabled=value;$('imageRatio').disabled=value;$('imageModel').disabled=value;$('imagePromptMic').disabled=value;
   document.querySelectorAll('[data-studio-tool]').forEach(button=>button.disabled=value);
   $('studioCreateLabel').textContent=value?(studioImageFile?'Изменяю фото…':'Создаю фото…'):'Создать фото';
 }
 
 
-async function generateMedia(kind){
-  if(!initData||!user){
-    toast("Открой ANIS AI через Telegram");
-    return;
-  }
-
-  const file=kind==="image"?studioImageFile:$("videoFile").files?.[0]||null;
-  let prompt=$(kind+"Prompt").value.trim();
-  if(kind==="image"){
-    try{prompt=buildStudioPrompt(prompt,file);}catch(error){toast(error.message);return;}
-  }
-  if(!prompt){
-    toast(kind==="image"?"Опиши, какое фото создать или изменить":"Опиши, как создать или изменить видео");
-    return;
-  }
-
-  if(kind==="image"&&file&&!file.type.startsWith("image/")){
-    toast("Выбери изображение");
-    return;
-  }
-  if(kind==="video"&&file&&!file.type.startsWith("video/")){
-    toast("Выбери видео");
-    return;
-  }
-  if(file&&file.size>(kind==="image"?20:25)*1024*1024){
-    toast(kind==="image"?"Фото должно быть меньше 20 МБ":"Видео должно быть меньше 25 МБ");
-    return;
-  }
-
-  const button=$(
-    kind==="image"?"makeImage":"makeVideo"
-  );
-  const status=$(kind+"Status");
-  const result=$(kind+"Result");
-
-  button.disabled=true;
-  if(kind==="image")setStudioBusy(true);
-  status.textContent=file
-    ?(kind==="image"?"Изменяю фото…":"Анализирую исходное видео…")
-    :"Создаю…";
-  result.replaceChildren();
-
-  const controller=new AbortController();
-  const timer=setTimeout(
-    ()=>controller.abort(),
-    kind==="video"?300000:180000
-  );
-
+const generatedMedia={image:null,video:null};
+let activeGeneratedKind='image';
+let mediaVoiceTask=null;
+let mediaVoiceEpoch=0;
+function readableMediaError(error){
+  if(error?.name==='AbortError')return 'Обработка заняла больше времени. Проверь соединение и попробуй ещё раз.';
+  if(error instanceof TypeError||/load failed|failed to fetch|networkerror/i.test(error?.message||''))return 'Соединение прервалось. Фото и описание сохранены — попробуй ещё раз. Если используешь VPN, проверь его соединение.';
+  return error?.message||'Не удалось обработать запрос. Попробуй ещё раз.';
+}
+function showGeneratedMedia(kind,blob){
+  const previous=generatedMedia[kind];if(previous)URL.revokeObjectURL(previous.url);
+  const ext=blob.type.includes('jpeg')?'jpg':blob.type.includes('webp')?'webp':blob.type.includes('webm')?'webm':kind==='video'?'mp4':'png';
+  generatedMedia[kind]={blob,url:URL.createObjectURL(blob),file:new File([blob],'anis-'+(kind==='video'?'video':'photo')+'.'+ext,{type:blob.type})};
+  renderGeneratedResultLink(kind);openGeneratedMedia(kind);
+}
+function renderGeneratedResultLink(kind){
+  const result=$(kind+'Result');result.replaceChildren();
+  if(!generatedMedia[kind])return;
+  const button=document.createElement('button');button.type='button';button.className='media-reopen-result';button.textContent='Открыть готовый результат ↗';button.onclick=()=>openGeneratedMedia(kind);result.append(button);
+}
+function openGeneratedMedia(kind){
+  const item=generatedMedia[kind];if(!item)return;
+  activeGeneratedKind=kind;
+  $('mediaResultTitle').textContent=kind==='video'?'Видео готово':'Фото готово';
+  const preview=document.createElement(kind==='video'?'video':'img');preview.src=item.url;
+  if(kind==='video'){preview.controls=true;preview.playsInline=true;}else preview.alt='Готовый результат ANIS AI';
+  $('mediaResultPreview').replaceChildren(preview);
+  $('mediaResultEdit').hidden=kind!=='image';
+  $('mediaResultHelp').textContent=kind==='image'?'На iPhone: «Поделиться» → «Сохранить изображение».':'На iPhone видео можно сохранить через меню «Поделиться».';
+  if(!$('mediaResultDialog').open)$('mediaResultDialog').showModal();
+}
+function closeGeneratedMedia(){
+  $('mediaResultPreview').querySelector('video')?.pause();$('mediaResultDialog').close();
+}
+function saveGeneratedMedia(){
+  const item=generatedMedia[activeGeneratedKind];if(!item)return;
+  const a=document.createElement('a');a.href=item.url;a.download=item.file.name;document.body.append(a);a.click();a.remove();
+}
+async function shareGeneratedMedia(){
+  const item=generatedMedia[activeGeneratedKind];if(!item)return;
   try{
-    const payload={
-      action:kind,
-      prompt,
-      model:kind==="image"&&file?"kontext":kind==="video"&&file?"bytedance/seedance-2.5":$(kind+"Model").value,
-      ratio:$(kind+"Ratio").value,
-      initData
-    };
-    if(kind==="video"){
-      payload.duration=Number($("duration").value);
-    }
-
-    let response;
-    if(kind==="image"&&file||kind==="video"){
-      const form=new FormData();
-      Object.entries(payload).forEach(([key,value])=>
-        form.append(key,String(value))
-      );
-      if(file) form.append("file",file,file.name);
-      if(kind==="image"&&file) form.set("action","image-edit");
-      response=await fetch(API_URL,{
-        method:"POST",
-        body:form,
-        signal:controller.signal
-      });
-    }else{
-      response=await fetch(API_URL,{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify(payload),
-        signal:controller.signal
-      });
-    }
-
-    if(!response.ok){
-      let error="Ошибка генерации";
-      try{
-        const data=await response.json();
-        error=data.error||error;
-      }catch(e){}
-      throw Error(error);
-    }
-
-    const type=(response.headers.get("content-type")||"").toLowerCase();
-    let blob;
-    if(kind==="image"&&type.includes("application/json")){
-      const data=await response.json();
-      if(data.error) throw Error(data.error);
-      const image=data.data?.[0];
-      if(image?.b64_json){
-        const bytes=Uint8Array.from(atob(image.b64_json),c=>c.charCodeAt(0));
-        blob=new Blob([bytes],{type:image.media_type||"image/png"});
-      }else if(image?.url){
-        const imageResponse=await fetch(image.url,{signal:controller.signal});
-        if(!imageResponse.ok) throw Error("Не удалось загрузить готовое фото");
-        blob=await imageResponse.blob();
-      }else{
-        throw Error("Сервис не вернул готовое изображение");
-      }
-    }else{
-      if(kind==="image"&&!type.startsWith("image/")){
-        throw Error("Сервер не вернул изображение");
-      }
-      if(kind==="video"&&!type.startsWith("video/")){
-        throw Error("Сервер не вернул видео");
-      }
-      blob=await response.blob();
-    }
-
-    const url=URL.createObjectURL(blob);
-    const media=document.createElement(kind==="image"?"img":"video");
-    invalidateUsageStats();
-    media.src=url;
-    if(kind==="video"){
-      media.controls=true;
-      media.playsInline=true;
-    }else{
-      media.alt=file?"Изменённое изображение":"Созданное изображение";
-    }
-    const link=document.createElement("a");
-    link.href=url;
-    link.download=kind==="image"?"anis-image.png":"anis-video.mp4";
-    link.textContent="Скачать результат";
-    result.append(media,link);
-    status.textContent=file
-      ?(kind==="image"?"Фото изменено":"Новая версия видео готова")
-      :"Готово!";
-  }catch(e){
-    status.textContent=e.name==="AbortError"
-      ?"Генерация заняла слишком много времени. Попробуй ещё раз."
-      :e.message;
-  }finally{
-    clearTimeout(timer);
-    button.disabled=false;
-    if(kind==="image")setStudioBusy(false);
+    if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[item.file]}))){await navigator.share({files:[item.file],title:'ANIS AI'});return;}
+    saveGeneratedMedia();toast('Сохрани файл, затем отправь его из галереи.');
+  }catch(error){if(error.name!=='AbortError')toast('Не удалось открыть отправку. Нажми «Сохранить».');}
+}
+function editGeneratedMedia(){
+  const item=generatedMedia.image;if(!item)return;
+  closeGeneratedMedia();openView('studio');setStudioPhoto(item.file);$('imagePrompt').focus({preventScroll:true});
+}
+async function prepareStudioImage(file){
+  if(!file||file.size<=2*1024*1024)return file;
+  // Resize large uploads locally; avoid waiting for a multi-megabyte transfer on mobile.
+  const url=URL.createObjectURL(file),image=new Image();
+  try{
+    await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject;image.src=url;});
+    const scale=Math.min(1,2048/Math.max(image.naturalWidth,image.naturalHeight));
+    const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+    const ctx=canvas.getContext('2d');if(!ctx)return file;ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.92));
+    return blob&&blob.size<file.size?new File([blob],'reference.jpg',{type:'image/jpeg'}):file;
+  }catch{return file;}finally{URL.revokeObjectURL(url);}
+}
+function syncMediaMic(){
+  for(const kind of ['image','video']){
+    const button=$(kind+'PromptMic'),active=mediaVoiceTask?.kind===kind,phase=active?mediaVoiceTask.phase:null;
+    button.classList.toggle('recording',phase==='recording');button.classList.toggle('working',phase==='opening'||phase==='transcribing');button.setAttribute('aria-pressed',String(!!active));
+    button.setAttribute('aria-label',phase==='recording'?'Остановить запись и вставить текст':phase?'Отменить голосовой ввод':'Продиктовать описание');
   }
+}
+function cancelMediaDictation(){
+  const task=mediaVoiceTask;mediaVoiceEpoch++;mediaVoiceTask=null;
+  if(task){task.cancelled=true;clearTimeout(task.timer);task.controller?.abort();if(task.recorder?.state==='recording')task.recorder.stop();task.stream?.getTracks().forEach(track=>track.stop());$(task.kind+'VoiceNote').textContent='';}
+  syncMediaMic();
+}
+function finishMediaDictation(task){
+  clearTimeout(task.timer);if(task.recorder?.state==='recording')task.recorder.stop();
+}
+async function toggleMediaDictation(kind){
+  if(mediaVoiceTask){if(mediaVoiceTask.kind===kind&&mediaVoiceTask.phase==='recording')finishMediaDictation(mediaVoiceTask);else cancelMediaDictation();return;}
+  if($(kind==='image'?'makeImage':'makeVideo').disabled)return;
+  if(!initData||!user){toast('Открой ANIS AI через Telegram');return;}
+  if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){toast('Голосовой ввод недоступен в этом браузере.');return;}
+  if(recording||openingMic||transcribing){toast('Сначала заверши запись в чате.');return;}
+  const task={kind,token:++mediaVoiceEpoch,phase:'opening',chunks:[],cancelled:false};mediaVoiceTask=task;syncMediaMic();
+  $(kind+'VoiceNote').textContent='Подключаю микрофон…';
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+    if(task.cancelled||mediaVoiceTask!==task){stream.getTracks().forEach(track=>track.stop());return;}
+    task.stream=stream;
+    const mime=['audio/webm;codecs=opus','audio/mp4','audio/webm'].find(type=>MediaRecorder.isTypeSupported?.(type));
+    task.recorder=new MediaRecorder(stream,mime?{mimeType:mime}:{});
+    task.recorder.ondataavailable=event=>{if(event.data.size)task.chunks.push(event.data);};
+    task.recorder.onstop=()=>{task.stream.getTracks().forEach(track=>track.stop());if(!task.cancelled&&mediaVoiceTask===task)void transcribeMediaDictation(task);};
+    task.recorder.onerror=()=>{if(mediaVoiceTask===task){cancelMediaDictation();toast('Запись прервалась. Попробуй ещё раз.');}};
+    task.phase='recording';task.recorder.start();task.timer=setTimeout(()=>finishMediaDictation(task),60000);
+    $(kind+'VoiceNote').textContent='Говори… Нажми на микрофон ещё раз, чтобы вставить текст.';syncMediaMic();
+  }catch(error){if(mediaVoiceTask===task){cancelMediaDictation();toast(error.name==='NotAllowedError'?'Разреши доступ к микрофону в настройках Telegram.':readableMediaError(error));}}
+}
+async function transcribeMediaDictation(task){
+  task.phase='transcribing';syncMediaMic();$(task.kind+'VoiceNote').textContent='Распознаю описание…';
+  task.controller=new AbortController();task.timer=setTimeout(()=>task.controller.abort(),60000);
+  try{
+    const type=task.recorder.mimeType||'audio/webm',blob=new Blob(task.chunks,{type});if(!blob.size)throw Error('Запись пустая. Попробуй ещё раз.');
+    const form=new FormData();form.append('action','transcribe');form.append('initData',initData);form.append('file',blob,type.includes('mp4')?'description.m4a':'description.webm');
+    const response=await fetch(API_URL,{method:'POST',body:form,signal:task.controller.signal});const data=await response.json();
+    if(!response.ok||!data.text)throw Error(data.error||'Не удалось распознать описание.');
+    if(task.cancelled||mediaVoiceTask!==task)return;
+    const field=$(task.kind+'Prompt'),text=String(data.text).trim();field.value=field.value.trim()?field.value.trim()+'\n'+text:text;
+    invalidateUsageStats();$(task.kind+'VoiceNote').textContent='Описание добавлено. Можно отредактировать текст.';
+    if(field.value.length>1200)toast('Текст вставлен полностью. Сократи описание до 1200 символов.');
+  }catch(error){if(!task.cancelled&&mediaVoiceTask===task)$(task.kind+'VoiceNote').textContent=readableMediaError(error);}
+  finally{clearTimeout(task.timer);if(mediaVoiceTask===task){mediaVoiceTask=null;syncMediaMic();}}
+}
+
+const pendingMediaJobs=new Map();
+function mediaJobKey(kind){return 'anis-media-job:'+user?.id+':'+kind;}
+function rememberMediaJob(kind,id){try{localStorage.setItem(mediaJobKey(kind),id);}catch{}}
+function forgetMediaJob(kind){try{localStorage.removeItem(mediaJobKey(kind));}catch{}}
+async function mediaJSON(payload){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),60000);
+ try{const response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,initData}),signal:controller.signal});const data=await response.json();if(!response.ok){const error=Error(data.error||'Сервис временно недоступен.');error.status=response.status;throw error;}return data;}finally{clearTimeout(timer);}
+}
+function setMediaBusy(kind,value){
+ $(kind==='image'?'makeImage':'makeVideo').disabled=value;
+ if(kind==='image')setStudioBusy(value);
+ else for(const id of ['videoPrompt','videoFile','videoModel','videoRatio','duration','videoPromptMic'])$(id).disabled=value;
+}
+async function watchMediaJob(kind,jobId,initial){
+ if(pendingMediaJobs.has(kind))return;
+ pendingMediaJobs.set(kind,jobId);rememberMediaJob(kind,jobId);setMediaBusy(kind,true);
+ const status=$(kind+'Status');let data=initial,attempts=0;
+ try{
+  while(true){
+   if(!data){
+    try{data=await mediaJSON({action:'media-status',jobId});attempts=0;}
+    catch(error){if(error.status===404){forgetMediaJob(kind);throw error;}if(++attempts>=4)throw error;status.textContent='Восстанавливаю соединение… Проект продолжает обрабатываться.';await new Promise(r=>setTimeout(r,5000));continue;}
+   }
+   if(data.status==='failed'||data.status==='cancelled'){forgetMediaJob(kind);throw Error(data.error||'Генерация не завершилась.');}
+   if(data.status==='completed'){
+    status.textContent='Результат готов. Загружаю файл…';
+    const response=await fetch(data.url,{signal:AbortSignal.timeout(90000)});if(!response.ok)throw Error('Не удалось загрузить готовый файл. Нажми «Проверить результат».');
+    const blob=await response.blob();if(!blob.size||!blob.type.startsWith(kind==='image'?'image/':'video/'))throw Error('Не удалось получить файл результата.');
+    showGeneratedMedia(kind,blob);invalidateUsageStats();forgetMediaJob(kind);status.textContent='Готово!';break;
+   }
+   status.textContent=data.status==='creating'?'Подтверждаю создание проекта…':data.status==='pending'?'Проект в очереди… Можно перейти в другой раздел.':'Создаю '+(kind==='image'?'фото':'видео')+'… Можно перейти в другой раздел.';
+   await new Promise(r=>setTimeout(r,kind==='image'?3500:6500));data=null;
+  }
+ }catch(error){status.textContent=readableMediaError(error);let id;try{id=localStorage.getItem(mediaJobKey(kind));}catch{}if(id){const retry=document.createElement('button');retry.type='button';retry.className='media-reopen-result';retry.textContent='Проверить результат';retry.onclick=()=>watchMediaJob(kind,id);$(kind+'Result').replaceChildren(retry);}}
+ finally{pendingMediaJobs.delete(kind);setMediaBusy(kind,false);}
+}
+async function resumeMediaProjects(){
+ if(!initData||!user)return;
+ for(const kind of ['image','video']){let id;try{id=localStorage.getItem(mediaJobKey(kind));}catch{}if(id)void watchMediaJob(kind,id);}
+ // Warm only local studio assets; paid API requests run exclusively after Create.
+ const warm=()=>document.querySelectorAll('.studio-sample-card img').forEach(img=>{img.loading='eager';});
+ if('requestIdleCallback'in window)window.requestIdleCallback(warm,{timeout:2500});else setTimeout(warm,1200);
+}
+async function generateMedia(kind){
+ if(!initData||!user){toast('Открой ANIS AI через Telegram');return;}
+ if(pendingMediaJobs.has(kind)||$(kind==='image'?'makeImage':'makeVideo').disabled)return;
+ let pending;try{pending=localStorage.getItem(mediaJobKey(kind));}catch{}if(pending){void watchMediaJob(kind,pending);return;}
+ if(mediaVoiceTask){toast('Сначала заверши голосовой ввод.');return;}
+ let file=kind==='image'?studioImageFile:$('videoFile').files?.[0]||null;
+ let prompt=$(kind+'Prompt').value.trim();
+ try{if(kind==='image')prompt=buildStudioPrompt(prompt,file);if(prompt.length<3||prompt.length>1200)throw Error('Опиши идею: от 3 до 1200 символов.');if(file&&file.size>(kind==='image'?20:25)*1024*1024)throw Error('Файл слишком большой.');}catch(error){toast(error.message);return;}
+ setMediaBusy(kind,true);const status=$(kind+'Status');status.textContent='Отправляю проект…';$(kind+'Result').replaceChildren();
+ const requestId=crypto.randomUUID();rememberMediaJob(kind,requestId);
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),60000);
+ try{
+  if(kind==='image')file=await prepareStudioImage(file);
+  const payload={action:'media-create',kind,requestId,prompt,model:$(kind+'Model').value,ratio:$(kind+'Ratio').value,initData};
+  if(kind==='video')payload.duration=Number($('duration').value);
+  let response;
+  if(file){const form=new FormData();for(const [key,value] of Object.entries(payload))form.append(key,String(value));form.append('file',file,file.name);response=await fetch(API_URL,{method:'POST',body:form,signal:controller.signal});}
+  else response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});
+  const data=await response.json();if(!response.ok){forgetMediaJob(kind);throw Error(data.error||'Не удалось создать проект.');}
+  clearTimeout(timer);await watchMediaJob(kind,requestId,data);
+ }catch(error){status.textContent=readableMediaError(error);let id;try{id=localStorage.getItem(mediaJobKey(kind));}catch{}if(id){const retry=document.createElement('button');retry.type='button';retry.className='media-reopen-result';retry.textContent='Проверить отправленный проект';retry.onclick=()=>watchMediaJob(kind,id);$(kind+'Result').replaceChildren(retry);}}
+ finally{clearTimeout(timer);setMediaBusy(kind,false);}
 }
 
 /* КЛАВИАТУРА IPHONE */
@@ -5028,6 +5068,7 @@ updateControls();
 loadHistory();
 void refreshWallet();
 void prefetchUsageStats();
+void resumeMediaProjects();
 </script>
 
 </body>
