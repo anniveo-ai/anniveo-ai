@@ -81,6 +81,25 @@
   document.querySelectorAll('[data-studio-projects]').forEach(b=>{b.hidden=!projects.length;b.textContent=active?'Мои проекты · в работе '+active:'Мои проекты';});
  };
  const previewUrls=new Map();
+ // Keep the native values used by generation, drafts and format help; cards are their visible controls.
+ const settingCardSync=[];
+ for(const id of ['imageQuality','imageRatio','videoQuality','videoRatio','duration']){
+  const select=$(id),panel=select.parentElement,quality=id.endsWith('Quality'),ratio=id.endsWith('Ratio'),rail=el('div',{className:'studio-setting-cards',role:'group','aria-label':quality?(id.startsWith('image')?'Качество фото':'Качество видео'):ratio?'Формат':'Длительность'});
+  panel.classList.add('studio-setting-panel');panel.classList.toggle('quality-panel',quality);select.closest('.media-settings').classList.add('studio-card-settings');select.hidden=true;
+  const thumbnail=$('studioUploadStage')?.querySelector('.studio-sample-card img')?.src||'orb20-real.webp';
+  for(const [index,option] of [...select.options].entries()){
+   const choice=button('',()=>{if(select.disabled)return;select.value=option.value;select.dispatchEvent(new Event('change',{bubbles:true}));});choice.className='studio-setting-card';choice.dataset.value=option.value;
+   if(quality){const image=el('img',{src:thumbnail,alt:'',loading:'lazy',decoding:'async'});image.className='quality-sample quality-sample-'+index;choice.append(image);}
+   else if(ratio)choice.append(el('i',{className:'setting-ratio-shape','data-ratio':option.value,'aria-hidden':'true'}));
+   else choice.append(el('i',{className:'setting-duration-icon','aria-hidden':'true'},'▷'));
+   const [title,detail]=option.textContent.split(' · ');choice.append(el('strong',{},title));if(detail)choice.append(el('small',{},detail));rail.append(choice);
+  }
+  const sync=()=>{for(const card of rail.children){card.setAttribute('aria-pressed',String(card.dataset.value===select.value));card.disabled=select.disabled;}};
+  select.addEventListener('change',sync);new MutationObserver(sync).observe(select,{attributes:true,attributeFilter:['disabled']});panel.append(rail);settingCardSync.push(sync);sync();
+ }
+ const formatHelpOriginal=applyFormatHelp;applyFormatHelp=function(...args){const result=formatHelpOriginal(...args);settingCardSync.forEach(sync=>sync());saveDrafts();return result;};
+ const room=$('mediaResultDialog'),roomHeader=room.querySelector('header'),roomTitle=$('mediaResultTitle'),roomClose=button('×',()=>closeGeneratedMedia());roomClose.className='room-close';roomClose.setAttribute('aria-label','Свернуть окно проекта');roomHeader.prepend(roomClose);roomHeader.after(roomTitle);
+ const variantPanel=el('section',{className:'room-variants','aria-label':'Варианты проекта'}),variantHeading=room.querySelector('.project-variants-heading');variantHeading.before(variantPanel);variantPanel.append(variantHeading,$('projectVariantCards'));
  function previewSource(p){
   if(p.media?.url)return {url:p.media.url,type:p.kind==='video'?'video':'img'};
   if(p.status==='completed')return p.resultUrl&&!p.region?{url:p.resultUrl,type:p.kind==='video'?'video':'img'}:null;
@@ -95,6 +114,7 @@
  }
  renderProjectRoom=function(){
   renderRoomOriginal();const p=studioProjects.get(selectedStudioProject);if(!p)return;
+  room.dataset.status=p.status;
   const family=projectFamily(p),stage=$('mediaResultPreview');
   $('projectVariantCount').textContent=variantsText(family.length);
   if(!PROJECT_TERMINAL.includes(p.status)){
@@ -107,6 +127,7 @@
    if(item.status==='completed'&&source)visual.append(previewElement(source));else if(!PROJECT_TERMINAL.includes(item.status))addWorkingPreview(visual,item,true);else visual.append(el('span',{},item.status==='completed'?'✓':'!'));
    if(item.kind==='video')visual.append(el('b',{className:'project-video-tag'},'▷'));card.append(visual,el('small',{},projectLabel(item)));cards.append(card);
   }
+  const addIdea=button('+',()=>$('projectAgentIdea').focus({preventScroll:false}));addIdea.className='project-variant-add';addIdea.setAttribute('aria-label','Добавить идею для нового варианта');cards.append(addIdea);
   $('mediaResultTitle').textContent=projectLabel(p)+(p.status==='completed'?' готово':p.status==='failed'?' · ошибка':p.status==='unknown'?' · проверка':' · в работе');
   let steps=$('anisProjectSteps');if(!steps){steps=el('div',{id:'anisProjectSteps',className:'anis-steps','aria-hidden':'true'});for(let i=0;i<4;i++)steps.append(el('span'));$('projectStageStatus').after(steps);}
   const step=p.status==='completed'?4:p.loading?3:['pending','processing'].includes(p.status)?2:['submitting','creating'].includes(p.status)?1:0;
@@ -297,6 +318,7 @@
 
  async function start(){
   const drafts=read('drafts',null);if(drafts)for(const [id,value]of Object.entries(drafts.values||{}))if($(id))$(id).value=value;
+  settingCardSync.forEach(sync=>sync());
   try{
    const rows=await dbRecord('projects')||JSON.parse(localStorage.getItem(studioProjectKey())||'[]');for(const row of rows){if(!row.id||!['image','video'].includes(row.kind))continue;const p={...row};if(p.mediaBlob)p.media=mediaFromBlob(p.kind,p.mediaBlob);studioProjects.set(p.id,p);projectCounter=Math.max(projectCounter,p.order||0);}
    const files=await dbRecord('files');if(files){if(files.image)setStudioPhoto(files.image);if(files.video)setStudioVideo(files.video);if(files.identity)setVideoIdentity(files.identity);state.region=files.region||null;}
