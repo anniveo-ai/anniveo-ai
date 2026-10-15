@@ -32,7 +32,7 @@ async function readWallet(db, userId) {
 
 async function createWalletInvoice(env, userId, packId) {
   const pack = STAR_PACKS.find(p => p.id === packId);
-  if (!pack) return { error: 'Выбери пакет Аниксов', status: 400 };
+  if (!pack) return { error: 'Выбери пакет Аниумов', status: 400 };
   const webhook = await telegramPaymentAPI(env, 'getWebhookInfo');
   if (webhook.url !== PAYMENT_WEBHOOK_URL) return { error: 'Приём платежей временно недоступен. Напиши в поддержку.', status: 503 };
   const now = Math.floor(Date.now() / 1000);
@@ -43,8 +43,8 @@ async function createWalletInvoice(env, userId, packId) {
   await env.DB.prepare('INSERT INTO payment_orders(id,user_id,coins,stars,created_at,expires_at) VALUES(?,?,?,?,?,?)')
     .bind(id, userId, pack.coins, pack.stars, now, now + 1800).run();
   const url = await telegramPaymentAPI(env, 'createInvoiceLink', {
-    title: 'Аниксы: ' + pack.coins, description: 'Пополнение баланса ANIS AI. Пакет «Аниксы»: ' + pack.coins + '. Поддержка: @ISMAILCHIIK.',
-    payload: id, provider_token: '', currency: 'XTR', prices: [{ label: 'Аниксы: ' + pack.coins, amount: pack.stars }]
+    title: 'Аниумы: ' + pack.coins, description: 'Пополнение баланса ANIS AI. Пакет «Аниумы»: ' + pack.coins + '. Поддержка: @ISMAILCHIIK.',
+    payload: id, provider_token: '', currency: 'XTR', prices: [{ label: 'Аниумы: ' + pack.coins, amount: pack.stars }]
   });
   return { url, orderId: id, coins: pack.coins, stars: pack.stars };
 }
