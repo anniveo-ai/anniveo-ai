@@ -11,9 +11,20 @@
   };
   function control(text,fn,className=''){const b=node('button',{type:'button',className},text);b.onclick=fn;return b;}
   function download(item){const link=node('a',{href:item.url,download:item.file.name});document.body.append(link);link.click();link.remove();}
+  const exportsInProgress=new WeakMap();
   async function getMedia(project){
     if(!project.media&&project.resultUrl)await loadStudioProjectResult(project);
     if(!project.media?.file)throw Error(project.error||'Не удалось открыть результат. Попробуй ещё раз.');
+    if(project.resolutionPending&&window.anisMediaQuality){
+      let exporting=exportsInProgress.get(project);
+      if(!exporting){exporting=(async()=>{
+        const result=await window.anisMediaQuality.prepare(project,project.media.blob,{convertVideo:true});
+        project.resolutionWarning=result.warning;project.resolutionPending=!!result.pending;
+        if(result.pending){showMedia(project.media,project.kind);throw Error(result.warning);}
+        const old=project.media.url;project.media=mediaFromBlob(project.kind,result.blob);project.mediaBlob=result.blob;project.outputWidth=result.width;project.outputHeight=result.height;Object.assign(project.media,{width:result.width,height:result.height,warning:result.warning});if(old?.startsWith('blob:'))URL.revokeObjectURL(old);persistStudioProjects();updateProjectDock();
+      })();exportsInProgress.set(project,exporting);}
+      try{await exporting;}finally{exportsInProgress.delete(project);}
+    }
     return project.media;
   }
   async function normalizeBlob(kind,blob){
@@ -41,6 +52,7 @@
     if(kind==='video'){media.controls=true;media.playsInline=false;media.preload='metadata';}else media.alt='Готовое фото ANIS AI';
     viewerStage.append(media);
     viewerNote.textContent=kind==='video'?'Нажми воспроизведение, чтобы посмотреть видео. Сохранение в «Фото» — через системное меню «Поделиться».':'Удерживай фото, чтобы открыть меню сохранения. Также можно сохранить его через «Поделиться».';
+    if(item.width&&item.height)viewerNote.textContent=item.width+'×'+item.height+' пикс. · '+(item.warning||viewerNote.textContent);
     if(navigator.share&&navigator.canShare?.({files:[item.file]}))viewerActions.append(control('Сохранить в Фото',()=>void saveMedia(item,kind),'anis-button primary'));
     viewerActions.append(control('Скачать .'+item.file.name.split('.').at(-1),()=>download(item),'anis-button'));
     if(!viewer.open)viewer.showModal();
@@ -52,13 +64,13 @@
     }
     showMedia(item,kind);
   }
-  function selectValue(id,value){const select=$(id);if([...select.options].some(o=>o.value===String(value)))select.value=String(value);select.dispatchEvent(new Event('change',{bubbles:true}));}
+  function selectValue(id,value){const select=$(id);if(id.endsWith('Quality')&&![...select.options].some(o=>o.value===String(value)))value={fast:'fhd',high:id==='imageQuality'?'qhd':'fhd',max:'uhd'}[value]||value;if([...select.options].some(o=>o.value===String(value)&&!o.disabled))select.value=String(value);select.dispatchEvent(new Event('change',{bubbles:true}));}
   function prepareAction(project,item,action){
     if($('mediaResultDialog').open)closeGeneratedMedia();
     const kind=project.kind;openView(kind==='video'?'video':'studio');
     if(kind==='video'){clearVideoIdentity();if(setStudioVideo(item.file)===false)return;}else if(setStudioPhoto(item.file)===false)return;
-    selectValue(kind+'Quality',action==='enhance'?(kind==='video'?'high':'max'):(project.quality||'fast'));
     selectValue(kind+'Ratio',project.ratio||(kind==='video'?'16:9':'1:1'));
+    selectValue(kind+'Quality',action==='enhance'?(kind==='video'&&project.ratio==='1:1'?'fhd':'uhd'):(project.quality||'fhd'));
     if(kind==='video')selectValue('duration',project.duration||4);
     const subject=kind==='video'?'видео':'фото',prompt=$(kind+'Prompt');
     prompt.value=action==='enhance'?'Улучши качество этого '+subject+'. Сохрани лица, композицию, цвета и все важные детали. Добавь естественную чёткость'+(kind==='video'?', плавность и стабильность движения.':', аккуратно убери шум.'):

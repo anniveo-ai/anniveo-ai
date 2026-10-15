@@ -48,7 +48,8 @@ const PREMIUM_MEDIA_MODELS=Object.freeze({
  'google/gemini-3.1-flash-image-preview':{kind:'image',resolution:'1K'},
  'google/gemini-3-pro-image-preview':{kind:'image',resolution:'2K'},
  'bytedance/seedance-2-fast':{kind:'video',resolution:'720p'},
- 'bytedance/seedance-2':{kind:'video',resolution:'720p'}
+ 'bytedance/seedance-2':{kind:'video',resolution:'720p'},
+ 'gemini-omni-video':{kind:'video',resolution:'4k'}
 });
 function premiumError(status){return status===402?'На балансе сервиса ИИ недостаточно средств. Пополни баланс Polza.':status===401||status===403?'Платный сервис ИИ недоступен: проверь доступ API-ключа.':status===429?'Сервис ИИ занят. Подожди немного.':'Сервис ИИ не смог обработать запрос. Повтори позже.';}
 async function polzaMediaRequest(env,path,body){
@@ -74,11 +75,20 @@ function choosePremiumMedia(body,file){
  const kind=body.kind,quality=body.quality;
  if(quality===undefined)return {model:String(body.model||''),resolution:null};
  if(kind==='image'){
+  if(['fhd','qhd','uhd'].includes(quality)){
+   const resolution=quality==='uhd'||quality==='qhd'&&body.ratio==='1:1'?'4K':'2K';
+   return {model:resolution==='4K'||!!file?'google/gemini-3-pro-image-preview':'google/gemini-3.1-flash-image-preview',resolution};
+  }
   if(!['fast','high','max'].includes(quality))throw Error('Выбери качество фото.');
   const complex=!!file||/текст|надпис|логотип|шрифт|портрет|идентич|сохрани|дизайн|инфограф|text|logo|portrait/i.test(String(body.prompt||''));
   return {model:quality==='max'||quality==='high'&&complex?'google/gemini-3-pro-image-preview':'google/gemini-3.1-flash-image-preview',resolution:{fast:'1K',high:'2K',max:'4K'}[quality]};
  }
  if(kind==='video'){
+  if(quality==='fhd')return {model:'bytedance/seedance-2',resolution:'1080p'};
+  if(['qhd','uhd'].includes(quality)){
+   if(!['16:9','9:16'].includes(body.ratio))throw Error('Для видео 2K и 4K выбери широкий или вертикальный формат.');
+   return {model:'gemini-omni-video',resolution:'4k'};
+  }
   if(!['fast','high'].includes(quality))throw Error('Выбери качество видео.');
   return {model:quality==='high'?'bytedance/seedance-2':'bytedance/seedance-2-fast',resolution:quality==='high'?'720p':'480p'};
  }
@@ -118,7 +128,7 @@ async function createPremiumMedia(env,userId,body,file,identityFile=null){
   await env.DB.prepare('UPDATE media_jobs SET prompt=?,quality=?,ratio=?,duration=?,region_json=? WHERE id=? AND user_id=?').bind(prompt,row.quality,ratio,duration,row.region_json,id,userId).run();
   const input={prompt,aspect_ratio:ratio};
   if(kind==='image'){input.image_resolution=selection.resolution||config.resolution;input.output_format='png';}
-  else{input.duration=String(duration);input.resolution=selection.resolution||config.resolution;input.generate_audio=false;}
+  else{input.duration=String(duration);input.resolution=selection.resolution||config.resolution;if(model!=='gemini-omni-video')input.generate_audio=false;}
   if(file){const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));input[file.type.startsWith('image/')?'images':'videos']=[{type:'base64',data:'data:'+file.type+';base64,'+btoa(binary)}];}
   if(identityFile){const bytes=new Uint8Array(await identityFile.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));input.images=[...(input.images||[]),{type:'base64',data:'data:'+identityFile.type+';base64,'+btoa(binary)}];}
   const data=await polzaMediaRequest(env,'',{model,input,async:true,user:'anis-'+userId});

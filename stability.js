@@ -2,7 +2,8 @@
 (() => {
  'use strict';
  const account=String(user?.id||'guest'),key=name=>'anis-stable:'+account+':'+name;
- const state=window.anisStability={activeChatId:localStorage.getItem(key('thread'))||'legacy',threads:[],restoring:true,uploading:0,region:null};
+ let savedThread;try{savedThread=localStorage.getItem(key('thread'));}catch{}
+ const state=window.anisStability={activeChatId:savedThread||'legacy',threads:[],restoring:true,historyLoading:false,historyLoaded:false,historyError:null,uploading:0,region:null};
  const read=(name,fallback)=>{try{return JSON.parse(localStorage.getItem(key(name)))??fallback;}catch{return fallback;}};
  const write=(name,value)=>{try{localStorage.setItem(key(name),JSON.stringify(value));}catch{}};
  const el=(tag,props={},text)=>{const n=document.createElement(tag);for(const [k,v]of Object.entries(props)){if(k.includes('-')||k==='role')n.setAttribute(k,v);else n[k]=v;}if(text!==undefined)n.textContent=text;return n;};
@@ -15,20 +16,41 @@
   if(retry)note.append(button(label,()=>{note.remove();void retry();}));
  }
  readableMediaError=error=>!navigator.onLine?'Нет интернета. Уже отправленный проект не нужно заказывать заново.':error?.status===401?'Открой приложение заново через бота ANIS AI в Telegram.':error?.status===429?'Сервис занят. Подожди немного и проверь готовность.':error?.status===402?'У сервиса ИИ закончились средства. Мы сохранили задание; обратись в поддержку.':error?.name==='AbortError'||error instanceof TypeError||/load failed|failed to fetch|networkerror/i.test(error?.message||'')?'Соединение прервалось. Проверь уже отправленное задание — новый заказ не создан.':error?.message||'Не удалось выполнить действие. Попробуй позже.';
- window.addEventListener('online',()=>{void resumeMediaProjects();});
+ window.addEventListener('online',()=>{void resumeMediaProjects();void loadHistory();});
 
  // IndexedDB stores originals and completed files, not just temporary object URLs.
  let databasePromise,persistTimer;
- function database(){return databasePromise??=new Promise((resolve,reject)=>{if(!window.indexedDB)return reject(Error('Хранилище недоступно'));const req=indexedDB.open('anis-stability-v1',1);req.onupgradeneeded=()=>req.result.createObjectStore('records');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
+ function database(){return databasePromise??=new Promise((resolve,reject)=>{
+  if(!window.indexedDB)return reject(Error('Хранилище недоступно'));
+  let settled=false;const timer=setTimeout(()=>finish(Error('Хранилище пока недоступно')),2500),req=indexedDB.open('anis-stability-v1',1);
+  function finish(error){if(settled)return;settled=true;clearTimeout(timer);if(error)reject(error);else resolve(req.result);}
+  req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains('records'))req.result.createObjectStore('records');};
+  req.onsuccess=()=>{if(settled){req.result.close();return;}req.result.onversionchange=()=>{req.result.close();databasePromise=null;};finish();};req.onerror=()=>finish(req.error);req.onblocked=()=>finish(Error('Хранилище занято'));
+ }).catch(error=>{databasePromise=null;throw error;});}
  async function dbRecord(name,value){const db=await database();return new Promise((resolve,reject)=>{const tx=db.transaction('records',value===undefined?'readonly':'readwrite'),req=value===undefined?tx.objectStore('records').get(key(name)):tx.objectStore('records').put(value,key(name));tx.oncomplete=()=>resolve(req.result);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('Не удалось сохранить'));});}
  function storageWarning(){state.storageUnavailable=true;}
  const metadataPersist=persistStudioProjects;
  function projectRecord(p){const {media,loading,...row}=p;return {...row,hasSource:!!p.sourceFile||!!p.hasSource,hasIdentity:!!p.identityFile||!!p.hasIdentity,mediaBlob:media?.blob||p.mediaBlob};}
- async function saveDurable(){try{await dbRecord('projects',[...studioProjects.values()].map(projectRecord));return true;}catch{storageWarning();return false;}}
- persistStudioProjects=function(){metadataPersist();clearTimeout(persistTimer);if(!state.restoring)persistTimer=setTimeout(()=>void saveDurable(),180);};
+ function mergeProjectRecords(previous,incoming){
+  const records=new Map();for(const row of [...(Array.isArray(previous)?previous:[]),...(Array.isArray(incoming)?incoming:[])]){
+   if(!row?.id||!['image','video'].includes(row.kind))continue;
+   const p={...records.get(row.id)};for(const [name,value]of Object.entries(row))if(value!==undefined&&value!==null)p[name]=value;
+   if(p.mediaBlob)p.status='completed';records.set(p.id,p);
+  }return [...records.values()];
+ }
+ async function saveDurable(){
+  if(state.restoring)return false;
+  const rows=[...studioProjects.values()].map(projectRecord);
+  try{const db=await database();await new Promise((resolve,reject)=>{
+   const tx=db.transaction('records','readwrite'),records=tx.objectStore('records'),request=records.get(key('projects'));
+   request.onsuccess=()=>records.put(mergeProjectRecords(request.result,rows),key('projects'));
+   tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('Не удалось сохранить'));
+  });return true;}catch{storageWarning();return false;}
+ }
+ persistStudioProjects=function(){if(state.restoring)return;metadataPersist();clearTimeout(persistTimer);persistTimer=setTimeout(()=>void saveDurable(),180);};
  const draftIds=['messageInput','imagePrompt','videoPrompt','projectAgentIdea','imageQuality','videoQuality','imageRatio','videoRatio','duration'];
  function saveDrafts(){const values={};for(const id of draftIds)if($(id))values[id]=id==='messageInput'&&anonymous?'':$(id).value;write('drafts',{values,view:currentView});}
- async function saveFileDrafts(){await dbRecord('files',{image:studioImageFile,video:studioVideoFile,identity:studioVideoIdentityFile,region:state.region});}
+ async function saveFileDrafts(){if(state.restoring)return;await dbRecord('files',{image:studioImageFile,video:studioVideoFile,identity:studioVideoIdentityFile,region:state.region});}
  document.addEventListener('input',event=>{if(draftIds.includes(event.target.id))saveDrafts();});
  document.addEventListener('change',event=>{if(draftIds.includes(event.target.id))saveDrafts();});
  for(const name of ['setStudioPhoto','setStudioVideo','setVideoIdentity','clearVideoIdentity','clearStudioPhoto','clearStudioVideo']){
@@ -36,7 +58,7 @@
   const original=window[name];if(typeof original!=='function')continue;
   window[name]=function(...args){const result=original(...args);if(name==='setStudioPhoto'||name==='clearStudioPhoto'){state.region=null;updateRegionButton();}if(name==='setStudioPhoto'&&result!==false&&state.regionAfterUpload){state.regionAfterUpload=false;queueMicrotask(()=>void openRegion());}if(!state.restoring)void saveFileDrafts().catch(storageWarning);return result;};
  }
- window.addEventListener('pagehide',()=>{saveDrafts();metadataPersist();void saveDurable();void saveFileDrafts().catch(()=>{});});
+ window.addEventListener('pagehide',()=>{saveDrafts();persistStudioProjects();void saveDurable();void saveFileDrafts().catch(()=>{});});
  document.addEventListener('visibilitychange',()=>{if(document.hidden){saveDrafts();void saveDurable();}else void resumeMediaProjects();});
 
  const createOriginal=createStudioVariant;
@@ -48,6 +70,7 @@
   if(creationLock||lastCreation.fingerprint===stamp&&now-lastCreation.time<2500){if(lastCreation.id)openProjectRoom(lastCreation.id);return;}
   creationLock=true;lastCreation={fingerprint:stamp,time:now,id:null};
   try{
+   if(snapshot.kind==='video'&&['qhd','uhd'].includes(snapshot.quality)&&snapshot.sourceFile?.type.startsWith('video/')){const source=await window.anisMediaQuality.inspectVideo(snapshot.sourceFile);if(source.duration>10.1){toast('Для 2K и 4K добавь видео до 10 секунд. Можно сначала обрезать ролик.');return;}}
    // Original creator adds the ID synchronously. Pump is held until the snapshot is committed.
    const held=projectPumpBusy;projectPumpBusy=true;
    try{await createOriginal(snapshot);lastCreation.id=selectedStudioProject;}finally{projectPumpBusy=held;}
@@ -86,7 +109,7 @@
  for(const id of ['imageQuality','imageRatio','videoQuality','videoRatio','duration']){
   const select=$(id),panel=select.parentElement,quality=id.endsWith('Quality'),ratio=id.endsWith('Ratio'),rail=el('div',{className:'studio-setting-cards',role:'group','aria-label':quality?(id.startsWith('image')?'Качество фото':'Качество видео'):ratio?'Формат':'Длительность'});
   panel.classList.add('studio-setting-panel');panel.classList.toggle('quality-panel',quality);select.closest('.media-settings').classList.add('studio-card-settings');select.hidden=true;
-  const thumbnail=$('studioUploadStage')?.querySelector('.studio-sample-card img')?.src||'orb20-real.webp';
+  const thumbnail='quality-mountains-v1.webp';
   for(const [index,option] of [...select.options].entries()){
    const choice=button('',()=>{if(select.disabled)return;select.value=option.value;select.dispatchEvent(new Event('change',{bubbles:true}));});choice.className='studio-setting-card';choice.dataset.value=option.value;
    if(quality){const image=el('img',{src:thumbnail,alt:'',loading:'lazy',decoding:'async'});image.className='quality-sample quality-sample-'+index;choice.append(image);}
@@ -94,9 +117,17 @@
    else choice.append(el('i',{className:'setting-duration-icon','aria-hidden':'true'},'▷'));
    const [title,detail]=option.textContent.split(' · ');choice.append(el('strong',{},title));if(detail)choice.append(el('small',{},detail));rail.append(choice);
   }
-  const sync=()=>{for(const card of rail.children){card.setAttribute('aria-pressed',String(card.dataset.value===select.value));card.disabled=select.disabled;}};
+   const sync=()=>{for(const card of rail.children){const option=[...select.options].find(o=>o.value===card.dataset.value);card.setAttribute('aria-pressed',String(card.dataset.value===select.value));card.disabled=select.disabled||!!option?.disabled;}};
   select.addEventListener('change',sync);new MutationObserver(sync).observe(select,{attributes:true,attributeFilter:['disabled']});panel.append(rail);settingCardSync.push(sync);sync();
  }
+ const videoQualityNote=el('p',{className:'studio-tool-hint',id:'videoQualityNote'});$('videoQuality').parentElement.append(videoQualityNote);
+ function syncQualityFormats(){
+  const square=$('videoRatio').value==='1:1';for(const option of $('videoQuality').options)option.disabled=square&&['qhd','uhd'].includes(option.value);
+  if($('videoQuality').selectedOptions[0]?.disabled)$('videoQuality').value='fhd';
+  videoQualityNote.textContent=square?'Для 2K и 4K выбери широкий или вертикальный формат.':$('videoQuality').value==='qhd'?'2K подготавливается из исходного видео 4K при сохранении.':$('videoQuality').value==='uhd'?'Исходное видео 4K. Для референса используй ролик до 10 секунд.':'Full HD · 1080p.';
+  settingCardSync.forEach(sync=>sync());
+ }
+ $('videoRatio').addEventListener('change',syncQualityFormats);$('videoQuality').addEventListener('change',syncQualityFormats);syncQualityFormats();
  const formatHelpOriginal=applyFormatHelp;applyFormatHelp=function(...args){const result=formatHelpOriginal(...args);settingCardSync.forEach(sync=>sync());saveDrafts();return result;};
  const room=$('mediaResultDialog'),roomHeader=room.querySelector('header'),roomTitle=$('mediaResultTitle'),roomClose=button('×',()=>closeGeneratedMedia());roomClose.className='room-close';roomClose.setAttribute('aria-label','Свернуть окно проекта');roomHeader.prepend(roomClose);roomHeader.after(roomTitle);
  const variantPanel=el('section',{className:'room-variants','aria-label':'Варианты проекта'}),variantHeading=room.querySelector('.project-variants-heading');variantHeading.before(variantPanel);variantPanel.append(variantHeading,$('projectVariantCards'));
@@ -130,7 +161,7 @@
   const addIdea=button('+',()=>$('projectAgentIdea').focus({preventScroll:false}));addIdea.className='project-variant-add';addIdea.setAttribute('aria-label','Добавить идею для нового варианта');cards.append(addIdea);
   $('mediaResultTitle').textContent=projectLabel(p)+(p.status==='completed'?' готово':p.status==='failed'?' · ошибка':p.status==='unknown'?' · проверка':' · в работе');
   $('mediaResultOpen').textContent=p.kind==='video'?'Открыть видео':'Открыть фото';
-  if(p.status==='completed')$('mediaResultHelp').textContent='Фото и видео открываются с предпросмотром. На iPhone: «Сохранить» → «Сохранить изображение» или «Сохранить видео» в системном меню.';
+  if(p.status==='completed')$('mediaResultHelp').textContent=(p.outputWidth&&p.outputHeight?p.outputWidth+'×'+p.outputHeight+' пикс. · ':'')+(p.resolutionWarning||'Фото и видео открываются с предпросмотром. На iPhone: «Сохранить» → «Сохранить изображение» или «Сохранить видео» в системном меню.');
   let steps=$('anisProjectSteps');if(!steps){steps=el('div',{id:'anisProjectSteps',className:'anis-steps','aria-hidden':'true'});for(let i=0;i<4;i++)steps.append(el('span'));$('projectStageStatus').after(steps);}
   const step=p.status==='completed'?4:p.loading?3:['pending','processing'].includes(p.status)?2:['submitting','creating'].includes(p.status)?1:0;
   [...steps.children].forEach((n,i)=>n.classList.toggle('done',i<step));
@@ -144,11 +175,11 @@
  const readyView=el('section',{id:'view-ready',className:'view photo-studio'}),readyHeading=el('div',{className:'studio-heading'}),readyHeadingCopy=el('div'),readyGrid=el('div',{id:'studioReadyList',className:'studio-template-list studio-ready-list'});
  readyHeadingCopy.append(el('h1',{className:'page-title'},'Твои готовые работы'),el('p',{className:'subtitle'},'Фото, видео и новые варианты — всё в одном месте.'));readyHeading.append(readyHeadingCopy);readyView.append(readyHeading,readyGrid);$('view-templates').after(readyView);
  const originalOpenStudioView=openView;
- openView=function(name){originalOpenStudioView(name);const tabs=$('mediaProjectSwitcher'),ready=currentView==='ready';tabs.classList.toggle('ready-selected',ready);if(ready){tabs.hidden=false;tabs.classList.remove('video-selected','templates-selected');tabs.querySelectorAll('[data-media-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mediaTab==='ready')));studioNav.classList.add('active');state.ackStudioResults();renderReadyProjects();requestAnimationFrame(moveGlider);}};
+ openView=function(name){originalOpenStudioView(name);const tabs=$('mediaProjectSwitcher'),ready=currentView==='ready';tabs.classList.toggle('ready-selected',ready);if(ready){tabs.hidden=false;tabs.classList.remove('video-selected','templates-selected');tabs.querySelectorAll('[data-media-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mediaTab==='ready')));studioNav.classList.add('active');state.ackStudioResults();renderReadyProjects();if(!state.restoring&&!state.historyLoading&&(!state.historyLoaded||state.historyError))void resumeMediaProjects();requestAnimationFrame(moveGlider);}};
  state.openReadyProjects=()=>openView('ready');
  let readyRenderKey='';
  function renderReadyProjects(){
-  const projects=[...studioProjects.values()],key=projects.map(p=>[p.id,p.status,p.loading,previewSource(p)?.url,p.prompt].join(':')).join('|');if(readyGrid.childElementCount&&key===readyRenderKey)return;readyRenderKey=key;readyGrid.replaceChildren();
+  const projects=[...studioProjects.values()].sort((a,b)=>(a.created||0)-(b.created||0)||(a.order||0)-(b.order||0)),key=[state.restoring,state.historyLoading,state.historyLoaded,state.historyError,...projects.map(p=>[p.id,p.groupId,p.status,p.loading,previewSource(p)?.url,p.prompt].join(':'))].join('|');if(readyGrid.childElementCount&&key===readyRenderKey)return;readyRenderKey=key;readyGrid.replaceChildren();
   const groups=new Map();for(const p of projects){const id=p.groupId||p.id;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(p);}
   for(const family of [...groups.values()].reverse()){
    const first=family[0],last=family.at(-1),display=[...family].reverse().find(p=>p.status==='completed'&&(p.media||p.resultUrl))||last;
@@ -159,7 +190,9 @@
    if(display.status==='completed'&&source)card.append(window.anisProjectActions.createControls(display));
    readyGrid.append(card);
   }
-  if(!groups.size){const empty=el('div',{className:'studio-ready-empty'});empty.append(el('strong',{},'Здесь будут твои фото и видео'),el('p',{},'Создай первую работу — она появится здесь.'),button('Создать фото',()=>openView('studio'),true));readyGrid.append(empty);}
+  if(state.restoring||state.historyLoading){const note=el('p',{className:'note ready-history-status',role:'status'},'Загружаем твои работы…');readyGrid.prepend(note);}
+  else if(state.historyError){const note=el('div',{className:'studio-ready-empty ready-history-status',role:'status'});note.append(el('p',{},state.historyError),button('Загрузить работы',()=>void resumeMediaProjects()));readyGrid.prepend(note);}
+  else if(!groups.size){const empty=el('div',{className:'studio-ready-empty'});empty.append(el('strong',{},'Здесь будут твои фото и видео'),el('p',{},'Создай первую работу — она появится здесь.'),button('Создать фото',()=>openView('studio'),true));readyGrid.append(empty);}
  }
  loadStudioProjectResult=async function(p){
   if(p.loading)return;p.loading=true;renderProjectRoom();
@@ -167,7 +200,9 @@
    const response=await fetch(p.resultUrl,{signal:AbortSignal.timeout(90000)});if(!response.ok)throw Error('Готовый файл пока недоступен. Нажми «Открыть готовый файл» ещё раз.');
    let blob=await window.anisProjectActions.normalizeBlob(p.kind,await response.blob());
    if(p.region){if(!p.regionOriginalFile)throw Error('Чтобы собрать результат без изменения остального фото, нужен оригинал с этого устройства. Не создавай заказ заново.');blob=await compositeRegion(p,blob);}
-   p.media=mediaFromBlob(p.kind,blob);p.mediaBlob=blob;generatedMedia[p.kind]=p.media;invalidateUsageStats();await saveDurable();
+   const prepared=await window.anisMediaQuality.prepare(p,blob);blob=prepared.blob;
+   p.outputWidth=prepared.width;p.outputHeight=prepared.height;p.resolutionWarning=prepared.warning||null;p.resolutionPending=!!prepared.pending;
+   p.media=mediaFromBlob(p.kind,blob);Object.assign(p.media,{width:p.outputWidth,height:p.outputHeight,warning:p.resolutionWarning});p.mediaBlob=blob;generatedMedia[p.kind]=p.media;invalidateUsageStats();await saveDurable();
   }catch(error){p.error=readableMediaError(error);if(selectedStudioProject===p.id&&$('mediaResultDialog').open)explain(error,()=>loadStudioProjectResult(p),'Открыть готовый файл');}
   finally{p.loading=false;workroomRenderKey='';renderProjectRoom();}
  };
@@ -182,14 +217,22 @@
  }
  let resumePromise;
  resumeMediaProjects=function(){
-  if(!initData||!user||state.restoring)return Promise.resolve();
+  if(state.restoring)return Promise.resolve();
+  if(!initData||!user){state.historyError='Открой ANIS AI через бота в Telegram, чтобы загрузить свои работы.';updateProjectDock();return Promise.resolve();}
   return resumePromise??=(async()=>{
-   for(const kind of ['image','video']){
-    try{const data=await mediaJSON({action:'media-history',kind});for(const row of data.items||[]){
+   state.historyLoading=true;state.historyError=null;updateProjectDock();
+   const kinds=['image','video'],results=await Promise.allSettled(kinds.map(kind=>mediaJSON({action:'media-history',kind},15000)));
+   let failure;for(const [index,result]of results.entries()){
+    if(result.status==='rejected'){failure=result.reason;continue;}
+    const kind=kinds[index],rows=result.value.items||[];
+    for(const row of [...rows].reverse()){
+     if(!row.jobId)continue;
      let p=studioProjects.get(row.jobId);if(!p){p={id:row.jobId,kind,order:++projectCounter,created:Date.parse(row.createdAt?.replace(' ','T')+'Z')||Date.now(),prompt:row.prompt,quality:row.quality,ratio:row.ratio,duration:row.duration};studioProjects.set(p.id,p);}
-     Object.assign(p,{groupId:row.groupId||p.groupId||p.id,status:row.status,resultUrl:row.url,expiresAt:row.expiresAt,error:row.error,region:p.region||row.region});
-    }}catch(error){if(!navigator.onLine)break;console.warn('Project history unavailable');}
+     Object.assign(p,{groupId:row.groupId||p.groupId||p.id,status:p.media?'completed':row.status,resultUrl:row.url||p.resultUrl,expiresAt:row.expiresAt||p.expiresAt,error:row.error,region:p.region||row.region});
+    }
    }
+   state.historyLoading=false;state.historyLoaded=!failure;
+   if(failure)state.historyError=failure.status===401?'Не удалось подтвердить вход. Закрой приложение и открой его через бота ANIS AI.':'Не удалось загрузить все работы. Проверь соединение и попробуй ещё раз.';
    for(const p of studioProjects.values())if(['submitting','creating','pending','processing','unknown'].includes(p.status))void recoverProject(p);
    void pumpStudioQueue();updateProjectDock();persistStudioProjects();
    const requested=new URL(location.href).searchParams.get('project');if(requested&&studioProjects.has(requested)){openProjectRoom(requested);const p=studioProjects.get(requested);if(p.status==='completed'&&!p.media&&p.resultUrl)void loadStudioProjectResult(p);}
@@ -198,7 +241,7 @@
 
  // Scrolling from the landing content into messages is also entering the chat.
  function syncChatScrollNavigation(){
-  const chat=currentView==='chat'&&!anonymous,hasMessages=$('messages').childElementCount>0;
+  const chat=currentView==='chat',hasMessages=$('messages').childElementCount>0;
   const top=Math.max($('app').getBoundingClientRect().top,window.visualViewport?.offsetTop||0);
   const inConversation=chat&&(!showWelcome||hasMessages&&$('welcome').getBoundingClientRect().bottom<=top+110);
   $('collapseChatButton').classList.toggle('hidden',!inConversation);
@@ -221,7 +264,7 @@
  loadHistory=async function(){
   if(!initData||!user||anonymous||busy||historyLoading)return;
   const id=state.activeChatId;historyLoading=true;
-  try{const data=await api({action:'history',threadId:id},20000);if(id===state.activeChatId&&!busy){normalHistory=cleanHistory(data.messages);saveCache();historyLoaded=true;updateWelcome();if(!anonymous)renderChat();}}
+  try{const data=await api({action:'history',threadId:id},20000);if(!Array.isArray(data.messages))throw Error('Не удалось прочитать историю. Попробуй ещё раз.');if(id===state.activeChatId&&!busy){if(data.messages.length||!normalHistory.length)normalHistory=cleanHistory(data.messages);saveCache();historyLoaded=true;updateWelcome();if(!anonymous)renderChat();}}
   catch(error){explain(error,()=>loadHistory(),'Загрузить разговор');}finally{historyLoading=false;}
  };
  async function switchThread(id){
@@ -329,22 +372,24 @@
 
  // Version checks are cheap and never reload while a user is composing or uploading.
  let nextVersion=null,updating=false;
- function safeToUpdate(){return !state.restoring&&![...studioProjects.values()].some(p=>['submitting','creating'].includes(p.status))&&!busy&&!recording&&!openingMic&&!transcribing&&!mediaVoiceTask&&!stagedMediaAttachment&&!document.querySelector('dialog[open]')&&!['TEXTAREA','INPUT','SELECT'].includes(document.activeElement?.tagName);}
+ function safeToUpdate(){return !state.restoring&&!state.historyLoading&&![...studioProjects.values()].some(p=>['submitting','creating'].includes(p.status))&&!busy&&!recording&&!openingMic&&!transcribing&&!mediaVoiceTask&&!stagedMediaAttachment&&!document.querySelector('dialog[open]')&&!['TEXTAREA','INPUT','SELECT'].includes(document.activeElement?.tagName);}
  async function applyRelease(){if(updating||!nextVersion||!safeToUpdate())return;updating=true;saveDrafts();try{if(studioImageFile||studioVideoFile||studioVideoIdentityFile)await saveFileDrafts();await saveDurable();const url=new URL(location.href);url.searchParams.set('v',nextVersion);location.replace(url.href);}catch{updating=false;storageWarning();}}
  async function checkRelease(){try{const response=await fetch('/release.json?t='+Date.now(),{cache:'no-store'});if(!response.ok)return;const data=await response.json(),current=document.querySelector('meta[name="anis-build"]')?.content;if(/^[a-f0-9]{12,64}$/.test(data.version)&&data.version!==current){nextVersion=data.version;if(safeToUpdate())void applyRelease();}}catch{}}
  window.addEventListener('focus',()=>void checkRelease());document.addEventListener('visibilitychange',()=>{if(!document.hidden)void checkRelease();});setInterval(()=>void checkRelease(),60000);
 
  async function start(){
-  const drafts=read('drafts',null);if(drafts)for(const [id,value]of Object.entries(drafts.values||{}))if($(id))$(id).value=value;
-  settingCardSync.forEach(sync=>sync());
-  try{
-   const rows=await dbRecord('projects')||JSON.parse(localStorage.getItem(studioProjectKey())||'[]');for(const row of rows){if(!row.id||!['image','video'].includes(row.kind))continue;const p={...row};if(p.mediaBlob)p.media=mediaFromBlob(p.kind,p.mediaBlob);studioProjects.set(p.id,p);projectCounter=Math.max(projectCounter,p.order||0);}
-   const files=await dbRecord('files');if(files){if(files.image)setStudioPhoto(files.image);if(files.video)setStudioVideo(files.video);if(files.identity)setVideoIdentity(files.identity);state.region=files.region||null;}
-  }catch{storageWarning();}
+  const drafts=read('drafts',null);if(drafts)for(const [id,value]of Object.entries(drafts.values||{}))if($(id))$(id).value=id.endsWith('Quality')?({fast:'fhd',high:id==='imageQuality'?'qhd':'fhd',max:'uhd'}[value]||value):value;
+  syncQualityFormats();
+  let rows=[];for(const name of [studioProjectKey()+':backup',studioProjectKey()])try{rows=mergeProjectRecords(rows,JSON.parse(localStorage.getItem(name)||'[]'));}catch{storageWarning();}
+  const restoreRows=records=>{for(const row of mergeProjectRecords(records,[...studioProjects.values()].map(projectRecord))){const p={...row};if(p.mediaBlob){p.media=studioProjects.get(p.id)?.media||mediaFromBlob(p.kind,p.mediaBlob);Object.assign(p.media,{width:p.outputWidth,height:p.outputHeight,warning:p.resolutionWarning});}studioProjects.set(p.id,p);projectCounter=Math.max(projectCounter,p.order||0);}};
+  restoreRows(rows);
+  try{rows=mergeProjectRecords(await dbRecord('projects'),rows);restoreRows(rows);}catch{storageWarning();}
   state.restoring=false;updateRegionButton();updateProjectDock();
+  persistStudioProjects();
+  void dbRecord('files').then(files=>{if(!files)return;if(files.image&&!studioImageFile)setStudioPhoto(files.image);if(files.video&&!studioVideoFile)setStudioVideo(files.video);if(files.identity&&!studioVideoIdentityFile)setVideoIdentity(files.identity);state.region=state.region||files.region||null;updateRegionButton();}).catch(storageWarning);
   state.threads=read('threads',[]);renderThreads();normalHistory=cleanHistory(read('chat:'+state.activeChatId,normalHistory));renderChat();
   if(drafts?.view&&['home','chat','studio','video','profile','history','statistics','templates','ready'].includes(drafts.view))openView(drafts.view);
-  void refreshThreads().then(()=>loadHistory()).catch(()=>{});
+  void refreshThreads().catch(()=>{}).then(()=>loadHistory());
   if(initData&&user)void mediaJSON({action:'notification-get'}).then(data=>notifyToggle.checked=data.enabled).catch(()=>{});
   void resumeMediaProjects();void checkRelease();
  }

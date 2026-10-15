@@ -1774,7 +1774,7 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
     <input id="imageFile" type="file" accept="image/jpeg,image/png,image/webp" onchange="studioPhotoPicked(this)" hidden>
   </div>
   <div class="studio-prompt-box"><label for="imagePrompt">Напиши, что хочешь сделать</label><textarea id="imagePrompt" maxlength="1200" placeholder="Например: сделай свет мягче, замени фон на закат…"></textarea><div class="media-prompt-actions"><span id="imageVoiceNote" class="media-voice-note" role="status"></span><button id="imagePromptCancel" class="media-prompt-cancel" type="button" aria-label="Отменить голосовой ввод" onclick="cancelMediaDictation()" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button><button id="imagePromptMic" class="media-prompt-mic" type="button" aria-label="Продиктовать описание" aria-pressed="false" onclick="mediaMicClick(event,'image')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg></button><button id="makeImage" class="studio-create-button" type="button" onclick="generateMedia('image')"><span id="studioCreateLabel">Создать фото</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"/></svg></button></div></div>
-<div class="media-settings studio-fields"><div><label for="imageQuality">Качество фото</label><select id="imageQuality"><option value="fast">Стандартное · 1K</option><option value="high">Высокое · 2K</option><option value="max">Максимальное · 4K</option></select></div><div><div class="format-field-heading"><label for="imageRatio">Формат</label><button type="button" class="format-help-trigger" onclick="openFormatHelp('image')" aria-haspopup="dialog" aria-controls="formatHelpDialog"><span aria-hidden="true">?</span> Подсказка</button></div><select id="imageRatio"><option value="1:1">Квадрат · 1:1</option><option value="9:16">Вертикальный · 9:16</option><option value="16:9">Широкий · 16:9</option></select></div></div><p class="studio-tool-hint">Опиши идею — ANIS AI выберет подходящий способ обработки.</p>
+<div class="media-settings studio-fields"><div><label for="imageQuality">Качество фото</label><select id="imageQuality"><option value="fhd">1080p · Full HD</option><option value="qhd">2K · 1440p</option><option value="uhd">4K · 2160p</option></select></div><div><div class="format-field-heading"><label for="imageRatio">Формат</label><button type="button" class="format-help-trigger" onclick="openFormatHelp('image')" aria-haspopup="dialog" aria-controls="formatHelpDialog"><span aria-hidden="true">?</span> Подсказка</button></div><select id="imageRatio"><option value="1:1">Квадрат · 1:1</option><option value="9:16">Вертикальный · 9:16</option><option value="16:9">Широкий · 16:9</option></select></div></div><p class="studio-tool-hint">Опиши идею — ANIS AI выберет подходящий способ обработки.</p>
   <div id="imageStatus" class="status studio-result-status" role="status" aria-live="polite"></div><div id="imageResult" class="result studio-result"></div>
 </section>
 
@@ -1792,7 +1792,7 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
   </div>
 <div class="studio-prompt-box"><label for="videoPrompt">Напиши, что хочешь сделать</label><textarea id="videoPrompt" maxlength="1200" placeholder="Например: плавный пролёт камеры, закат и мягкий кинематографичный свет…"></textarea><div class="media-prompt-actions"><span id="videoVoiceNote" class="media-voice-note" role="status"></span><button id="videoPromptCancel" class="media-prompt-cancel" type="button" aria-label="Отменить голосовой ввод" onclick="cancelMediaDictation()" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button><button id="videoPromptMic" class="media-prompt-mic" type="button" aria-label="Продиктовать описание" aria-pressed="false" onclick="mediaMicClick(event,'video')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg></button><button id="makeVideo" class="studio-create-button" type="button" onclick="generateMedia('video')"><span id="videoCreateLabel">Создать видео</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"/></svg></button></div></div>
 <div class="source-mode-chips"><button type="button" onclick="clearStudioVideo();$('videoPrompt').focus({preventScroll:true})">✦ По описанию</button><button type="button" onclick="pickStudioVideo('image')">▧ Оживить фото</button><button type="button" onclick="pickStudioVideo('video')">▷ Из видео</button></div>
-<div class="media-settings studio-fields"><div><label for="videoQuality">Качество видео</label><select id="videoQuality"><option value="fast">Быстро · 480p</option><option value="high">Высокое · 720p</option></select></div><div><div class="format-field-heading"><label for="videoRatio">Формат</label><button type="button" class="format-help-trigger" onclick="openFormatHelp('video')" aria-haspopup="dialog" aria-controls="formatHelpDialog"><span aria-hidden="true">?</span> Подсказка</button></div><select id="videoRatio"><option value="16:9">Широкий · 16:9</option><option value="9:16">Вертикальный · 9:16</option><option value="1:1">Квадрат · 1:1</option></select></div><div class="media-duration-setting"><label for="duration">Длительность</label><select id="duration"><option value="4">4 секунды</option><option value="6">6 секунд</option><option value="8">8 секунд</option></select></div></div><p class="studio-tool-hint">Добавь фото для оживления, ролик до 15 секунд или просто опиши новое видео.</p>
+<div class="media-settings studio-fields"><div><label for="videoQuality">Качество видео</label><select id="videoQuality"><option value="fhd">1080p · Full HD</option><option value="qhd">2K · 1440p</option><option value="uhd">4K · 2160p</option></select></div><div><div class="format-field-heading"><label for="videoRatio">Формат</label><button type="button" class="format-help-trigger" onclick="openFormatHelp('video')" aria-haspopup="dialog" aria-controls="formatHelpDialog"><span aria-hidden="true">?</span> Подсказка</button></div><select id="videoRatio"><option value="16:9">Широкий · 16:9</option><option value="9:16">Вертикальный · 9:16</option><option value="1:1">Квадрат · 1:1</option></select></div><div class="media-duration-setting"><label for="duration">Длительность</label><select id="duration"><option value="4">4 секунды</option><option value="6">6 секунд</option><option value="8">8 секунд</option></select></div></div><p class="studio-tool-hint">Добавь фото для оживления, ролик до 15 секунд или просто опиши новое видео.</p>
 <div id="videoStatus" class="status studio-result-status" role="status" aria-live="polite"></div><div id="videoResult" class="result studio-result"></div>
 </section>
 
@@ -2790,11 +2790,11 @@ function openView(name){
 
 /* ГЛАВНЫЙ ЭКРАН */
 function updateWelcome(){
-  const landingVisible=showWelcome&&!anonymous;
+  const landingVisible=showWelcome;
   $("welcome").classList.toggle("hidden",!landingVisible);
-  $("homePrivacyBar")?.classList.toggle("hidden",currentView!=="chat"||(!landingVisible&&!anonymous));
-  $("collapseChatButton")?.classList.toggle("hidden",landingVisible||anonymous||currentView!=="chat");
-  const showReturn=landingVisible&&returnToChatAvailable&&!anonymous&&currentView==="chat";
+  $("homePrivacyBar")?.classList.toggle("hidden",currentView!=="chat"||!landingVisible);
+  $("collapseChatButton")?.classList.toggle("hidden",landingVisible||currentView!=="chat");
+  const showReturn=landingVisible&&returnToChatAvailable&&currentView==="chat";
   $("returnToChatButton")?.classList.toggle("hidden",!showReturn);
   $("app")?.classList.toggle("has-return-to-chat",showReturn);
   syncChatOrbUI();
@@ -2806,14 +2806,14 @@ function collapseChat(){
     return;
   }
   endVoiceSession();
-  returnToChatAvailable=normalHistory.length>0;
+  returnToChatAvailable=(anonymous?anonymousHistory:normalHistory).length>0;
   showWelcome=true;newestFirstChat=true;
   updateWelcome();renderChat();
   app.scrollTo({top:0,behavior:"smooth"});
   tg?.HapticFeedback?.impactOccurred("light");
 }
 function returnToChat(){
-  if(anonymous||!returnToChatAvailable||!normalHistory.length)return;
+  if(!returnToChatAvailable||!(anonymous?anonymousHistory:normalHistory).length)return;
   if(recording||transcribing||openingMic){
     toast("Сначала заверши голосовое сообщение");
     return;
@@ -2989,7 +2989,7 @@ function renderVoiceProgress(){
   }
   text.textContent=voiceProgressText;
   const task=activeRequestTask;
-  const homeStatusVisible=Boolean(task?.spokenVoice&&showWelcome&&!anonymous);
+  const homeStatusVisible=Boolean(task?.spokenVoice&&showWelcome);
   const showCancel=Boolean(task?.kind==="transcription"&&!task.cancelled&&!voiceProgressError&&!homeStatusVisible);
   let cancel=message.querySelector(".task-cancel");
   if(showCancel&&!cancel){
@@ -3006,7 +3006,7 @@ function setVoiceProgress(text,isError=false){
   if(!voiceProgressText){clearVoiceProgress();return;}
   if($("messages").children.length===0&&!showWelcome) renderChat();
   renderVoiceProgress();
-  if(anonymous||!showWelcome) scrollAppToBottom();
+  if(!showWelcome) scrollAppToBottom();
 }
 function clearVoiceProgress(){
   voiceProgressText="";
@@ -3025,7 +3025,7 @@ function createTaskCancelButton(label){
 }
 function syncTaskCancelControls(){
   const task=activeRequestTask&&!activeRequestTask.cancelled?activeRequestTask:null;
-  const homeStatusVisible=Boolean(showWelcome&&!anonymous&&(task?.spokenVoice||orbVoiceActive));
+  const homeStatusVisible=Boolean(showWelcome&&(task?.spokenVoice||orbVoiceActive));
   const statusButton=$("voiceStatusCancel");
   statusButton?.classList.toggle("hidden",!homeStatusVisible);
   if(statusButton&&homeStatusVisible){
@@ -3089,13 +3089,13 @@ function cancelActiveRequest(event){
 function renderChat(){
   updateWelcome();
   $("messages").replaceChildren();
-  if(showWelcome&&!anonymous&&!normalHistory.length){
+  const items=anonymous?anonymousHistory:normalHistory;
+  if(showWelcome&&!items.length){
     renderVoiceProgress();
     return;
   }
 
-  const items=anonymous?anonymousHistory:normalHistory;
-  const visibleItems=!anonymous&&newestFirstChat?items.slice().reverse():items;
+  const visibleItems=newestFirstChat?items.slice().reverse():items;
   visibleItems.forEach(item=>addMessage(item.content,item.role));
   renderVoiceProgress();
 }
@@ -3246,8 +3246,9 @@ async function loadHistory(){
 function toggleAnonymous(){
   if(busy||recording||transcribing||openingMic) return;
   anonymous=!anonymous;
-  showWelcome=false;
   anonymousHistory=[];
+  returnToChatAvailable=(anonymous?anonymousHistory:normalHistory).length>0;
+  newestFirstChat=showWelcome;
 
   $("anonToggle").classList.toggle("on",anonymous);
   $("anonToggle").setAttribute(
@@ -3274,7 +3275,7 @@ function toggleAnonymous(){
 function syncChatOrbUI(){
   const send=$("send"),hint=$("chatOrbHint");
   if(!send||!hint) return;
-  const inChat=currentView==="chat"&&(!showWelcome||anonymous);
+  const inChat=currentView==="chat"&&!showWelcome;
   const voiceMode=!$("messageInput").value.trim();
   const voiceActive=voiceMode&&orbVoiceActive;
   const visible=inChat&&voiceMode&&(
@@ -3860,7 +3861,7 @@ async function sendMessage(text,audioURL,spokenVoice=false){
   const voiceReplySession=voiceSessionVersion;
   const context=cleanHistory(anonymousHistory).slice(-12);
 
-  showWelcome=spokenVoice&&!isAnonymous&&!orbVoiceStayInChat;
+  showWelcome=spokenVoice&&!orbVoiceStayInChat;
   updateWelcome();
   if($("messages").children.length===0||reorderForChat) renderChat();
 
@@ -3949,7 +3950,7 @@ async function sendMessage(text,audioURL,spokenVoice=false){
       syncTaskCancelControls();
       updateControls();
       $("chatStatus").textContent="";
-      if(spokenVoice&&returnToChatAvailable&&showWelcome&&!isAnonymous) renderChat();
+      if(spokenVoice&&returnToChatAvailable&&showWelcome) renderChat();
       if(!spokenVoice||orbVoiceStayInChat) scrollAppToBottom();
     }
   }
@@ -4788,7 +4789,13 @@ const projectWatchers=new Set();
 const PROJECT_TERMINAL=['completed','failed','unknown'];
 function studioProjectKey(){return 'anis-projects-v2:'+user?.id;}
 function persistStudioProjects(){
- try{localStorage.setItem(studioProjectKey(),JSON.stringify([...studioProjects.values()].slice(-24).map(p=>({id:p.id,groupId:p.groupId||p.id,kind:p.kind,status:p.status,prompt:p.prompt,quality:p.quality,ratio:p.ratio,duration:p.duration,resultUrl:p.resultUrl,error:p.error,created:p.created,order:p.order,hasSource:!!p.sourceFile||!!p.hasSource,hasIdentity:!!p.identityFile||!!p.hasIdentity}))));}catch{}
+ try{
+  const key=studioProjectKey(),previous=localStorage.getItem(key),records=new Map();
+  try{const saved=JSON.parse(previous||'[]');if(Array.isArray(saved))for(const row of saved)if(row?.id&&['image','video'].includes(row.kind))records.set(row.id,row);}catch{}
+  for(const p of studioProjects.values())records.set(p.id,{...records.get(p.id),id:p.id,groupId:p.groupId||p.id,kind:p.kind,status:p.status,prompt:p.prompt,quality:p.quality,ratio:p.ratio,duration:p.duration,resultUrl:p.resultUrl,error:p.error,created:p.created,order:p.order,hasSource:!!p.sourceFile||!!p.hasSource,hasIdentity:!!p.identityFile||!!p.hasIdentity,outputWidth:p.outputWidth,outputHeight:p.outputHeight,resolutionWarning:p.resolutionWarning,resolutionPending:p.resolutionPending});
+  const next=JSON.stringify([...records.values()]);if(previous&&previous!==next&&records.size)try{localStorage.setItem(key+':backup',previous);}catch{}
+  localStorage.setItem(key,next);
+ }catch{}
 }
 function updateProjectDock(){
  if(typeof window!=='undefined')window.anisStability?.updateStudioIndicator?.();
@@ -4838,7 +4845,7 @@ function selectedProjectMedia(){const p=studioProjects.get(selectedStudioProject
 function saveGeneratedMedia(){const item=selectedProjectMedia();if(item)return window.anisProjectActions.saveMedia(item,studioProjects.get(selectedStudioProject)?.kind||activeGeneratedKind);}
 function shareGeneratedMedia(){return saveGeneratedMedia();}
 function editGeneratedMedia(){const item=selectedProjectMedia();if(!item)return;closeGeneratedMedia();openView('studio');setStudioPhoto(item.file);$('imagePrompt').focus({preventScroll:true});}
-async function mediaJSON(payload){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),60000);try{const response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,initData}),signal:controller.signal});const data=await response.json();if(!response.ok){const error=Error(data.error||'Сервис временно недоступен.');error.status=response.status;throw error;}return data;}finally{clearTimeout(timer);}}
+async function mediaJSON(payload,timeoutMs=60000){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);try{const response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,initData}),signal:controller.signal});const data=await response.json();if(!response.ok){const error=Error(data.error||'Сервис временно недоступен.');error.status=response.status;throw error;}return data;}finally{clearTimeout(timer);}}
 function setMediaBusy(kind,value){$(kind==='image'?'makeImage':'makeVideo').disabled=value;}
 async function loadStudioProjectResult(p){
  if(p.loading)return;p.loading=true;
@@ -5204,6 +5211,7 @@ void prefetchUsageStats();
 setupMediaMicGestures();
 syncMediaMic();
 </script>
+<script src="media-quality.js?v=__ANIS_BUILD__"></script>
 <script src="project-actions.js?v=__ANIS_BUILD__"></script>
 <script src="stability.js?v=__ANIS_BUILD__"></script>
 
