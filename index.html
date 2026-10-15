@@ -2013,7 +2013,6 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
   </svg>
 </button>
 
-<button id="projectDock" class="project-dock" type="button" onclick="openProjectRoom()" aria-label="Мои проекты. Кнопку можно перетаскивать" title="Мои проекты · можно перетаскивать" hidden><svg class="projects-folder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M7 13h10M7 17h7"/></svg><svg class="projects-working-icon" viewBox="0 0 28 28" fill="none" aria-hidden="true"><circle class="projects-progress-track" cx="14" cy="14" r="11" stroke="currentColor" stroke-opacity=".22" stroke-width="2"/><circle class="projects-progress-arc" cx="14" cy="14" r="11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="23 47"/><path d="m14 9 1.2 3.8L19 14l-3.8 1.2L14 19l-1.2-3.8L9 14l3.8-1.2Z" fill="currentColor"/></svg><b id="projectDockLabel">Мои проекты</b><span id="projectDockCount" class="projects-icon-count" aria-hidden="true"></span></button>
 <!-- НАВИГАЦИЯ -->
 <nav id="bottomNav">
   <div id="navGlider"></div>
@@ -2753,6 +2752,7 @@ function openView(name){
   if(!returnToTyping) endVoiceSession();
   $("messageInput").blur();
   currentView = name;
+  if(['studio','video','templates','image'].includes(name))window.anisStability?.ackStudioResults?.();
   const mediaSwitcher=$('mediaProjectSwitcher');mediaSwitcher.hidden=!['studio','video','templates'].includes(name);
   mediaSwitcher.classList.toggle('video-selected',name==='video');mediaSwitcher.classList.toggle('templates-selected',name==='templates');
   mediaSwitcher.querySelectorAll('[data-media-tab]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.mediaTab===name)));
@@ -4787,8 +4787,7 @@ function persistStudioProjects(){
  try{localStorage.setItem(studioProjectKey(),JSON.stringify([...studioProjects.values()].slice(-24).map(p=>({id:p.id,groupId:p.groupId||p.id,kind:p.kind,status:p.status,prompt:p.prompt,quality:p.quality,ratio:p.ratio,duration:p.duration,resultUrl:p.resultUrl,error:p.error,created:p.created,order:p.order,hasSource:!!p.sourceFile||!!p.hasSource,hasIdentity:!!p.identityFile||!!p.hasIdentity}))));}catch{}
 }
 function updateProjectDock(){
- const projects=[...studioProjects.values()],active=projects.filter(p=>!PROJECT_TERMINAL.includes(p.status)).length;
- const dock=$('projectDock');dock.hidden=!projects.length;$('projectDockLabel').textContent=active?'В работе · '+active:'Мои проекты · '+projects.length;dock.classList.toggle('working',active>0);
+ if(typeof window!=='undefined')window.anisStability?.updateStudioIndicator?.();
 }
 function projectLabel(project){return (project.kind==='video'?'Видео':'Фото')+' '+project.order;}
 function projectFamily(project){const groupId=project.groupId||project.id;return [...studioProjects.values()].filter(item=>(item.groupId||item.id)===groupId);}
@@ -5203,5 +5202,5 @@ syncMediaMic();
 </script>
 <script src="stability.js?v=__ANIS_BUILD__"></script>
 
-<script src="qa-four-points.js"></script></body>
+<script src="qa-nav-status.js"></script></body>
 </html>
