@@ -1692,7 +1692,7 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
   <button class="gear" onclick="openView('profile')">⚙</button>
 </header>
 
-<div id="mediaProjectSwitcher" class="studio-project-tabs" role="group" aria-label="Тип проекта" hidden><span class="studio-tab-highlight" aria-hidden="true"></span><button type="button" data-media-tab="studio" aria-pressed="true" onclick="openView('studio')">Создать фото</button><button type="button" data-media-tab="video" aria-pressed="false" onclick="openView('video')">Создать видео</button><button type="button" data-media-tab="templates" aria-pressed="false" onclick="openView('templates')">Шаблоны</button></div>
+<div id="mediaProjectSwitcher" class="studio-project-tabs" role="group" aria-label="Тип проекта" hidden><span class="studio-tab-highlight" aria-hidden="true"></span><button type="button" data-media-tab="studio" aria-pressed="true" onclick="openView('studio')">Создать фото</button><button type="button" data-media-tab="video" aria-pressed="false" onclick="openView('video')">Создать видео</button><button type="button" data-media-tab="templates" aria-pressed="false" onclick="openView('templates')">Шаблоны</button><button type="button" data-media-tab="ready" aria-pressed="false" onclick="window.anisStability?.openReadyProjects()">Готовые</button></div>
 <!-- ЧАТ -->
 <section id="view-home" class="view active">
 <div id="welcome" class="welcome">
@@ -1766,7 +1766,7 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
 
 <!-- СТУДИЯ -->
 <section id="view-studio" class="view photo-studio">
-<div class="source-mode-chips"><button type="button" onclick="clearStudioPhoto();$('imagePrompt').focus({preventScroll:true})">✦ Создать по описанию</button><button type="button" onclick="pickStudioPhoto()">▧ Из моего фото</button></div><div class="studio-heading"><div><h1 class="page-title">Создай фото</h1><p class="subtitle">Загрузи фото или начни с идеи.</p></div></div>
+<div class="studio-heading"><div><h1 class="page-title">Создай фото</h1><p class="subtitle">Загрузи фото или начни с идеи.</p></div></div>
   <div class="studio-upload-stage" id="studioUploadStage" ondragover="studioDragOver(event)" ondragleave="studioDragLeave(event)" ondrop="studioDropPhoto(event)">
     <div class="studio-upload-decor" aria-hidden="true"><span class="studio-backplate"></span><span class="studio-sample-card sample-one"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=240&q=80" alt="" decoding="async" loading="lazy"></span><span class="studio-sample-card sample-two"><img src="https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=240&q=80" alt="" decoding="async" loading="lazy"></span><span class="studio-upload-spark spark-one"></span><span class="studio-upload-spark spark-two"></span></div>
     <button id="studioUploadButton" class="studio-upload-square" type="button" onclick="pickStudioPhoto()" aria-label="Добавить фото">
@@ -4623,7 +4623,7 @@ function videoDropFile(event){event.preventDefault();$('videoUploadStage').class
 
 let studioImageFile=null;
 let studioPreviewUrl=null;
-function pickStudioPhoto(){if(!$('makeImage').disabled)$('imageFile').click();}
+function pickStudioPhoto(forRegion=false){if(!$('makeImage').disabled){if(typeof window!=='undefined'&&window.anisStability)window.anisStability.regionAfterUpload=forRegion;$('imageFile').click();}}
 function buildStudioPrompt(text){if(text.length>1200)throw Error('Сократи описание до 1200 символов.');return text;}
 function setStudioPhoto(file){
   if($('makeImage').disabled)return false;

@@ -1,4 +1,10 @@
 /* Stability controls share ANIS AI's restrained glass surfaces. */
+#mediaProjectSwitcher .studio-tab-highlight{width:calc((100% - 10px)/4)}#mediaProjectSwitcher.ready-selected .studio-tab-highlight{transform:translateX(300%)}
+#mediaProjectSwitcher>button{min-width:0;padding-left:3px;padding-right:3px;font-size:11px;white-space:nowrap}
+.media-prompt-pencil{flex:0 0 40px;width:40px;height:42px;padding:9px;display:grid;place-items:center;border:1px solid #c197ef4d;border-radius:14px;background:#a86be51a;color:#d8baf4;cursor:pointer;transition:background .3s,border-color .3s}
+.media-prompt-pencil svg{width:21px;height:21px}.media-prompt-pencil.anis-region-active{background:#9c52ce44;border-color:#c28ae9}
+html[data-theme="light"] .media-prompt-pencil{background:#f0e5f7;color:#86559e;border-color:#d9c4e7}
+@media(max-width:370px){#mediaProjectSwitcher>button{font-size:10px}.studio-prompt-box .studio-create-button{padding-left:10px;padding-right:10px;font-size:12px}.studio-prompt-box .media-prompt-actions{gap:6px}}
 #bottomNav{grid-template-columns:repeat(5,minmax(0,1fr))}
 #view-chat>.anis-toolbar{margin-top:0;margin-bottom:16px}
 .chat-conversations-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:6px 0 16px}.chat-conversations-heading h1{margin:0}.chat-conversations-heading button{white-space:nowrap}

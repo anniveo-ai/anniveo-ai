@@ -34,7 +34,7 @@
  for(const name of ['setStudioPhoto','setStudioVideo','setVideoIdentity','clearVideoIdentity','clearStudioPhoto','clearStudioVideo']){
   // Named declarations in the original classic script are window functions.
   const original=window[name];if(typeof original!=='function')continue;
-  window[name]=function(...args){const result=original(...args);if(name==='setStudioPhoto'||name==='clearStudioPhoto'){state.region=null;updateRegionButton();}if(!state.restoring)void saveFileDrafts().catch(storageWarning);return result;};
+  window[name]=function(...args){const result=original(...args);if(name==='setStudioPhoto'||name==='clearStudioPhoto'){state.region=null;updateRegionButton();}if(name==='setStudioPhoto'&&result!==false&&state.regionAfterUpload){state.regionAfterUpload=false;queueMicrotask(()=>void openRegion());}if(!state.restoring)void saveFileDrafts().catch(storageWarning);return result;};
  }
  window.addEventListener('pagehide',()=>{saveDrafts();metadataPersist();void saveDurable();void saveFileDrafts().catch(()=>{});});
  document.addEventListener('visibilitychange',()=>{if(document.hidden){saveDrafts();void saveDurable();}else void resumeMediaProjects();});
@@ -117,7 +117,9 @@
   }
   if(/проект\s+не найден/i.test(p.error||'')){$('mediaResultPreview').replaceChildren();$('mediaResultTitle').textContent=projectLabel(p);$('projectStageStatus').textContent='';}
  };
- const projectList=dialog('anisProjectList','Мои проекты'),projectListBody=el('div',{className:'project-group-list'});projectList.append(projectListBody);
+ const projectList=dialog('anisProjectList','Готовые'),projectListBody=el('div',{className:'project-group-list'});projectList.append(projectListBody);
+ state.openReadyProjects=()=>{const tabs=$('mediaProjectSwitcher');tabs.classList.add('ready-selected');tabs.querySelectorAll('[data-media-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mediaTab==='ready')));openProjectList();};
+ projectList.addEventListener('close',()=>{const tabs=$('mediaProjectSwitcher');tabs.classList.remove('ready-selected');tabs.querySelectorAll('[data-media-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mediaTab===currentView)));});
  function openProjectList(){
   projectListBody.replaceChildren();const groups=new Map();for(const p of studioProjects.values()){const id=p.groupId||p.id;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(p);}
   for(const family of [...groups.values()].reverse()){
@@ -127,7 +129,6 @@
   }
   if(!groups.size)projectListBody.append(el('p',{},'Здесь появятся твои проекты.'));projectList.showModal();
  }
- for(const view of ['studio','video','templates']){const toolbar=el('div',{className:'anis-toolbar studio-projects-toolbar'}),entry=button('Мои проекты',openProjectList);entry.dataset.studioProjects='true';entry.hidden=true;toolbar.append(entry);$('view-'+view).prepend(toolbar);}
  loadStudioProjectResult=async function(p){
   if(p.loading)return;p.loading=true;renderProjectRoom();
   try{
@@ -189,7 +190,6 @@
   if(anonymous)toggleAnonymous();normalHistory=cleanHistory(read('chat:'+id,[]));historyLoaded=false;showWelcome=!normalHistory.length;renderChat();void loadHistory();
  }
  threadSelect.onchange=()=>void switchThread(threadSelect.value);
- const historyThreads=button('Мои разговоры',()=>{openView('chat');threadSelect.focus();});$('historyList').before(historyThreads);
  state.decorateMediaHistoryCard=function(card,row){
    let p=studioProjects.get(row.jobId);
    if(!p){p={id:row.jobId,groupId:row.groupId||row.jobId,kind:row.kind,status:row.status,prompt:row.prompt,quality:row.quality,ratio:row.ratio,duration:row.duration,created:Date.parse(row.createdAt?.replace(' ','T')+'Z')||Date.now(),expiresAt:row.expiresAt,resultUrl:row.url,region:row.region,order:++projectCounter};studioProjects.set(p.id,p);}
@@ -225,7 +225,10 @@
  },true);
  const useDescription=button('Использовать описание',()=>{$(helperKind+'Prompt').value=helperOutput.value;saveDrafts();helper.close();$(helperKind+'Prompt').focus();},true);useDescription.hidden=true;
  helper.append(improveButton,helperOutput,useDescription,el('p',{},'Проверь и поправь описание. Создание начнётся только после нажатия «Создать» в студии.'));
- for(const kind of ['image','video']){const tools=el('div',{className:'anis-toolbar'});tools.append(button('✦ Уточнить идею',()=>{helperKind=kind;helperIdea.value=$(kind+'Prompt').value;helperOutput.hidden=true;useDescription.hidden=true;helper.showModal();}));if(kind==='image'){state.regionButton=button('◌ Выделить область',()=>void openRegion());tools.append(state.regionButton);}$(kind+'Prompt').closest('.studio-prompt-box').before(tools);}
+ state.regionButton=button('',()=>{document.activeElement?.blur();if(studioImageFile)void openRegion();else pickStudioPhoto(true);});
+ state.regionButton.id='imagePromptPencil';state.regionButton.className='media-prompt-pencil';state.regionButton.title='Карандаш — выделить область';state.regionButton.setAttribute('aria-label','Карандаш — выделить область');state.regionButton.setAttribute('aria-haspopup','dialog');
+ state.regionButton.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 14Z"/></svg>';$('imagePromptMic').before(state.regionButton);
+ $('imageFile').addEventListener('cancel',()=>{state.regionAfterUpload=false;});
 
  // Freehand selection: only the crop is edited; the original is composited outside the polygon.
  const regionDialog=dialog('anisRegionDialog','Что изменить на фото?'),regionCanvas=el('canvas',{id:'regionCanvas'});let regionImage=null,regionPoints=[],drawing=false;
@@ -239,7 +242,7 @@
   if(regionPoints.length<3)return toast('Обведи область замкнутой линией.');const xs=regionPoints.map(p=>p.x),ys=regionPoints.map(p=>p.y),bounds={x:Math.min(...xs),y:Math.min(...ys),w:Math.max(...xs)-Math.min(...xs),h:Math.max(...ys)-Math.min(...ys)};
   if(bounds.w<.015||bounds.h<.015)return toast('Выдели область чуть крупнее.');state.region={points:regionPoints.map(p=>({...p})),bounds};updateRegionButton();void saveFileDrafts().catch(storageWarning);regionDialog.close();toast('Теперь напиши, что изменить внутри выделения.');
  },true));regionDialog.append(regionActions);
- function updateRegionButton(){if(!state.regionButton)return;state.regionButton.disabled=!studioImageFile;state.regionButton.textContent=state.region?'◉ Область выбрана':'◌ Выделить область';state.regionButton.classList.toggle('anis-region-active',!!state.region);}
+ function updateRegionButton(){if(!state.regionButton)return;state.regionButton.disabled=$('makeImage').disabled;state.regionButton.title=state.region?'Карандаш — изменить выделение':'Карандаш — выделить область';state.regionButton.setAttribute('aria-label',state.regionButton.title);state.regionButton.classList.toggle('anis-region-active',!!state.region);}
  async function imageFor(file){const url=URL.createObjectURL(file),img=new Image();try{await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(Error('Не удалось открыть фото.'));img.src=url;});return img;}finally{URL.revokeObjectURL(url);}}
  async function openRegion(){if(!studioImageFile)return toast('Сначала добавь фото.');try{regionImage=await imageFor(studioImageFile);const scale=Math.min(1,1200/Math.max(regionImage.naturalWidth,regionImage.naturalHeight));regionCanvas.width=Math.round(regionImage.naturalWidth*scale);regionCanvas.height=Math.round(regionImage.naturalHeight*scale);regionPoints=state.region?.points.map(p=>({...p}))||[];drawRegion();regionDialog.showModal();}catch(error){explain(error);}}
  async function cropRegion(file,region){const img=await imageFor(file),b=region.bounds,c=document.createElement('canvas');c.width=Math.max(1,Math.round(b.w*img.naturalWidth));c.height=Math.max(1,Math.round(b.h*img.naturalHeight));c.getContext('2d').drawImage(img,b.x*img.naturalWidth,b.y*img.naturalHeight,b.w*img.naturalWidth,b.h*img.naturalHeight,0,0,c.width,c.height);const blob=await new Promise(resolve=>c.toBlob(resolve,'image/png'));if(!blob)throw Error('Не удалось подготовить выделение.');return new File([blob],'selected-area.png',{type:'image/png'});}
