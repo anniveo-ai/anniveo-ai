@@ -167,71 +167,45 @@
     }catch(error){if(error.name!=='AbortError'){if(s.project.kind==='video')cropDialog.close();toast(error.message);}}
     finally{if(cropState===s){s.exporting=false;cropSave.disabled=false;for(const input of cropFields.querySelectorAll('input,button'))input.disabled=false;}}
   }
-  // Restore ready results automatically when opening a project, including after app restart.
-  const pendingPreviews=new WeakSet();
-  const originalRoomRender=window.renderProjectRoom;
-  if(typeof originalRoomRender==='function'){
-    window.renderProjectRoom=function(...args){
-      const result=originalRoomRender.apply(this,args);
-      const project=studioProjects.get(selectedStudioProject);
-      if(!project||project.status!=='completed'||project.media||!project.resultUrl)return result;
-      const stage=document.getElementById('mediaResultPreview');
-      if(!stage||pendingPreviews.has(project))return result;
-      pendingPreviews.add(project);
-      const showLoading=()=>{
-        if(selectedStudioProject!==project.id||project.media)return;
-        stage.replaceChildren();
-        const status=node('div',{className:'project-creation-scene'},project.kind==='video'?'Открываем готовое видео…':'Открываем готовое фото…');
-        stage.append(status);
-      };
-      showLoading();
-      Promise.resolve(loadStudioProjectResult(project)).catch(error=>{
-        if(selectedStudioProject!==project.id)return;
-        stage.replaceChildren();
-        const retry=control('Повторить загрузку',()=>{
-          pendingPreviews.delete(project);
-          window.renderProjectRoom();
-        },'project-load-result');
-        stage.append(node('p',{className:'note'},error?.message||'Не удалось открыть файл.'),retry);
-      }).finally(()=>pendingPreviews.delete(project));
-      return result;
-    };
-  }
-  // Recover thumbnails in the Ready gallery without regenerating projects.
-  const galleryLoads=new Set();
-  function repairReadyGallery(){
-    const grid=document.querySelector('#studioReadyList');
-    const cards=grid?grid.querySelectorAll('[data-project-id]'):document.querySelectorAll('.studio-ready-project[data-project-id]');
-    for(const card of cards){
-      const id=card.dataset.projectId,project=studioProjects.get(id);
-      if(!project||project.status!=='completed'||project.media||!project.resultUrl||galleryLoads.has(id))continue;
-      const preview=card.querySelector('.studio-ready-preview');
-      if(!preview)continue;
-      const media=preview.querySelector('img,video');
-      if(media&&media.complete&&media.naturalWidth>0)continue;
-      const start=()=>{
-        if(galleryLoads.has(id)||project.media)return;
-        galleryLoads.add(id);
-        Promise.resolve(loadStudioProjectResult(project)).catch(()=>{}).finally(()=>{
-          galleryLoads.delete(id);
-          const current=document.querySelector('.studio-ready-project[data-project-id="'+CSS.escape(id)+'"] .studio-ready-preview');
-          if(current&&project.media?.url){
-            const previous=current.querySelector('img,video');
-            const next=document.createElement(project.kind==='video'?'video':'img');
-            next.src=project.media.url;
-            if(project.kind==='video'){next.muted=true;next.playsInline=true;next.preload='metadata';}
-            if(previous)previous.replaceWith(next);else current.prepend(next);
-          }
-        });
-      };
-      if(media){media.addEventListener('error',start,{once:true});if(media.tagName==='IMG'&&media.complete&&!media.naturalWidth)start();}
-      else start();
+  // Automatically load completed projects once. Explicit clicks can retry failures.
+  const originalRoomRender=window.renderProjectRoom,pendingRooms=new WeakSet(),roomAttempts=new WeakSet();
+  if(typeof originalRoomRender==='function')window.renderProjectRoom=function(...args){
+    const result=originalRoomRender.apply(this,args),project=studioProjects.get(selectedStudioProject);
+    if(!document.getElementById('mediaResultDialog')?.open||!project||project.status!=='completed'||project.media||!project.resultUrl||pendingRooms.has(project)||roomAttempts.has(project))return result;
+    pendingRooms.add(project);roomAttempts.add(project);
+    Promise.resolve().then(()=>loadStudioProjectResult(project)).finally(()=>{pendingRooms.delete(project);if(!project.media){const stage=document.getElementById('mediaResultPreview');if(selectedStudioProject===project.id){stage.replaceChildren(node('p',{className:'note'},project.error||'Файл не загрузился.'),control('Повторить загрузку',()=>{roomAttempts.delete(project);window.renderProjectRoom();},'project-load-result'));}}});
+    return result;
+  };
+  // Visible results load through our API and are retained as local blobs. Rendering
+  // must not restart all the full-size downloads or create an infinite retry loop.
+  const galleryLoads=new Set(),galleryAttempts=new Map(),galleryQueue=[];
+  function pumpGallery(){
+    while(galleryLoads.size<2&&galleryQueue.length){
+      const project=galleryQueue.shift();if(project.media||galleryLoads.has(project.id))continue;
+      galleryLoads.add(project.id);
+      Promise.resolve().then(()=>loadStudioProjectResult(project)).finally(()=>{galleryLoads.delete(project.id);repairReadyGallery();pumpGallery();});
     }
   }
-  document.addEventListener('DOMContentLoaded',()=>{
-    const grid=document.querySelector('#studioReadyList');
-    if(grid){new MutationObserver(()=>repairReadyGallery()).observe(grid,{childList:true,subtree:false});repairReadyGallery();}
-  });
+  function repairReadyGallery(){
+    const grid=document.getElementById('studioReadyList');if(!grid)return;
+    for(const card of grid.querySelectorAll('.studio-ready-project[data-project-id]')){
+      const project=studioProjects.get(card.dataset.projectId),preview=card.querySelector('.studio-ready-preview');
+      if(!project||project.status!=='completed'||!preview)continue;
+      if(project.media?.url){
+        const media=preview.querySelector('img,video');
+        if(media?.getAttribute('src')!==project.media.url){const next=node(project.kind==='video'?'video':'img',{src:project.media.url});if(project.kind==='video'){next.muted=true;next.playsInline=true;next.preload='metadata';}else next.alt='Готовое фото';if(media)media.replaceWith(next);else preview.prepend(next);}
+        preview.querySelector('.ready-preview-status')?.remove();continue;
+      }
+      if(!project.resultUrl)continue;
+      let status=preview.querySelector('.ready-preview-status');
+      if(!status){status=node('span',{className:'ready-preview-status',role:'status'});preview.prepend(status);}
+      status.textContent=project.error&&!project.loading?'Нажми, чтобы загрузить':'Загружаем '+(project.kind==='video'?'видео…':'фото…');
+      if(!galleryLoads.has(project.id)&&galleryAttempts.get(project.id)!==project.resultUrl){galleryAttempts.set(project.id,project.resultUrl);galleryQueue.push(project);}
+    }
+    pumpGallery();
+  }
+  function observeGallery(){const grid=document.getElementById('studioReadyList');if(grid){new MutationObserver(repairReadyGallery).observe(grid,{childList:true});repairReadyGallery();}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observeGallery,{once:true});else observeGallery();
   window.anisProjectActions={createControls,normalizeBlob,saveMedia,showMedia,getMedia};
 })();
 

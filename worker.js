@@ -150,6 +150,20 @@ async function readPremiumMedia(env,userId,id){
  const data=await polzaMediaRequest(env,'/'+encodeURIComponent(row.provider_id));return updatePremiumJob(env,row,data);
 }
 
+// Fetch only an authenticated user's stored result, never a client-supplied URL.
+async function serveMediaFile(env,userId,jobId,headers){
+ const row=await env.DB.prepare('SELECT kind,status,result_url FROM media_jobs WHERE id=? AND user_id=?').bind(String(jobId||''),userId).first();
+ if(!row){const error=Error('Работа не найдена.');error.status=404;throw error;}
+ if(row.status!=='completed'||!row.result_url){const error=Error('Файл ещё не готов.');error.status=409;throw error;}
+ const url=new URL(row.result_url);
+ if(url.origin!=='https://s3.polza.ai'||url.username||url.password)throw Error('Адрес результата не поддерживается.');
+ const response=await fetch(url.href,{redirect:'error',signal:AbortSignal.timeout(90000)});
+ if(!response.ok){await response.body?.cancel();const error=Error('Не удалось загрузить готовый файл. Попробуй ещё раз.');error.status=502;throw error;}
+ const type=response.headers.get('Content-Type')||'application/octet-stream';
+ if(!/^(image|video)\//i.test(type)&&!/^application\/octet-stream/i.test(type)){await response.body?.cancel();throw Error('Сервис вернул некорректный файл.');}
+ return new Response(response.body,{headers:{...headers,'Content-Type':type,'X-Content-Type-Options':'nosniff'}});
+}
+
 async function recordMediaUsage(db,userId,kind){
   if(!db)return;
   try{await db.prepare('INSERT INTO usage_events(id,user_id,kind) VALUES(?,?,?)').bind(crypto.randomUUID(),userId,kind).run();}
@@ -1336,7 +1350,8 @@ export default {
     if (new URL(request.url).pathname === "/telegram/payments") return handlePaymentWebhook(request, env);
     const headers = {
       "Access-Control-Allow-Origin":
-        "https://anniveo-ai-app.pages.dev",
+        (["https://anniveo-ai-app.pages.dev","https://anniveo-ai.pages.dev"].includes(request.headers.get('Origin'))?request.headers.get('Origin'):"https://anniveo-ai-app.pages.dev"),
+      "Vary":"Origin",
       "Access-Control-Allow-Methods":
         "POST, OPTIONS",
       "Access-Control-Allow-Headers":
@@ -1459,6 +1474,11 @@ export default {
           const data=action.startsWith('chat-thread-')?await handleChatThreadAction(env.DB,userId,body):action==='notification-get'?await readNotificationPreference(env.DB,userId):action==='notification-set'?await setNotificationPreference(env.DB,userId,body.enabled):await improveCreationPrompt(env,body);
           return json(data,200,headers);
         }catch(error){return json({error:error.message},error.status||400,headers);}
+      }
+      if(action==='media-file'){
+        if(!env.DB)return json({error:'Файлы временно недоступны'},503,headers);
+        try{return await serveMediaFile(env,userId,body.jobId,headers);}
+        catch(error){return json({error:error.message},error.status||502,headers);}
       }
       if(action==="media-history"){
         if(!env.DB)return json({error:'История временно недоступна'},503,headers);

@@ -215,3 +215,5 @@ body.studio-typing .studio-prompt-box textarea{max-height:max(80px,calc(var(--st
 @media(max-width:480px){.anis-toolbar{gap:6px}.anis-button{font-size:13px;padding:10px 12px}.anis-dialog{padding:18px}.format-help-trigger{min-height:44px}.anis-toolbar select{max-width:none}}
 @media(prefers-reduced-motion:reduce){.anis-button{transition:none}}
 
+
+#view-ready .ready-preview-status{position:absolute;z-index:1;inset:25% 10px auto;text-align:center;color:#d6b9ec;font-size:11px;line-height:1.5}

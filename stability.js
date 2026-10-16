@@ -196,7 +196,7 @@
   notice.append(el('span',{},ongoing?'Вариант убран. Создание продолжится.':'Вариант удалён из списка.'),button('Отменить',()=>{
    item.removedFromVariants=false;notice.remove();persistStudioProjects();void saveDurable();openProjectRoom(item.id);updateProjectDock();void pumpStudioQueue();
   }));
-  (room.open?room:document.body).append(notice);setTimeout(()=>notice.remove(),8000);
+  (room.open?room:document.body).append(notice);setTimeout(()=>notice.remove(),3000);
  }
  function previewSource(p){
   if(p.media?.url)return {url:p.media.url,type:p.kind==='video'?'video':'img'};
@@ -249,7 +249,7 @@
  state.openReadyProjects=()=>openView('ready');
  let readyRenderKey='';
  function renderReadyProjects(){
-  const projects=[...studioProjects.values()].filter(p=>!p.removedFromVariants).sort((a,b)=>(a.created||0)-(b.created||0)||(a.order||0)-(b.order||0)),key=[state.restoring,state.historyLoading,state.historyLoaded,state.historyError,...projects.map(p=>[p.id,p.groupId,p.status,p.loading,previewSource(p)?.url,p.prompt].join(':'))].join('|');if(readyGrid.childElementCount&&key===readyRenderKey)return;readyRenderKey=key;readyGrid.replaceChildren();
+  const projects=[...studioProjects.values()].filter(p=>!p.removedFromVariants).sort((a,b)=>(a.created||0)-(b.created||0)||(a.order||0)-(b.order||0)),key=[state.restoring,state.historyLoading,state.historyLoaded,state.historyError,...projects.map(p=>[p.id,p.groupId,p.status,p.loading,p.error,previewSource(p)?.url,p.prompt].join(':'))].join('|');if(readyGrid.childElementCount&&key===readyRenderKey)return;readyRenderKey=key;readyGrid.replaceChildren();
   const groups=new Map();for(const p of projects){const id=p.groupId||p.id;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(p);}
   for(const family of [...groups.values()].reverse()){
    const first=family[0],last=family.at(-1),display=[...family].reverse().find(p=>p.status==='completed'&&(p.media||p.resultUrl))||last;
@@ -266,23 +266,31 @@
  }
  const resultLoads=new WeakMap();
  loadStudioProjectResult=function(p){
+  if(p.media?.file)return Promise.resolve(p.media);
   if(resultLoads.has(p))return resultLoads.get(p);
-  const task=(async()=>{p.loading=true;renderProjectRoom();
-  try{
-   let downloaded;
-   for(let attempt=0;attempt<3;attempt++){
-    try{const response=await fetch(p.resultUrl,{signal:AbortSignal.timeout(30000)});if(!response.ok){const error=Error('Не удалось загрузить результат.');error.status=response.status;throw error;}downloaded=await response.blob();break;}
-    catch(error){if(attempt===2||error.status&&error.status<500&&![408,429].includes(error.status))throw error;await new Promise(resolve=>setTimeout(resolve,600*(attempt+1)));}
-   }
-   let blob=await window.anisProjectActions.normalizeBlob(p.kind,downloaded);
-   if(p.region){if(!p.regionOriginalFile)throw Error('Чтобы собрать результат без изменения остального фото, нужен оригинал с этого устройства. Не создавай заказ заново.');blob=await compositeRegion(p,blob);}
-   const prepared=await window.anisMediaQuality.prepare(p,blob);blob=prepared.blob;
-   p.outputWidth=prepared.width;p.outputHeight=prepared.height;p.resolutionWarning=prepared.warning||null;p.resolutionPending=!!prepared.pending;
-   p.media=mediaFromBlob(p.kind,blob);Object.assign(p.media,{width:p.outputWidth,height:p.outputHeight,warning:p.resolutionWarning});p.mediaBlob=blob;p.error=null;generatedMedia[p.kind]=p.media;invalidateUsageStats();await saveDurable();
-   if(selectedStudioProject===p.id)room.querySelector('.anis-inline-error')?.remove();
-  }catch(error){p.error=p.region?readableMediaError(error):(p.kind==='image'?'Фото':'Видео')+' готово, но не удалось загрузить его на устройство. Повтори загрузку — новая генерация не нужна.';if(selectedStudioProject===p.id&&room.open)explain(Error(p.error),()=>loadStudioProjectResult(p),'Повторить загрузку');}
-  finally{p.loading=false;resultLoads.delete(p);workroomRenderKey='';renderProjectRoom();}
-  })();resultLoads.set(p,task);return task;
+  // Register before rendering: room and gallery renders can request this same file.
+  const task=Promise.resolve().then(async()=>{
+   p.loading=true;renderProjectRoom();
+   try{
+    let downloaded;
+    const routes=initData?[{url:API_URL,options:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'media-file',jobId:p.id,initData})}},{url:p.resultUrl}]:[{url:p.resultUrl}];
+    for(let i=0;i<routes.length;i++){
+     try{const route=routes[i],response=await fetch(route.url,{...route.options,signal:AbortSignal.timeout(90000)});if(!response.ok){await response.body?.cancel();throw Error('Не удалось загрузить результат.');}downloaded=await window.anisProjectActions.normalizeBlob(p.kind,await response.blob());break;}
+     catch(error){if(i===routes.length-1)throw error;}
+    }
+    let blob=downloaded;
+    if(p.region){if(!p.regionOriginalFile)throw Error('Чтобы собрать результат без изменения остального фото, нужен оригинал с этого устройства. Не создавай заказ заново.');blob=await compositeRegion(p,blob);}
+    // Publish the decoded file immediately; saving to storage must not hold up previews.
+    p.media=mediaFromBlob(p.kind,blob);p.mediaBlob=blob;p.error=null;generatedMedia[p.kind]=p.media;updateProjectDock();
+    const prepared=await window.anisMediaQuality.prepare(p,blob);
+    p.outputWidth=prepared.width;p.outputHeight=prepared.height;p.resolutionWarning=prepared.warning||null;p.resolutionPending=!!prepared.pending;
+    if(prepared.blob!==blob){const old=p.media.url;p.media=mediaFromBlob(p.kind,prepared.blob);p.mediaBlob=prepared.blob;URL.revokeObjectURL(old);}
+    Object.assign(p.media,{width:p.outputWidth,height:p.outputHeight,warning:p.resolutionWarning});generatedMedia[p.kind]=p.media;invalidateUsageStats();persistStudioProjects();void saveDurable();
+    if(selectedStudioProject===p.id)room.querySelector('.anis-inline-error')?.remove();
+    return p.media;
+   }catch(error){p.error=p.region?readableMediaError(error):(p.kind==='image'?'Фото':'Видео')+' готово, но файл не загрузился. Нажми на работу, чтобы повторить загрузку.';if(selectedStudioProject===p.id&&room.open)explain(Error(p.error),()=>loadStudioProjectResult(p),'Повторить загрузку');}
+   finally{p.loading=false;resultLoads.delete(p);workroomRenderKey='';renderProjectRoom();}
+  });resultLoads.set(p,task);return task;
  };
  async function recoverProject(p){
   if(projectWatchers.has(p.id))return;
