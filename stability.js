@@ -383,7 +383,7 @@
    const copy=el('span',{className:'studio-ready-copy'});
    if(issue)copy.append(el('small',{},first.kind==='video'?'Видео':'Фото'),el('strong',{},issue.title),el('span',{className:'ready-issue-reason'},issue.reason),el('small',{className:'ready-issue-prompt'},(first.prompt||'Мой проект').slice(0,110)));
    else copy.append(el('small',{},(first.kind==='video'?'Видео':'Фото')+' · '+projectStatusLabel(last)+(family.length>1?' · '+variantsText(family.length):'')),el('strong',{},(first.prompt||'Мой проект').slice(0,110)));
-   preview.append(copy,el('b',{'aria-hidden':'true'},first.kind==='video'?'▷':'↗'));card.append(preview);
+   preview.append(copy,el('b',{'aria-hidden':'true'},issue?'↗':first.kind==='video'?'▷':'↗'));if(issue)preview.setAttribute('aria-label',issue.title+'. '+issue.reason+'. Открыть работу');card.append(preview);
    const billing=issue&&projectBillingLabel(display);if(billing)copy.append(el('small',{className:'ready-billing-status'},billing));
    if(display.status==='completed'&&source)card.append(window.anisProjectActions.createControls(display));
    else if(PROJECT_TERMINAL.includes(display.status)){
