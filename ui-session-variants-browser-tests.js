@@ -41,7 +41,14 @@ async function runAnisUIRegression(appHTML){
     w.closeGeneratedMedia();
    }
    w.openProjectRoom(a);await wait(30);
-   const remove=id=>d.querySelector('[data-variant-id="'+id+'"] .variant-remove').click();
+   const requestRemove=id=>d.querySelector('[data-variant-id="'+id+'"] .variant-remove').click();
+   requestRemove(b);await wait(30);
+   check(kind+' deletion requires confirmation',d.getElementById('variantDeleteDialog').open&&!!d.querySelector('[data-variant-id="'+b+'"]')&&!d.querySelector('.variant-removal-notice'));
+   d.getElementById('variantDeleteCancel').click();await wait(30);
+   check(kind+' cancelling keeps the variant',!!d.querySelector('[data-variant-id="'+b+'"]')&&!d.querySelector('.variant-removal-notice'));
+   requestRemove(b);d.getElementById('variantDeleteDialog').dispatchEvent(new w.Event('cancel',{cancelable:true}));d.getElementById('variantDeleteDialog').close();await wait(30);
+   check(kind+' dismissing confirmation keeps the variant',!!d.querySelector('[data-variant-id="'+b+'"]'));
+   const remove=id=>{requestRemove(id);d.getElementById('variantDeleteConfirm').click();};
    remove(b);await wait(30);
    check(kind+' non-selected variant removes without changing selection',w.eval('selectedStudioProject')===a&&!d.querySelector('[data-variant-id="'+b+'"]'));
    d.querySelector('.variant-removal-notice button').click();await wait(30);

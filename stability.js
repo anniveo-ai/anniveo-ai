@@ -140,6 +140,20 @@
   return result;
  };
  const variantPanel=el('section',{className:'room-variants','aria-label':'Варианты проекта'}),variantHeading=room.querySelector('.project-variants-heading');variantHeading.before(variantPanel);variantPanel.append(variantHeading,$('projectVariantCards'));
+ const variantDeleteDialog=dialog('variantDeleteDialog','Удалить вариант?'),variantDeleteText=el('p'),variantDeleteActions=el('div',{className:'anis-toolbar'});
+ let variantToDelete=null;
+ const cancelVariantDelete=button('Отмена',()=>variantDeleteDialog.close()),confirmVariantDelete=button('Удалить',()=>{
+  const item=variantToDelete;variantDeleteDialog.close();if(item&&!item.removedFromVariants)removeVariant(item);
+ },true);
+ cancelVariantDelete.id='variantDeleteCancel';confirmVariantDelete.id='variantDeleteConfirm';variantDeleteText.id='variantDeleteDescription';
+ variantDeleteDialog.setAttribute('aria-labelledby','variantDeleteTitle');variantDeleteDialog.querySelector('h2').id='variantDeleteTitle';variantDeleteDialog.setAttribute('aria-describedby',variantDeleteText.id);
+ variantDeleteActions.append(cancelVariantDelete,confirmVariantDelete);variantDeleteDialog.append(variantDeleteText,variantDeleteActions);
+ variantDeleteDialog.addEventListener('close',()=>{if(!variantDeleteDialog.open)variantToDelete=null;});
+ function requestVariantDeletion(item){
+  if(variantDeleteDialog.open)return;variantToDelete=item;
+  variantDeleteText.textContent=projectLabel(item)+' будет удалён из списка вариантов.'+(['submitting','creating','pending','processing'].includes(item.status)?' Уже начатое создание продолжится.':'');
+  variantDeleteDialog.showModal();cancelVariantDelete.focus({preventScroll:true});
+ }
  function removeVariant(item){
   item.removedFromVariants=true;
   const remaining=projectFamily(item);
@@ -181,7 +195,7 @@
    const visual=el('div',{className:'project-variant-visual'}),source=previewSource(item);
    if(item.status==='completed'&&source)visual.append(previewElement(source));else if(!PROJECT_TERMINAL.includes(item.status))addWorkingPreview(visual,item,true);else visual.append(el('span',{},item.status==='completed'?'✓':'!'));
    if(item.kind==='video')visual.append(el('b',{className:'project-video-tag'},'▷'));card.append(visual,el('small',{},projectLabel(item)));
-   const tile=el('div',{className:'project-variant-item','data-variant-id':item.id}),remove=button('',event=>{event.stopPropagation();removeVariant(item);});
+   const tile=el('div',{className:'project-variant-item','data-variant-id':item.id}),remove=button('',event=>{event.stopPropagation();requestVariantDeletion(item);});
    remove.className='variant-remove';remove.title='Удалить вариант';remove.setAttribute('aria-label','Удалить '+projectLabel(item));
    remove.innerHTML='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m5 5 6 6M11 5l-6 6"/></svg>';
    tile.append(card,remove);cards.append(tile);
