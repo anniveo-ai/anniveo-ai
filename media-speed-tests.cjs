@@ -14,5 +14,18 @@ const html=fs.readFileSync('index.html','utf8'),actions=fs.readFileSync('project
  const alpha=await vm.runInContext('prepareStudioImage(file)',context);assert.equal(alpha.type,'image/png','transparent input retains alpha');const decoded=await loadImage(Buffer.from(await alpha.arrayBuffer()));const check=createCanvas(2048,2048);check.getContext('2d').drawImage(decoded,0,0);assert.equal(check.getContext('2d').getImageData(0,0,1,1).data[3],80);
  const modelContext=vm.createContext({URL,Error,PREMIUM_MEDIA_MODELS:{}});const begin=worker.indexOf('function choosePremiumMedia('),end=worker.indexOf('async function getMediaHistory',begin);vm.runInContext(worker.slice(begin,end),modelContext);
  for(const [quality,ratio,prompt,model]of [['fhd','9:16','Сделай белый фон','google/gemini-3.1-flash-image-preview'],['qhd','16:9','Убери предмет','google/gemini-3.1-flash-image-preview'],['uhd','9:16','Сделай белый фон','google/gemini-3-pro-image-preview'],['qhd','16:9','Добавь надпись','google/gemini-3-pro-image-preview']]){modelContext.job={kind:'image',quality,ratio,prompt};assert.equal(vm.runInContext("choosePremiumMedia(job,{type:'image/jpeg'}).model",modelContext),model);}
+ // Saving waits for the selected export dimensions, while a preview can be visible.
+ let finishExport,saveFinished=false;const exportWait=new Promise(resolve=>finishExport=resolve),previewFile={name:'preview.jpg'},finalFile={name:'export.jpg'};
+ const getContext=vm.createContext({WeakMap,Promise,Error,window:{},loadStudioProjectResult:async project=>{await exportWait;project.media={file:finalFile};},project:{loading:true,media:{file:previewFile}}});
+ vm.runInContext(actions.slice(actions.indexOf('  const exportsInProgress='),actions.indexOf('  const imagePreviews=')),getContext);
+ const save=vm.runInContext('getMedia(project)',getContext).then(item=>{saveFinished=true;return item});await new Promise(setImmediate);assert.equal(saveFinished,false);finishExport();assert.equal((await save).file,finalFile);
+ // Unchanged media is not rewritten; a change made during a write is still committed.
+ const client=fs.readFileSync('stability.js','utf8');let writes=0,saved=[];
+ const db={transaction(){const tx={objectStore(){return {get(){const request={result:saved};queueMicrotask(()=>{request.onsuccess();queueMicrotask(()=>tx.oncomplete());});return request;},put(rows){writes++;saved=rows;}}}};return tx;}};
+ const project={id:'durable-test',kind:'image',status:'completed',prompt:'First',media:{blob:original}},projects=new Map([[project.id,project]]);
+ const durable=vm.createContext({WeakMap,Map,Object,Array,Promise,state:{restoring:false},studioProjects:projects,database:async()=>db,key:name=>name,storageWarning(){throw Error('Unexpected storage failure');}});
+ vm.runInContext(client.slice(client.indexOf(' const projectRecordCache='),client.indexOf(' persistStudioProjects=function')),durable);
+ await Promise.all([vm.runInContext('saveDurable()',durable),vm.runInContext('saveDurable()',durable)]);assert.equal(writes,1);await vm.runInContext('saveDurable()',durable);assert.equal(writes,1);
+ project.prompt='Second';const before=vm.runInContext('saveDurable()',durable);project.prompt='Third';await Promise.all([before,vm.runInContext('saveDurable()',durable)]);assert.equal(saved[0].prompt,'Third');assert.equal(writes,3);
  console.log(JSON.stringify({pass:true,pngUploadBytes:original.size,optimizedUploadBytes:optimized.size,reduction:Number((original.size/optimized.size).toFixed(1)),checks:'opaque PNG compression once; transparent alpha preserved; Flash edits at 2K; Pro at 4K and typography'}));
 })().catch(e=>{console.error(e);process.exitCode=1});
