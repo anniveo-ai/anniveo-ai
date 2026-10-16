@@ -4947,7 +4947,7 @@ async function createStudioVariant(snapshot){
 }
 async function generateMedia(kind){
  if(mediaVoiceTask){toast('Сначала заверши голосовой ввод.');return;}
- return createStudioVariant({kind,consumeDraft:true,prompt:$(kind+'Prompt').value,sourceFile:kind==='image'?studioImageFile:studioVideoFile,identityFile:kind==='video'?studioVideoIdentityFile:null,quality:$(kind+'Quality').value,ratio:$(kind+'Ratio').value,duration:kind==='video'?Number($('duration').value):undefined});
+ return createStudioVariant({kind,consumeDraft:true,prompt:$(kind+'Prompt').value.trim()||window.anisProjectActions?.enhancementPrompt?.(kind)||'',sourceFile:kind==='image'?studioImageFile:studioVideoFile,identityFile:kind==='video'?studioVideoIdentityFile:null,quality:$(kind+'Quality').value,ratio:$(kind+'Ratio').value,duration:kind==='video'?Number($('duration').value):undefined});
 }
 async function addAgentVariant(){
  const base=studioProjects.get(selectedStudioProject),idea=$('projectAgentIdea').value.trim();if(base&&(base.hasSource&&!base.sourceFile||base.hasIdentity&&!base.identityFile)){toast('Для нового варианта заново добавь исходные файлы в студии.');return;}if(!base||!idea){toast('Добавь идею для нового варианта.');return;}

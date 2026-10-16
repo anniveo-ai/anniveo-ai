@@ -250,24 +250,52 @@
     const cancel=()=>{if(version===settingsRevealVersion)settingsRevealVersion++;};
     scroller.addEventListener('touchstart',cancel,{once:true,passive:true});scroller.addEventListener('wheel',cancel,{once:true,passive:true});
   }
+  const enhancementSources=new Map();
+  let enhancementSession=null;
+  function enhancementReturn(session){
+    if(enhancementSession!==session)return;
+    enhancementSession=null;session.toolbar.remove();session.create.disabled=false;
+    for(const [field,listener]of session.listeners)field.removeEventListener('change',listener);
+    openView(session.origin.view);
+    if(session.origin.roomId)openProjectRoom(session.origin.roomId);
+    requestAnimationFrame(()=>{ $('app').scrollTop=session.origin.scrollTop;if(session.origin.roomId)$('mediaResultDialog').scrollTop=session.origin.roomScroll; });
+  }
+  function enhancementReturnControl(kind,origin,create){
+    if(enhancementSession){enhancementSession.toolbar.remove();for(const [field,listener]of enhancementSession.listeners)field.removeEventListener('change',listener);}
+    const ids=kind==='video'?['videoQuality','videoRatio','duration']:['imageQuality','imageRatio'];
+    const initial=ids.map(id=>$(id).value),toolbar=node('div',{className:'enhancement-return-bar'});
+    const session={origin,toolbar,create,listeners:[]};enhancementSession=session;
+    const back=control('← Вернуться',()=>enhancementReturn(session),'enhancement-return');
+    const sync=()=>{const changed=ids.some((id,index)=>$(id).value!==initial[index]);back.textContent=changed?'✓ Готово':'← Вернуться';back.classList.toggle('is-changed',changed);back.setAttribute('aria-label',changed?'Подтвердить настройки и вернуться':'Вернуться к работе');};
+    for(const id of ids){const field=$(id);field.addEventListener('change',sync);session.listeners.push([field,sync]);}
+    toolbar.append(back);$('view-'+(kind==='video'?'video':'studio')).querySelector('.media-settings').prepend(toolbar);sync();return session;
+  }
+  function enhancementPrompt(kind){
+    const intent=enhancementSources.get(kind),file=kind==='image'?studioImageFile:studioVideoFile;
+    return intent&&intent.file===file?intent.prompt:'';
+  }
   async function enhanceProject(project){
     const kind=project.kind,view=kind==='video'?'video':'studio',create=$(kind==='video'?'makeVideo':'makeImage');
     if(create.disabled)throw Error('Дождись завершения текущей отправки и повтори улучшение.');
+    const room=$('mediaResultDialog'),origin={view:currentView,scrollTop:$('app').scrollTop,roomId:room.open?selectedStudioProject:null,roomScroll:room.scrollTop};
     // Navigation does not depend on downloading the original file.
     openActionStudio(kind);
     selectValue(kind+'Ratio',project.ratio||(kind==='video'?'16:9':'1:1'));
     selectValue(kind+'Quality',project.quality||'fhd');if(kind==='video')selectValue('duration',project.duration||4);
-    const prompt=$(kind+'Prompt');prompt.value=kind==='video'?'Улучши качество этого видео. Сохрани лица, композицию и цвета, добавь чёткость и плавность движения.':'Улучши качество этого фото. Сохрани лица, композицию, цвета и детали. Добавь естественную чёткость и убери шум.';prompt.dispatchEvent(new Event('input',{bubbles:true}));
+    const session=enhancementReturnControl(kind,origin,create);
+    enhancementSources.delete(kind);
+    const prompt=$(kind+'Prompt');prompt.value='';prompt.dispatchEvent(new Event('input',{bubbles:true}));
     revealActionSettings(kind);create.disabled=true;
     try{
       const item=await mediaDeadline(getMedia(studioProjects.get(project.id)||project),15000,'Не удалось загрузить оригинал для улучшения. Повтори нажатие.');
-      if(currentView!==view)return;
+      if(currentView!==view||enhancementSession!==session)return;
       create.disabled=false;
       const attached=kind==='video'?(clearVideoIdentity(),setStudioVideo(item.file)):setStudioPhoto(item.file);
       if(attached===false)throw Error('Оригинал не удалось добавить. Проверь размер и формат файла.');
+      enhancementSources.set(kind,{file:item.file,prompt:kind==='video'?'Улучши качество этого видео. Сохрани лица, композицию и цвета, добавь чёткость и плавность движения.':'Улучши качество этого фото. Сохрани лица, композицию, цвета и детали. Добавь естественную чёткость и убери шум.'});
       // Preserve any quality/format choices made while the file was loading.
       revealActionSettings(kind);
-    }finally{create.disabled=false;}
+    }finally{if(enhancementSession===session)create.disabled=false;}
   }
   function prepareAction(project,item,action){
     const kind=project.kind;openActionStudio(kind);
@@ -441,7 +469,7 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){galleryAttempts.clear();scheduleGallery();}});window.addEventListener('online',()=>{galleryAttempts.clear();scheduleGallery();});
   function observeGallery(){const grid=document.getElementById('studioReadyList');if(grid){new MutationObserver(repairReadyGallery).observe(grid,{childList:true});repairReadyGallery();}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observeGallery,{once:true});else observeGallery();
-  window.anisProjectActions={createControls,normalizeBlob,saveMedia,saveProject,showMedia,getMedia,prepareDownload,retryResult,showLoadError,ensureImagePreview,ensureProjectPreview,downloadMediaBlob,restorePreviews,resultPreview,refreshGallery:scheduleGallery};
+  window.anisProjectActions={enhancementPrompt,createControls,normalizeBlob,saveMedia,saveProject,showMedia,getMedia,prepareDownload,retryResult,showLoadError,ensureImagePreview,ensureProjectPreview,downloadMediaBlob,restorePreviews,resultPreview,refreshGallery:scheduleGallery};
 })();
 
 

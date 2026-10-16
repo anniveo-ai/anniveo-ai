@@ -386,3 +386,9 @@ html[data-theme=light] #welcome .idea .symbol{color:#76508f}
 #bottomNav .studio-nav-working .studio-nav-progress{opacity:1}
 #bottomNav [data-tab=studio].studio-nav-working.studio-nav-dual-progress .studio-nav-icon{width:43px;height:5px;margin:10px 0;border-radius:20px;background:#b68ad63b}
 @media(prefers-reduced-motion:reduce){#bottomNav .studio-nav-progress{transition:none}}
+
+.enhancement-return-bar{display:flex;justify-content:flex-start;grid-column:1/-1;padding:0 0 3px}
+.enhancement-return{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 13px;border:1px solid #b891d266;border-radius:13px;background:#9c66bf20;color:#e2c7f5;font:inherit;font-size:12px;cursor:pointer;touch-action:manipulation}
+.enhancement-return.is-changed{background:#9c66bf40;border-color:#cca2e888;color:#f1e0fc}
+html[data-theme=light] .enhancement-return{background:#eee1f6;color:#613c78;border-color:#c8addb}
+html[data-theme=light] .enhancement-return.is-changed{background:#e1c9ef;color:#4e2b65;border-color:#ac82c8}

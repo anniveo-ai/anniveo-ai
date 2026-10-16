@@ -170,6 +170,7 @@
   document.querySelectorAll('[data-studio-projects]').forEach(b=>{b.hidden=!projects.length;b.textContent=active?'Мои проекты · в работе '+active:'Мои проекты';});
  };
  const previewUrls=new Map();
+ const viewedStudioResults=new Set(read('studio-viewed-results',[]));
  function studioProjectProgress(project){
   // Creation is finished even when the ready file has not been opened on this device.
   if(project.status==='completed')return 1;
@@ -229,13 +230,14 @@
    const own=projects.filter(p=>p.kind===kind&&!p.removedFromVariants).sort((a,b)=>(b.created||0)-(a.created||0)||(b.order||0)-(a.order||0));
    const running=own.filter(p=>!PROJECT_TERMINAL.includes(p.status)),project=running.find(p=>p.id===selectedStudioProject)||running[0]||own[0];
    ui.panel.hidden=!project;if(!project)continue;
-   const busy=running.includes(project),key=[project.id,project.status,!!project.loading,!!project.media?.file,running.length,project.prompt,project.error].join('|');
+   const viewed=project.status==='completed'&&viewedStudioResults.has(project.id);
+   const busy=running.includes(project),key=[project.id,project.status,!!project.loading,!!project.media?.file,running.length,project.prompt,project.error,viewed].join('|');
    if(key===ui.lastKey)continue;ui.lastKey=key;
    const subject=kind==='image'?'Фото':'Видео';
    ui.panel.dataset.projectId=project.id;ui.panel.dataset.status=project.status;
    ui.panel.classList.toggle('is-working',busy);ui.panel.classList.toggle('is-ready',project.status==='completed');
-   ui.title.textContent=busy?(running.length>1?'В работе: '+running.length+' '+subject.toLowerCase():subject+' в работе'):project.status==='completed'?subject+' готово':subject+' · проверь результат';
-   ui.status.textContent=projectStatusLabel(project);
+   ui.title.textContent=busy?(running.length>1?'В работе: '+running.length+' '+subject.toLowerCase():subject+' в работе'):viewed?'Последняя работа':project.status==='completed'?subject+' готово':subject+' · проверь результат';
+   ui.status.textContent=viewed?subject+' · открыть':projectStatusLabel(project);
    ui.prompt.textContent=project.prompt||'Открыть текущий проект';
    ui.icon.textContent=busy?'':project.status==='completed'?'✓':'!';
    ui.panel.querySelector('.studio-job-progress-track i').style.width=(studioProjectProgress(project)*100)+'%';
@@ -278,6 +280,10 @@
  openProjectRoom=function(...args){
   const wasOpen=room.open;syncRoomSafeTop();if(!wasOpen)room.classList.remove('room-edge-sheet');
   const result=openRoomOriginal(...args);
+  const opened=studioProjects.get(selectedStudioProject);
+  if(room.open&&opened?.status==='completed'&&!viewedStudioResults.has(opened.id)){
+   viewedStudioResults.add(opened.id);write('studio-viewed-results',[...viewedStudioResults].slice(-500));updateProjectDock();
+  }
   if(!wasOpen&&room.open&&window.matchMedia('(max-width:760px)').matches){
    room.style.setProperty('--room-sheet-top',Math.max(0,room.getBoundingClientRect().top)+'px');room.classList.add('room-edge-sheet');
   }
