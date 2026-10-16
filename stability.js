@@ -181,12 +181,13 @@
  }
  state.renderStudioNavProgress=function(projects){
   const running=projects.filter(p=>!PROJECT_TERMINAL.includes(p.status)&&!(p.removedFromVariants&&p.status==='queued'));
-  let rows=0;
+  let rows=0,progress=1;
   for(const [kind,ui]of studioNavTracks){
    const project=running.filter(p=>p.kind===kind).sort((a,b)=>(b.created||0)-(a.created||0))[0];
    if(project){studioNavTracked.set(kind,project.id);studioNavFinishing.delete(kind);}
    let tracked=studioProjects.get(studioNavTracked.get(kind));
-   if(tracked?.status==='completed'&&!studioNavFinishing.has(kind)){
+   const readable=tracked?.media?.file?.size>0||!!(kind==='video'?tracked?.posterDataUrl:tracked?.previewDataUrl);
+   if(tracked?.status==='completed'&&readable&&!studioNavFinishing.has(kind)){
     const id=tracked.id;studioNavFinishing.set(kind,id);
     // Let the 100% fill finish before restoring the Studio icon.
     setTimeout(()=>{if(studioNavFinishing.get(kind)!==id)return;studioNavFinishing.delete(kind);studioNavTracked.delete(kind);state.updateStudioIndicator?.();},900);
@@ -194,10 +195,12 @@
     studioNavTracked.delete(kind);studioNavFinishing.delete(kind);tracked=null;
    }
    ui.track.hidden=!tracked;if(!tracked)continue;rows++;
-   ui.fill.style.width=(studioProjectProgress(tracked)*100)+'%';
+   const value=tracked.status==='completed'&&!readable? .9:studioProjectProgress(tracked);
+   progress=Math.min(progress,value);ui.fill.style.width=(value*100)+'%';
    ui.track.title=(kind==='image'?'Фото':'Видео')+' · '+projectStatusLabel(tracked);
   }
   studioNav.classList.toggle('studio-nav-working',rows>0);
+  studioNavIcon.style.setProperty('--studio-progress',(rows?progress*100:0)+'%');
   studioNav.classList.toggle('studio-nav-dual-progress',rows===2);
  };
  state.renderRoomProgress=function(project){

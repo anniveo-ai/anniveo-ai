@@ -379,3 +379,10 @@ html[data-theme=light] #welcome .idea{background:linear-gradient(135deg,#fff,#f0
 html[data-theme=light] #welcome .idea strong{color:#3f2b50}
 html[data-theme=light] #welcome .idea small{color:#65516f}
 html[data-theme=light] #welcome .idea .symbol{color:#76508f}
+
+/* Original single Studio pill, filled only by confirmed job stages. */
+#bottomNav .studio-nav-job-track{display:none!important}
+#bottomNav .studio-nav-progress{display:block!important;inset:0 auto 0 0;width:var(--studio-progress,0%);transform:none;animation:none!important;opacity:0;background:linear-gradient(90deg,#ab72df,#d8b6f5,#f0dfff);transition:width .6s ease,opacity .3s}
+#bottomNav .studio-nav-working .studio-nav-progress{opacity:1}
+#bottomNav [data-tab=studio].studio-nav-working.studio-nav-dual-progress .studio-nav-icon{width:43px;height:5px;margin:10px 0;border-radius:20px;background:#b68ad63b}
+@media(prefers-reduced-motion:reduce){#bottomNav .studio-nav-progress{transition:none}}
