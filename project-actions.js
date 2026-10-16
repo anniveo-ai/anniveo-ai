@@ -51,13 +51,13 @@
   const imagePreviews=new WeakMap();
   function mediaDeadline(promise,ms,message){return new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error(message)),ms);Promise.resolve(promise).then(value=>{clearTimeout(timer);resolve(value)},error=>{clearTimeout(timer);reject(error)});});}
   async function downloadMediaBlob(project){
-    const proxy={url:API_URL,options:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'media-file',jobId:project.id,initData})}},direct={url:project.resultUrl},routes=initData?[proxy,direct,proxy]:[direct,direct];
+    const proxy={url:API_URL,options:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'media-file',jobId:project.id,initData})}},direct={url:project.resultUrl},routes=initData?[direct,proxy,direct]:[direct,direct];
     let lastError;
     for(const route of routes){
       const controller=new AbortController();let idle,total,reader;
       const touch=()=>{clearTimeout(idle);idle=setTimeout(()=>controller.abort(),20000);};
       try{
-        touch();total=setTimeout(()=>controller.abort(),120000);
+        touch();total=setTimeout(()=>controller.abort(),route===direct?8000:30000);
         const response=await fetch(route.url,{...route.options,signal:controller.signal});if(!response.ok){await response.body?.cancel();const error=Error('Файл временно недоступен (HTTP '+response.status+').');error.status=response.status;throw error;}
         const expected=Number(response.headers.get('Content-Length'))||0;let loaded=0;const chunks=[];reader=response.body?.getReader();
         if(!reader)return await normalizeBlob(project.kind,await response.blob());
@@ -202,6 +202,10 @@
     if(!viewer.open)viewer.showModal();
   }
   const saveButtonStates=new WeakMap();
+  function iosSaving(){
+    const bridge=window.Telegram?.WebApp||(typeof tg!=='undefined'?tg:null);
+    return bridge?.platform==='ios'||/iPhone|iPad|iPod/i.test(navigator.userAgent||'')||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  }
   function originalDownloadLink(project){
     const url=new URL(project.resultUrl);
     if(url.origin!=='https://s3.polza.ai'||url.username||url.password)throw Error('Адрес файла не поддерживается.');
@@ -220,11 +224,14 @@
     if(bridge?.openLink)bridge.openLink(data.url);else download({url:data.url,file:{name:data.filename}});
     return {state:'opened'};
   }
-  async function saveReadyMedia(item,kind){
+  async function saveReadyMedia(item,kind,original=null){
     if(shareable(item)){
       try{await navigator.share({files:[item.file],title:kind==='video'?'Видео ANIS AI':'Фото ANIS AI'});return {state:'shared'};}
       catch(error){if(error.name==='AbortError')return {state:'cancelled'};}
     }
+    // Telegram iOS can delay downloadFile confirmation beyond the UI timeout.
+    // Use the OS share sheet or open the actual original instead of waiting for it.
+    if(iosSaving()){if(original)return openDownloadLink(original);download(item);return {state:'opened'};}
     if(telegramDownloads()&&item.exportJobId){
       const data=await mediaDeadline(window.anisProjectActions.prepareDownload(item),45000,'Не удалось скачать файл. Повтори попытку.');
       try{return await nativeFileDownload(data);}catch(error){if(error.code==='DOWNLOAD_TIMEOUT')throw error;return openDownloadLink(data);}
@@ -255,6 +262,10 @@
       // or converting/re-uploading an already generated file in the WebView.
       if(project.resultUrl&&(!project.exportJobId||project.exportJobId===project.id)){
         const data=originalDownloadLink(project);
+        if(iosSaving()){
+          if(project.media?.file?.size)return saveReadyMedia(project.media,project.kind,data);
+          return mediaDeadline(getMedia(project),5000,'').then(item=>saveReadyMedia(item,project.kind,data)).catch(()=>openDownloadLink(data));
+        }
         if(telegramDownloads())return nativeFileDownload(data).catch(error=>{if(error.code==='DOWNLOAD_TIMEOUT')throw error;return openDownloadLink(data);});
         if(project.media?.file?.size&&shareable(project.media))return saveReadyMedia(project.media,project.kind);
         return openDownloadLink(data);
