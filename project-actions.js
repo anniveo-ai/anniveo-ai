@@ -198,45 +198,69 @@
     viewerNote.textContent=kind==='video'?'Нажми воспроизведение, чтобы посмотреть видео. Сохранение в «Фото» — через системное меню «Поделиться».':'Удерживай фото, чтобы открыть меню сохранения. Также можно сохранить его через «Поделиться».';
     if(item.width&&item.height)viewerNote.textContent=item.width+'×'+item.height+' пикс. · '+(item.warning||viewerNote.textContent);
     if(shareable(item))viewerActions.append(control('Поделиться · сохранить в Фото',()=>{void navigator.share({files:[item.file],title:kind==='video'?'Видео ANIS AI':'Фото ANIS AI'}).catch(error=>{if(error.name!=='AbortError')viewerNote.textContent='Системное меню недоступно. Используй «Скачать», либо удерживай фото для сохранения.';});},'anis-button'));
-    viewerActions.append(control('Скачать .'+item.file.name.split('.').at(-1),()=>void saveMedia(item,kind),'anis-button primary'));
+    const save=control('Скачать .'+item.file.name.split('.').at(-1),()=>void saveMedia(item,kind,save),'anis-button primary');viewerActions.append(save);
     if(!viewer.open)viewer.showModal();
   }
-  async function saveMedia(item,kind){
-    // iOS requires opening the system share sheet in the original user gesture.
-    // Preparing an HTTPS export first loses that gesture and can leave Save inert.
+  const saveButtonStates=new WeakMap();
+  function originalDownloadLink(project){
+    const url=new URL(project.resultUrl);
+    if(url.origin!=='https://s3.polza.ai'||url.username||url.password)throw Error('Адрес файла не поддерживается.');
+    const ext=/\.(png|jpe?g|webp|mp4|webm|mov)$/i.exec(url.pathname)?.[1]?.toLowerCase()||(project.kind==='video'?'mp4':'jpg');
+    return {url:url.href,filename:'anis-'+(project.kind==='video'?'video':'photo')+'.'+ext};
+  }
+  function nativeFileDownload(data){
+    return new Promise((resolve,reject)=>{
+      const timer=setTimeout(()=>{const error=Error('Telegram не подтвердил скачивание. Нажми ещё раз.');error.code='DOWNLOAD_TIMEOUT';reject(error);},20000);
+      try{telegramDownloads().downloadFile({url:data.url,file_name:data.filename},accepted=>{clearTimeout(timer);resolve({state:accepted?'queued':'cancelled'});});}
+      catch(error){clearTimeout(timer);reject(error);}
+    });
+  }
+  function openDownloadLink(data){
+    const bridge=window.Telegram?.WebApp||(typeof tg!=='undefined'?tg:null);
+    if(bridge?.openLink)bridge.openLink(data.url);else download({url:data.url,file:{name:data.filename}});
+    return {state:'opened'};
+  }
+  async function saveReadyMedia(item,kind){
     if(shareable(item)){
-      try{await navigator.share({files:[item.file],title:kind==='video'?'Видео ANIS AI':'Фото ANIS AI'});return;}
-      catch(error){if(error.name==='AbortError')return;}
+      try{await navigator.share({files:[item.file],title:kind==='video'?'Видео ANIS AI':'Фото ANIS AI'});return {state:'shared'};}
+      catch(error){if(error.name==='AbortError')return {state:'cancelled'};}
     }
     if(telegramDownloads()&&item.exportJobId){
-      showMedia(item,kind);viewerNote.textContent='Подготавливаем скачивание файла…';
-      try{
-        const data=await mediaDeadline(window.anisProjectActions.prepareDownload(item),45000,'Подготовка файла занимает больше времени. Повтори скачивание.');
-        viewerActions.querySelector('.download-https')?.remove();
-        const fallback=control('Открыть файл для сохранения',()=>{
-          const bridge=window.Telegram?.WebApp||(typeof tg!=='undefined'?tg:null);
-          if(bridge?.openLink)bridge.openLink(data.url);else download({url:data.url,file:{name:data.filename}});
-        },'anis-button download-https');viewerActions.append(fallback);
-        viewerNote.textContent='Подтверди скачивание в окне Telegram. Если оно не появилось, нажми «Открыть файл для сохранения».';
-        try{telegramDownloads().downloadFile({url:data.url,file_name:data.filename},accepted=>{viewerNote.textContent=accepted?'Скачивание запрошено. Файл появится в загрузках Telegram.':'Скачивание отменено. Можно повторить или открыть файл для сохранения.';});}
-        catch{viewerNote.textContent='Telegram не открыл скачивание. Нажми «Открыть файл для сохранения».';}
-      }
-      catch(error){viewerNote.textContent=error.message+(kind==='image'?' Удерживай фото, чтобы сохранить его.':' Используй «Поделиться · сохранить в Фото», если это меню доступно.');}
-      return;
+      const data=await mediaDeadline(window.anisProjectActions.prepareDownload(item),45000,'Не удалось скачать файл. Повтори попытку.');
+      try{return await nativeFileDownload(data);}catch(error){if(error.code==='DOWNLOAD_TIMEOUT')throw error;return openDownloadLink(data);}
     }
-    const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
-    download(item);
-    if(mobile){showMedia(item,kind);viewerNote.textContent='Файл открыт для скачивания. В меню устройства выбери «Сохранить видео», «Сохранить изображение» или «Сохранить в Файлы».';}
+    download(item);return {state:'opened'};
   }
-  function saveProject(project){
-    // Call native Share inside the original click, before any asynchronous download.
-    if(project.media?.file?.size&&!project.resolutionPending){project.media.exportJobId=project.exportJobId||project.id;return window.anisProjectActions.saveMedia(project.media,project.kind);}
-    viewerTitle.textContent=project.kind==='video'?'Подготавливаем видео':'Подготавливаем фото';viewerStage.replaceChildren();viewerActions.replaceChildren();viewerNote.textContent='Загружаем готовый файл. Новый заказ не создаётся.';if(!viewer.open)viewer.showModal();
-    return getMedia(project,{forExport:true}).then(item=>telegramDownloads()?saveMedia(item,project.kind):showMedia(item,project.kind)).catch(error=>{
-      viewerNote.textContent=error.message;viewerActions.replaceChildren(control('Повторить загрузку',()=>{
-        viewerActions.replaceChildren();viewerNote.textContent='Загружаем…';
-        void retryResult(project).then(()=>saveProject(project)).catch(next=>{viewerNote.textContent=next.message;viewerActions.replaceChildren(control('Повторить',()=>void saveProject(project),'anis-button'));});
-      },'anis-button primary'));
+  async function withSaveFeedback(button,operation){
+    let state;
+    if(button){
+      state=saveButtonStates.get(button)||{html:button.innerHTML,label:button.getAttribute('aria-label')};clearTimeout(state.timer);saveButtonStates.set(button,state);
+      button.disabled=true;button.setAttribute('aria-busy','true');button.setAttribute('aria-label','Скачивание');button.classList.add('save-inline-busy');button.innerHTML='<span class="save-inline-spinner" aria-hidden="true"></span>';
+    }
+    const restore=()=>{if(!button)return;button.innerHTML=state.html;button.classList.remove('save-inline-busy');if(state.label)button.setAttribute('aria-label',state.label);else button.removeAttribute('aria-label');};
+    try{
+      // Run synchronously up to the first await to preserve iOS user activation.
+      const result=await operation();
+      if(button&&['shared','queued'].includes(result?.state)){
+        button.innerHTML='<span class="save-inline-check" aria-hidden="true">✓</span>';button.setAttribute('aria-label',result.state==='queued'?'Передано в загрузки Telegram':'Передано в системное меню сохранения');state.timer=setTimeout(restore,2500);
+      }else restore();
+      return result;
+    }catch(error){restore();toast(error.message||'Не удалось скачать файл. Попробуй ещё раз.');return {state:'error'};}
+    finally{if(button){button.disabled=false;button.removeAttribute('aria-busy');}}
+  }
+  function saveMedia(item,kind,button=null){return withSaveFeedback(button,()=>saveReadyMedia(item,kind));}
+  function saveProject(project,button=null){
+    return withSaveFeedback(button,()=>{
+      // Telegram downloads the remote original directly, without blocking on previews
+      // or converting/re-uploading an already generated file in the WebView.
+      if(project.resultUrl&&(!project.exportJobId||project.exportJobId===project.id)){
+        const data=originalDownloadLink(project);
+        if(telegramDownloads())return nativeFileDownload(data).catch(error=>{if(error.code==='DOWNLOAD_TIMEOUT')throw error;return openDownloadLink(data);});
+        if(project.media?.file?.size&&shareable(project.media))return saveReadyMedia(project.media,project.kind);
+        return openDownloadLink(data);
+      }
+      if(project.media?.file?.size){project.media.exportJobId=project.exportJobId||project.id;return saveReadyMedia(project.media,project.kind);}
+      return mediaDeadline(getMedia(project),20000,'Файл не загрузился. Повтори скачивание.').then(item=>saveReadyMedia(item,project.kind));
     });
   }
   function selectValue(id,value){const select=$(id);if(id.endsWith('Quality')&&![...select.options].some(o=>o.value===String(value)))value={fast:'fhd',high:id==='imageQuality'?'qhd':'fhd',max:'uhd'}[value]||value;if([...select.options].some(o=>o.value===String(value)&&!o.disabled))select.value=String(value);select.dispatchEvent(new Event('change',{bubbles:true}));}
@@ -351,7 +375,7 @@
         if(action==='delete'){window.anisStability.requestWorkDeletion(project);return;}
         if(action==='revise'){closeGeneratedMedia();const kind=project.kind;openView(kind==='video'?'video':'studio');if(project.sourceFile)(kind==='video'?setStudioVideo:setStudioPhoto)(project.sourceFile);if(kind==='video'&&project.identityFile)setVideoIdentity(project.identityFile);const idea=$(kind+'Prompt');idea.value=project.prompt||'';idea.dispatchEvent(new Event('input',{bubbles:true}));idea.focus({preventScroll:true});if(project.hasSource&&!project.sourceFile)toast('Добавь исходный файл заново. Новый заказ ещё не создан.');return;}
         b.disabled=true;b.setAttribute('aria-busy','true');
-        try{if(action==='download'){await saveProject(project);return;}if(action==='edit'){openProjectRoom(project.id);const idea=$('projectAgentIdea');idea.focus({preventScroll:true});idea.closest('.project-agent').scrollIntoView({block:'center',behavior:'smooth'});return;}if(action==='enhance'){await enhanceProject(project);return;}if(action==='crop'){await openCrop(project);return;}const item=await getMedia(project);prepareAction(project,item,action);}
+        try{if(action==='download'){await saveProject(project,b);return;}if(action==='edit'){openProjectRoom(project.id);const idea=$('projectAgentIdea');idea.focus({preventScroll:true});idea.closest('.project-agent').scrollIntoView({block:'center',behavior:'smooth'});return;}if(action==='enhance'){await enhanceProject(project);return;}if(action==='crop'){await openCrop(project);return;}const item=await getMedia(project);prepareAction(project,item,action);}
         catch(error){if(error.name!=='AbortError')toast(error.message||'Не удалось открыть действие.');}
         finally{b.disabled=false;b.removeAttribute('aria-busy');}
       },'ready-project-action ready-action-'+action);

@@ -1,23 +1,19 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const actions=fs.readFileSync('project-actions.js','utf8'),html=fs.readFileSync('index.html','utf8');
-const file=new File(['video'],'video.mp4',{type:'video/mp4'}),item={file,url:'blob:original',exportJobId:'owned'};
-function environment(){
- const counts={share:0,prepared:0,native:0,opened:0,download:0},buttons=[],note={textContent:''};
- const context=vm.createContext({navigator:{userAgent:'iPhone',share:async()=>{counts.share++}},window:{anisProjectActions:{prepareDownload:async()=>{counts.prepared++;return {url:'https://api.test/media-download/private',filename:'video.mp4'}}},Telegram:{WebApp:{openLink(){counts.opened++}}}},shareable:()=>true,telegramDownloads:()=>({downloadFile(data,callback){counts.native++;callback(true)}}),showMedia(){},viewerNote:note,viewerActions:{querySelector:()=>null,append:b=>buttons.push(b)},control:(text,onclick)=>({text,onclick}),mediaDeadline:p=>p,download(){counts.download++},Error});
- vm.runInContext(actions.slice(actions.indexOf('  async function saveMedia('),actions.indexOf('  function saveProject(')),context);context.item=item;
- return {context,counts,buttons,note,save:()=>vm.runInContext("saveMedia(item,'video')",context)};
-}
+function button(){const attrs={},classes=new Set();return {innerHTML:'<svg></svg><span>Скачать</span>',disabled:false,classList:{add:c=>classes.add(c),remove:c=>classes.delete(c)},getAttribute:k=>attrs[k],setAttribute:(k,v)=>attrs[k]=v,removeAttribute:k=>delete attrs[k]};}
+function environment(){let fetched=0,shared=0,downloaded=0,native=0,errors=0;const timers=new Map();let sequence=0;const file=new File(['image'],'original.jpg',{type:'image/jpeg'}),item={file,url:'blob:original',exportJobId:'owned'},project={id:'owned',kind:'image',resultUrl:'https://s3.polza.ai/original.jpg',resolutionPending:true},trigger=button();
+ const ctx=vm.createContext({WeakMap,Promise,Date,URL,Error,window:{Telegram:{WebApp:{openLink(){downloaded++}}},anisProjectActions:{prepareDownload:async()=>({url:'https://api.test/export',filename:'crop.png'})}},API_URL:'https://api.test/',initData:'signed',mediaJSON:async data=>{assert.equal(data.action,'media-download-link');return {url:'https://api.test/media-original/private',filename:'original.jpg',expires:Date.now()+900000}},telegramDownloads:()=>({downloadFile(data,callback){native++;callback(true)}}),navigator:{share:async()=>shared++},shareable:()=>true,download:()=>downloaded++,getMedia:async()=>{fetched++;return item},toast:()=>errors++,mediaDeadline:p=>p,setTimeout:f=>{timers.set(++sequence,f);return sequence},clearTimeout:id=>timers.delete(id)});
+ vm.runInContext(actions.slice(actions.indexOf('  const saveButtonStates='),actions.indexOf('  function selectValue(')),ctx);Object.assign(ctx,{project,item,trigger});return {ctx,trigger,counts:()=>({fetched,shared,downloaded,native,errors})};}
 (async()=>{
- let e=environment();await e.save();assert.equal(e.counts.share,1);assert.equal(e.counts.prepared,0,'system save opens before export/link preparation');
- e=environment();e.context.navigator.share=async()=>{throw Object.assign(Error('cancel'),{name:'AbortError'})};await e.save();assert.equal(e.counts.native,0,'cancelling Share must not start a second download');
- e=environment();e.context.shareable=()=>false;e.context.telegramDownloads=()=>({downloadFile(){throw Error('unavailable')}});await e.save();assert.match(e.note.textContent,/не открыл/);assert.equal(e.buttons.length,1);e.buttons[0].onclick();assert.equal(e.counts.opened,1,'native download failure leaves a working HTTPS save button');
- e=environment();e.context.shareable=()=>false;await e.save();assert.equal(e.counts.native,1);assert.match(e.note.textContent,/запрошено/);
- e=environment();e.context.shareable=()=>false;e.context.telegramDownloads=()=>null;await e.save();assert.equal(e.counts.download,1,'mobile without Share/native bridge still gets an actual download');
- // Both Ready gallery downloads and the long result button use saveProject.
- const node={focus(){this.focused=true},closest(){return {scrollIntoView(){node.scrolled=true}}}},project={id:'owned',kind:'video'};let saved,opened;
- const ctx=vm.createContext({studioProjects:new Map([[project.id,project]]),selectedStudioProject:project.id,window:{anisProjectActions:{saveProject:p=>saved=p}},$:()=>node,openProjectRoom:id=>opened=id});
- for(const name of ['saveGeneratedMedia','editGeneratedMedia'])vm.runInContext(html.split('\n').find(line=>line.startsWith('function '+name+'(')),ctx);
- vm.runInContext('saveGeneratedMedia();editGeneratedMedia()',ctx);assert.equal(saved,project);assert.equal(opened,project.id);assert.equal(node.focused,true);assert.equal(node.scrolled,true);
- assert.ok(actions.includes("if(action==='download'){await saveProject(project);return;}"));
- console.log('PASS: synchronous system Save, cancellation, native HTTPS fallback, mobile download, unified gallery/result saving and video edit opens the same agent.');
+ let e=environment();await vm.runInContext('saveProject(project,trigger)',e.ctx);assert.equal(e.counts().fetched,0,'remote save bypasses slow local conversion/download');assert.equal(e.counts().native,1);assert.match(e.trigger.innerHTML,/✓/);assert.equal(e.trigger.disabled,false);
+ e=environment();e.ctx.telegramDownloads=()=>({downloadFile(data,callback){callback(false)}});await vm.runInContext('saveProject(project,trigger)',e.ctx);assert.match(e.trigger.innerHTML,/Скачать/);assert.ok(!e.trigger.innerHTML.includes('✓'),'cancellation must not look successful');
+ e=environment();e.ctx.project.resultUrl='https://untrusted.test/file.jpg';await vm.runInContext('saveProject(project,trigger)',e.ctx);assert.equal(e.counts().errors,1);assert.match(e.trigger.innerHTML,/Скачать/);
+ e=environment();e.ctx.project={id:'local',kind:'image',media:e.ctx.item};await vm.runInContext('saveProject(project,trigger)',e.ctx);assert.equal(e.counts().shared,1);assert.match(e.trigger.innerHTML,/✓/);
+ e=environment();e.ctx.project={id:'local',kind:'image',media:e.ctx.item};e.ctx.navigator.share=async()=>{throw Object.assign(Error('cancel'),{name:'AbortError'})};await vm.runInContext('saveProject(project,trigger)',e.ctx);assert.equal(e.counts().native,0);assert.ok(!e.trigger.innerHTML.includes('✓'));
+ const node={focus(){this.focused=true},closest(){return {scrollIntoView(){node.scrolled=true}}}},project={id:'owned',kind:'video'},trigger={};let saved,source,opened;
+ const ctx=vm.createContext({studioProjects:new Map([[project.id,project]]),selectedStudioProject:project.id,window:{anisProjectActions:{saveProject:(p,b)=>{saved=p;source=b}}},$:()=>node,openProjectRoom:id=>opened=id,event:{currentTarget:trigger}});
+ for(const name of ['saveGeneratedMedia','editGeneratedMedia'])vm.runInContext(html.split('\n').find(l=>l.startsWith('function '+name+'(')),ctx);
+ vm.runInContext('saveGeneratedMedia(event);editGeneratedMedia()',ctx);assert.equal(saved,project);assert.equal(source,trigger);assert.equal(opened,project.id);assert.equal(node.focused,true);assert.equal(node.scrolled,true);
+ assert.ok(actions.includes("if(action==='download'){await saveProject(project,b);return;}"));const section=actions.slice(actions.indexOf('  const saveButtonStates='),actions.indexOf('  function selectValue('));assert.ok(!section.includes('showModal'));assert.ok(!section.includes('showMedia('));
+ console.log('PASS: direct native downloads bypass local preparation, inline spinner/check, cancel/error recovery, cached local sharing, no preparation modal, shared gallery/result handler.');
 })().catch(error=>{console.error(error);process.exitCode=1});
