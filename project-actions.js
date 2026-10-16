@@ -210,9 +210,9 @@
     return {url:url.href,filename:'anis-'+(project.kind==='video'?'video':'photo')+'.'+ext};
   }
   const originalDownloadLinks=new Map();
-  function prepareOriginalLink(project){
+  function prepareOriginalLink(project,{retry=false}={}){
     const key=project.id+':'+project.resultUrl,cached=originalDownloadLinks.get(key);
-    if(cached&&cached.expires>Date.now()+60000)return cached;
+    if(cached&&cached.expires>Date.now()+60000&&(!cached.error||!retry))return cached;
     const entry={expires:Date.now()+25*60*1000,data:null,promise:null};
     entry.promise=mediaJSON({action:'media-download-link',jobId:project.id},10000).then(async data=>{
       if(data.needsUpload){
@@ -222,7 +222,7 @@
       }
       if(new URL(data.url).origin!==new URL(API_URL).origin)throw Error('Некорректная ссылка скачивания.');
       entry.data=data;entry.expires=data.expires;return data;
-    }).catch(error=>{entry.expires=Date.now()+90000;throw error;});
+    }).catch(error=>{entry.error=true;entry.expires=Date.now()+90000;throw error;});
     originalDownloadLinks.set(key,entry);return entry;
   }
   const downloadWarmQueue=[],downloadWarmKeys=new Set();let downloadWarmActive=0;
@@ -233,14 +233,29 @@
     if(!initData||!telegramDownloads()||!project.resultUrl||project.status!=='completed'||project.exportJobId&&project.exportJobId!==project.id)return;
     if(downloadWarmKeys.has(project.id))return;downloadWarmKeys.add(project.id);downloadWarmQueue.push(project);pumpDownloadWarm();
   }
+  let nativeDownloadActive=null;
   function nativeFileDownload(data){
-    return new Promise((resolve,reject)=>{
-      // The native popup can finish after a slow connection; do not report the
-      // previous false 20-second failure while Telegram is still working.
-      const timer=setTimeout(()=>reject(Error('Загрузка в Telegram занимает дольше обычного. Проверь загрузки Telegram.')),120000);
-      try{telegramDownloads().downloadFile({url:data.url,file_name:data.filename},accepted=>{clearTimeout(timer);resolve({state:accepted?'queued':'cancelled'});});}
-      catch(error){clearTimeout(timer);reject(error);}
-    });
+    // Telegram allows one request globally, even across different work cards.
+    if(nativeDownloadActive){
+      if(nativeDownloadActive.url===data.url)return nativeDownloadActive.promise;
+      toast('Telegram ещё открывает предыдущее скачивание. Дождись подтверждения.');return Promise.resolve({state:'busy'});
+    }
+    let resolveRequest,rejectRequest;
+    const active={url:data.url,promise:new Promise((resolve,reject)=>{resolveRequest=resolve;rejectRequest=reject;})};nativeDownloadActive=active;
+    try{telegramDownloads().downloadFile({url:data.url,file_name:data.filename},accepted=>{
+      if(nativeDownloadActive===active)nativeDownloadActive=null;
+      resolveRequest({state:accepted?'queued':'cancelled'});
+    });}catch(error){
+      if(error.message==='WebAppDownloadFilePopupOpened'){
+        // A request from an earlier app release can still be held by the SDK.
+        const bridge=telegramDownloads();const completed=()=>{bridge.offEvent?.('fileDownloadRequested',completed);if(nativeDownloadActive===active)nativeDownloadActive=null;resolveRequest({state:'cancelled'});};
+        bridge.onEvent?.('fileDownloadRequested',completed);
+        toast('Подтверди или закрой предыдущее скачивание в Telegram.');
+        return Promise.resolve({state:'busy'});
+      }
+      if(nativeDownloadActive===active)nativeDownloadActive=null;rejectRequest(error);
+    }
+    return active.promise;
   }
   function inTelegram(){return !!(window.Telegram?.WebApp?.initData||(typeof tg!=='undefined'&&tg?.initData)||initData);}
   async function saveReadyMedia(item,kind,original=null){
@@ -284,9 +299,9 @@
           // to Telegram from this very click, without waiting for getMedia.
           if(project.media?.file?.size&&shareable(project.media))return saveReadyMedia(project.media,project.kind,data);
           if(telegramDownloads()){
-            const link=prepareOriginalLink(project);
+            const link=prepareOriginalLink(project,{retry:true});
             if(link.data)return nativeFileDownload(link.data);
-            return link.promise.then(nativeFileDownload,()=>nativeFileDownload(data));
+            return mediaDeadline(link.promise,15000,'Файл ещё загружается. Повтори скачивание через несколько секунд.').then(nativeFileDownload);
           }
           if(inTelegram())throw Error('Сохранение файлов недоступно в этой версии Telegram. Обнови Telegram и повтори.');
           download({url:data.url,file:{name:data.filename}});return {state:'opened'};

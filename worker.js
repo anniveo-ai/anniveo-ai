@@ -259,7 +259,7 @@ async function downloadMediaExport(request,env){
 }
 // Reuse an owner-uploaded original so Telegram probes and downloads never
 // depend on the provider's slow or datacenter-blocked storage connection.
-async function prepareOriginalDownload(env,userId,jobId,origin){
+async function findOriginalDownload(env,userId,jobId,origin){
  const row=await env.DB.prepare('SELECT kind,status,result_url FROM media_jobs WHERE id=? AND user_id=?').bind(String(jobId||''),String(userId)).first();
  if(!row||row.status!=='completed'||!row.result_url){const error=Error('Готовая работа не найдена.');error.status=404;throw error;}
  const source=new URL(row.result_url);if(source.origin!=='https://s3.polza.ai'||source.username||source.password)throw Error('Адрес файла не поддерживается.');
@@ -268,12 +268,31 @@ async function prepareOriginalDownload(env,userId,jobId,origin){
  return link?{url:new URL('/media-download/'+link.id,origin).href,filename:link.filename,expires:link.expires}:{needsUpload:true};
 }
 async function storeOriginalDownload(env,userId,jobId,file,origin){
- const cached=await prepareOriginalDownload(env,userId,jobId,origin);if(!cached.needsUpload)return cached;
+ const cached=await findOriginalDownload(env,userId,jobId,origin);if(!cached.needsUpload)return cached;
  const exported=await prepareMediaExport(env,userId,jobId,file);
  const owned=await env.DB.prepare('SELECT result_url FROM media_jobs WHERE id=? AND user_id=? AND status=?').bind(String(jobId),String(userId),'completed').first();
  if(!owned)throw Error('Готовая работа не найдена.');
  await env.DB.prepare('INSERT OR REPLACE INTO media_original_exports(job_id,user_id,source,export_id) VALUES(?,?,?,?)').bind(String(jobId),String(userId),owned.result_url,exported.id).run();
  return {url:new URL('/media-download/'+exported.id,origin).href,filename:exported.filename,expires:exported.expires};
+}
+async function prepareOriginalDownload(env,userId,jobId,origin){
+ const cached=await findOriginalDownload(env,userId,jobId,origin);if(!cached.needsUpload)return cached;
+ const owned=await env.DB.prepare('SELECT result_url FROM media_jobs WHERE id=? AND user_id=? AND status=?').bind(String(jobId),String(userId),'completed').first();
+ const source=new URL(owned.result_url);if(source.origin!=='https://s3.polza.ai'||source.username||source.password)throw Error('Адрес файла не поддерживается.');
+ try{
+  const response=await fetch(source.href,{redirect:'error',signal:AbortSignal.timeout(8000)});
+  if(!response.ok||Number(response.headers.get('Content-Length'))>25*1024*1024){await response.body?.cancel();return {needsUpload:true};}
+  const size=Number(response.headers.get('Content-Length'));
+  if(!Number.isSafeInteger(size)||size<=0){await response.body?.cancel();return {needsUpload:true};}
+  const bytes=await response.arrayBuffer();if(bytes.byteLength!==size||bytes.byteLength>25*1024*1024)return {needsUpload:true};
+  const file=new File([bytes],'original',{type:response.headers.get('Content-Type')||''});
+  return await storeOriginalDownload(env,userId,jobId,file,origin);
+ }catch{return {needsUpload:true};}
+}
+async function warmRecentDownloads(env,userId,origin){
+ try{const rows=await env.DB.prepare("SELECT id FROM media_jobs WHERE user_id=? AND status='completed' AND result_url IS NOT NULL ORDER BY created_at DESC LIMIT 4").bind(String(userId)).all();
+  for(let i=0;i<rows.results.length;i+=2)await Promise.allSettled(rows.results.slice(i,i+2).map(row=>prepareOriginalDownload(env,userId,row.id,origin)));
+ }catch{}
 }
 // Short-lived, owner-issued playback links support Safari's byte-range requests.
 async function prepareMediaPlayback(env,userId,jobId,origin){
@@ -1644,7 +1663,7 @@ export default {
       }
       if(action==="media-history"){
         if(!env.DB)return json({error:'История временно недоступна'},503,headers);
-        try{return json(await getMediaHistory(env.DB,userId,body.kind),200,headers);}catch(error){return json({error:error.message},400,headers);}
+        try{ctx.waitUntil?.(warmRecentDownloads(env,userId,request.url));return json(await getMediaHistory(env.DB,userId,body.kind),200,headers);}catch(error){return json({error:error.message},400,headers);}
       }
       if(action==="media-config")return json({premium:!!env.POLZA_API_KEY},200,headers);
       if(action==="media-status"||action==="media-create"){
