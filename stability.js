@@ -50,7 +50,30 @@
  persistStudioProjects=function(){if(state.restoring)return;metadataPersist();clearTimeout(persistTimer);persistTimer=setTimeout(()=>void saveDurable(),180);};
  const draftIds=['messageInput','imagePrompt','videoPrompt','projectAgentIdea','imageQuality','videoQuality','imageRatio','videoRatio','duration'];
  function saveDrafts(){const values={};for(const id of draftIds)if($(id))values[id]=id==='messageInput'&&anonymous?'':$(id).value;write('drafts',{values,view:currentView});}
- async function saveFileDrafts(){if(state.restoring)return;await dbRecord('files',{image:studioImageFile,video:studioVideoFile,identity:studioVideoIdentityFile,region:state.region});}
+ const draftFileBytes=new WeakMap();let fileDraftSaveQueue=Promise.resolve();
+ function packDraftFile(file){
+  if(!file)return Promise.resolve(null);
+  if(!draftFileBytes.has(file))draftFileBytes.set(file,file.arrayBuffer().then(bytes=>{
+   if(!bytes.byteLength||bytes.byteLength!==file.size)throw Error('Не удалось прочитать исходный файл целиком.');
+   return {bytes,type:file.type,name:file.name||'reference',lastModified:file.lastModified||Date.now()};
+  }).catch(error=>{draftFileBytes.delete(file);throw error;}));
+  return draftFileBytes.get(file);
+ }
+ async function restoreDraftFile(record){
+  if(!record)return null;
+  const data=record instanceof Blob?await packDraftFile(record):record;
+  if(!(data.bytes instanceof ArrayBuffer)||!data.bytes.byteLength)throw Error('Сохранённый исходный файл недоступен.');
+  const file=new File([data.bytes],data.name||'reference',{type:data.type||'',lastModified:data.lastModified||Date.now()});
+  draftFileBytes.set(file,Promise.resolve(data));return file;
+ }
+ async function saveFileDrafts(){
+  if(state.restoring||state.fileDraftsLoading)return;
+  const files=[studioImageFile,studioVideoFile,studioVideoIdentityFile],region=state.region;
+  const save=fileDraftSaveQueue.catch(()=>{}).then(async()=>{
+   const [image,video,identity]=await Promise.all(files.map(packDraftFile));
+   await dbRecord('files',{image,video,identity,region});
+  });fileDraftSaveQueue=save;return save;
+ }
  document.addEventListener('input',event=>{if(draftIds.includes(event.target.id))saveDrafts();});
  document.addEventListener('change',event=>{if(draftIds.includes(event.target.id))saveDrafts();});
  for(const name of ['setStudioPhoto','setStudioVideo','setVideoIdentity','clearVideoIdentity','clearStudioPhoto','clearStudioVideo']){
@@ -498,7 +521,8 @@
   state.restoring=false;updateRegionButton();updateProjectDock();
   persistStudioProjects();
   state.fileDraftsLoading=true;
-  void dbRecord('files').then(files=>{if(!files)return;if(files.image&&!studioImageFile)setStudioPhoto(files.image);if(files.video&&!studioVideoFile)setStudioVideo(files.video);if(files.identity&&!studioVideoIdentityFile)setVideoIdentity(files.identity);state.region=state.region||files.region||null;updateRegionButton();}).catch(storageWarning).finally(()=>{state.fileDraftsLoading=false;scheduleReleaseApply();});
+  let fileDraftsRestored=false;
+  void dbRecord('files').then(async files=>{if(!files)return;const [image,video,identity]=await Promise.all([files.image,files.video,files.identity].map(restoreDraftFile));if(image&&!studioImageFile)setStudioPhoto(image);if(video&&!studioVideoFile)setStudioVideo(video);if(identity&&!studioVideoIdentityFile)setVideoIdentity(identity);state.region=state.region||files.region||null;updateRegionButton();fileDraftsRestored=true;}).catch(storageWarning).finally(()=>{state.fileDraftsLoading=false;if(fileDraftsRestored)void saveFileDrafts().catch(storageWarning);scheduleReleaseApply();});
   state.threads=read('threads',[]);renderThreads();normalHistory=cleanHistory(read('chat:'+state.activeChatId,normalHistory));renderChat();
   // Restore draft contents, never the previously open screen.
   if(updateHandoff){

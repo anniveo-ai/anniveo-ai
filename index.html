@@ -4681,6 +4681,11 @@ function readableMediaError(error){
   return error?.message||'Не удалось обработать запрос. Попробуй ещё раз.';
 }
 const preparedStudioImageCache=new WeakMap();
+async function materializeStudioUpload(file,fallbackName){
+  if(!file)return null;
+  try{const bytes=await file.arrayBuffer();if(!bytes.byteLength||bytes.byteLength!==file.size)throw Error('incomplete');return new File([bytes],file.name||fallbackName,{type:file.type,lastModified:file.lastModified||Date.now()});}
+  catch{throw Error('Не удалось прочитать сохранённый исходник. Добавь это фото или видео снова — новый заказ ещё не отправлен.');}
+}
 async function prepareStudioImage(file){
   if(!file||file.type==='image/png'||file.size<=2*1024*1024)return file;
   if(!preparedStudioImageCache.has(file))preparedStudioImageCache.set(file,prepareStudioImageUncached(file));
@@ -4901,9 +4906,10 @@ async function launchStudioProject(p){
  p.status='submitting';renderProjectRoom();setMediaBusy(p.kind,true);
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),60000);
  try{
-  const file=p.sourceFile&&p.sourceFile.type.startsWith('image/')?await prepareStudioImage(p.sourceFile):p.sourceFile;
+  const preparedFile=p.sourceFile&&p.sourceFile.type.startsWith('image/')?await prepareStudioImage(p.sourceFile):p.sourceFile;
+  const file=await materializeStudioUpload(preparedFile,p.kind==='image'?'reference.png':'reference.mp4'),identityFile=await materializeStudioUpload(p.identityFile,'identity.jpg');
   const payload={action:'media-create',kind:p.kind,requestId:p.id,prompt:p.providerPrompt||p.prompt,quality:p.quality,ratio:p.ratio,groupId:p.groupId||p.id,initData};if(p.kind==='video')payload.duration=p.duration;if(p.region)payload.region=JSON.stringify(p.region);
-  let response;if(file||p.identityFile){const form=new FormData();for(const [key,value]of Object.entries(payload))form.append(key,String(value));if(file)form.append('file',file,file.name);if(p.identityFile)form.append('identityFile',p.identityFile,p.identityFile.name);response=await fetch(API_URL,{method:'POST',body:form,signal:controller.signal});}
+  let response;if(file||identityFile){const form=new FormData();for(const [key,value]of Object.entries(payload))form.append(key,String(value));if(file)form.append('file',file,file.name);if(identityFile)form.append('identityFile',identityFile,identityFile.name);response=await fetch(API_URL,{method:'POST',body:form,signal:controller.signal});}
   else response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});
   const data=await response.json();if(!response.ok){p.status='failed';const error=Error(data.error||'Не удалось создать проект.');error.status=response.status;throw error;}
   setMediaBusy(p.kind,false);clearTimeout(timer);await watchMediaJob(p.kind,p.id,data);

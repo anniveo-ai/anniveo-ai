@@ -10,7 +10,7 @@ async function runAnisUIRegression(appHTML){
  async function boot(){
   await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Fixture load timeout')),18000);frame.onload=()=>{clearTimeout(timer);resolve();};frame.srcdoc=appHTML;});
   w=frame.contentWindow;d=w.document;
-  for(let i=0;i<100&&(!w.anisStability||w.anisStability.restoring);i++)await wait(40);
+  for(let i=0;i<100&&(!w.anisStability||w.anisStability.restoring||w.anisStability.fileDraftsLoading);i++)await wait(40);
   if(!w.anisStability||w.anisStability.restoring)throw Error('Fixture restoration timeout');
  }
  try{
@@ -113,6 +113,25 @@ async function runAnisUIRegression(appHTML){
   await boot();
   check('Reload from profile opens home',w.eval('currentView')==='chat'&&!hidden('welcome'));
   for(const {a,b}of ids)check('Deletion stays removed after restart: '+b,w.eval(`studioProjects.get(${JSON.stringify(b)})?.removedFromVariants===true&&!projectFamily(studioProjects.get(${JSON.stringify(a)})).some(p=>p.id===${JSON.stringify(b)})`));
+  w.setStudioPhoto(new w.File([imageBlob],'restored-photo.png',{type:'image/png'}));
+  w.setStudioVideo(new w.File(['video-bytes'],'restored-video.mp4',{type:'video/mp4'}));
+  w.setVideoIdentity(new w.File([imageBlob],'restored-identity.png',{type:'image/png'}));
+  d.getElementById('imagePrompt').value='Белый фон после повторного входа';d.getElementById('imagePrompt').dispatchEvent(new w.Event('input',{bubbles:true}));
+  w.dispatchEvent(new w.PageTransitionEvent('pagehide'));await wait(300);await boot();
+  check('Re-entry restores the photo as a fresh readable File',w.eval('studioImageFile instanceof File&&studioImageFile.name')==='restored-photo.png'&&(await w.eval('studioImageFile.arrayBuffer()')).byteLength===imageBlob.size);
+  check('Re-entry restores video and identity files',w.eval("studioVideoFile instanceof File&&studioVideoFile.name==='restored-video.mp4'&&studioVideoIdentityFile instanceof File&&studioVideoIdentityFile.name==='restored-identity.png'"));
+  check('Re-entry keeps photo prompt text',d.getElementById('imagePrompt').value==='Белый фон после повторного входа');
+  const api=w.eval('API_URL'),originalFetch=w.fetch;let submittedFile,submittedPrompt,submitCount=0;
+  const resultObjectURL=w.URL.createObjectURL(imageBlob);
+  w.fetch=async(url,options)=>{if(url!==api)return originalFetch(url,options);submitCount++;const parsed=await new w.Request(api,{method:'POST',body:options.body}).formData();submittedFile=parsed.get('file');submittedPrompt=parsed.get('prompt');return w.Response.json({status:'completed',url:resultObjectURL});};
+  const restoredJob={id:w.crypto.randomUUID(),kind:'image',status:'queued',prompt:d.getElementById('imagePrompt').value,sourceFile:w.eval('studioImageFile'),quality:'fhd',ratio:'1:1',order:999};
+  w.eval('studioProjects').set(restoredJob.id,restoredJob);await w.launchStudioProject(restoredJob);
+  check('Restored draft sends a valid multipart image',submittedFile?.name==='restored-photo.png'&&submittedFile.type==='image/png'&&(await submittedFile.arrayBuffer()).byteLength===imageBlob.size&&submittedPrompt==='Белый фон после повторного входа');
+  check('Restored draft completes through mocked API exactly once',submitCount===1&&restoredJob.status==='completed'&&!!restoredJob.media);
+  const badJob={...restoredJob,id:w.crypto.randomUUID(),status:'queued',media:null,sourceFile:{type:'image/png',size:100,name:'unreadable.png',arrayBuffer:async()=>{throw Error('File backing store lost');}}};
+  w.eval('studioProjects').set(badJob.id,badJob);await w.launchStudioProject(badJob);
+  check('Unreadable restored source never reaches the API',submitCount===1&&badJob.status==='unknown'&&badJob.error.includes('новый заказ ещё не отправлен'));
+  w.fetch=originalFetch;w.URL.revokeObjectURL(resultObjectURL);
   output.textContent=JSON.stringify({ok:checks.every(c=>c.ok),checks});
  }catch(error){output.textContent=JSON.stringify({ok:false,error:String(error),stack:error.stack,checks});}
  output.dataset.done='yes';
