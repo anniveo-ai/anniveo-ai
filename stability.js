@@ -367,6 +367,51 @@
  openView=function(name){originalOpenStudioView(name);const tabs=$('mediaProjectSwitcher'),ready=currentView==='ready';tabs.classList.toggle('ready-selected',ready);if(ready){tabs.hidden=false;tabs.classList.remove('video-selected','templates-selected');tabs.querySelectorAll('[data-media-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mediaTab==='ready')));studioNav.classList.add('active');state.ackStudioResults();renderReadyProjects();window.anisProjectActions.refreshGallery?.();if(!state.restoring&&!state.historyLoading&&(!state.historyLoaded||state.historyError))void resumeMediaProjects();requestAnimationFrame(moveGlider);}};
  state.openReadyProjects=()=>openView('ready');
  let readyRenderKey='';
+ // A single non-modal prompt bubble lives outside the clipped gallery tiles.
+ let readyPromptBubble,readyPromptAnchor,readyPromptCloseTimer;
+ function closeReadyPrompt(restoreFocus=false){
+  const anchor=readyPromptAnchor;readyPromptAnchor=null;
+  anchor?.setAttribute('aria-expanded','false');
+  if(!readyPromptBubble)return;
+  readyPromptBubble.classList.remove('is-visible');
+  clearTimeout(readyPromptCloseTimer);
+  readyPromptCloseTimer=setTimeout(()=>{if(!readyPromptAnchor)readyPromptBubble.hidden=true;},180);
+  if(restoreFocus&&anchor?.isConnected)anchor.focus({preventScroll:true});
+ }
+ function showReadyPrompt(anchor,prompt){
+  if(readyPromptAnchor===anchor){closeReadyPrompt(true);return;}
+  closeReadyPrompt();clearTimeout(readyPromptCloseTimer);
+  if(!readyPromptBubble){
+   readyPromptBubble=el('section',{id:'readyPromptBubble',className:'ready-prompt-bubble',role:'dialog','aria-modal':'false','aria-labelledby':'readyPromptTitle',tabIndex:-1});
+   const heading=el('header');heading.append(el('strong',{id:'readyPromptTitle'},'Запрос'),button('×',()=>closeReadyPrompt(true)));
+   heading.lastChild.setAttribute('aria-label','Закрыть запрос');
+   readyPromptBubble.append(heading,el('p'));document.body.append(readyPromptBubble);
+  }
+  readyPromptAnchor=anchor;anchor.setAttribute('aria-expanded','true');
+  readyPromptBubble.querySelector('p').textContent=prompt||'Запрос не сохранён';
+  readyPromptBubble.classList.remove('is-visible');readyPromptBubble.hidden=false;
+  const rect=anchor.getBoundingClientRect(),viewport=window.visualViewport;
+  const left=viewport?.offsetLeft||0,top=viewport?.offsetTop||0,width=viewport?.width||window.innerWidth,height=viewport?.height||window.innerHeight;
+  readyPromptBubble.style.maxWidth=Math.max(0,width-24)+'px';
+  readyPromptBubble.style.maxHeight=Math.max(0,Math.min(240,height-24))+'px';
+  const bounds=readyPromptBubble.getBoundingClientRect();
+  readyPromptBubble.style.left=Math.max(left+12,Math.min(rect.left,left+width-bounds.width-12))+'px';
+  const above=rect.top-bounds.height-8;
+  readyPromptBubble.style.top=Math.max(top+12,Math.min(above>=top+12?above:rect.bottom+8,top+height-bounds.height-12))+'px';
+  readyPromptBubble.focus({preventScroll:true});
+  requestAnimationFrame(()=>{if(readyPromptAnchor===anchor)readyPromptBubble.classList.add('is-visible');});
+ }
+ document.addEventListener('pointerdown',event=>{if(readyPromptAnchor&&!readyPromptBubble.contains(event.target)&&!readyPromptAnchor.contains(event.target))closeReadyPrompt();});
+ document.addEventListener('keydown',event=>{if(event.key==='Escape'&&readyPromptAnchor){event.preventDefault();event.stopPropagation();closeReadyPrompt(true);}},true);
+ document.addEventListener('scroll',event=>{if(readyPromptAnchor&&!readyPromptBubble.contains(event.target))closeReadyPrompt();},true);
+ window.addEventListener('resize',()=>closeReadyPrompt());
+ window.visualViewport?.addEventListener('resize',()=>closeReadyPrompt());
+ function readyPromptControl(prompt){
+  const control=button('',event=>{event.stopPropagation();showReadyPrompt(control,prompt);});
+  control.className='ready-prompt-toggle';control.setAttribute('aria-label','Посмотреть запрос');control.setAttribute('aria-controls','readyPromptBubble');control.setAttribute('aria-expanded','false');control.setAttribute('aria-haspopup','dialog');
+  control.innerHTML='<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path class="prompt-icon-body" d="M25 10c0-4-4-6-10-6S4 7 4 14c0 4 2 7 5 8l-2 6 8-5c7 0 12-3 12-9"/><path class="prompt-icon-lines" d="M10 10h10M10 14h8M10 18h5"/><path class="prompt-icon-spark" d="m26 2 1.5 4.5L32 8l-4.5 1.5L26 14l-1.5-4.5L20 8l4.5-1.5Z"/></svg>';
+  return control;
+ }
  function renderReadyProjects(){
   const projects=[...studioProjects.values()].filter(p=>!p.removedFromVariants).sort((a,b)=>(a.created||0)-(b.created||0)||(a.order||0)-(b.order||0)),key=[state.restoring,state.historyLoading,state.historyLoaded,state.historyError,...projects.map(p=>[p.id,p.groupId,p.status,p.loading,p.error,p.previewDataUrl?'preview':p.posterDataUrl?'poster':previewSource(p)?.url,p.prompt,p.billing?.state,p.billing?.amount].join(':'))].join('|');if(readyGrid.childElementCount&&key===readyRenderKey)return;readyRenderKey=key;
   const existing=new Map([...readyGrid.querySelectorAll('.studio-ready-project')].map(card=>[card.dataset.projectId,card])),next=[];
@@ -383,7 +428,9 @@
    const copy=el('span',{className:'studio-ready-copy'});
    if(issue)copy.append(el('small',{},first.kind==='video'?'Видео':'Фото'),el('strong',{},issue.title),el('span',{className:'ready-issue-reason'},issue.reason),el('small',{className:'ready-issue-prompt'},(first.prompt||'Мой проект').slice(0,110)));
    else copy.append(el('small',{},(first.kind==='video'?'Видео':'Фото')+' · '+projectStatusLabel(last)+(family.length>1?' · '+variantsText(family.length):'')),el('strong',{},(first.prompt||'Мой проект').slice(0,110)));
-   preview.append(copy,el('b',{'aria-hidden':'true'},issue?'↗':first.kind==='video'?'▷':'↗'));if(issue)preview.setAttribute('aria-label',issue.title+'. '+issue.reason+'. Открыть работу');card.append(preview);
+   if(issue||display.status!=='completed')preview.append(copy);
+   preview.append(el('b',{'aria-hidden':'true'},issue?'↗':first.kind==='video'?'▷':'↗'));if(issue)preview.setAttribute('aria-label',issue.title+'. '+issue.reason+'. Открыть работу');card.append(preview);
+   if(!issue&&display.status==='completed')card.append(readyPromptControl(display.prompt||first.prompt));
    const billing=issue&&projectBillingLabel(display);if(billing)copy.append(el('small',{className:'ready-billing-status'},billing));
    if(display.status==='completed'&&source)card.append(window.anisProjectActions.createControls(display));
    else if(PROJECT_TERMINAL.includes(display.status)){
@@ -708,4 +755,5 @@
   showWelcome=true;chatOpenedThisSession=false;returnToChatAvailable=false;newestFirstChat=true;openView('home');
  });
 })();
+
 

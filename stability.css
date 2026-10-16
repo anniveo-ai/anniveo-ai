@@ -327,3 +327,23 @@ html[data-theme=light] #view-ready .studio-ready-status-card .studio-ready-copy{
 #view-ready .studio-ready-project:not(.studio-ready-status-card) .ready-action-similar{--ready-action-color:#9ee5e5}
 #view-ready .studio-ready-project:not(.studio-ready-status-card) .studio-ready-placeholder{inset:0}
 #view-ready .studio-ready-project:not(.studio-ready-status-card) .project-reveal-overlay{inset:0;padding-bottom:166px}
+
+/* Small prompt control above Download; its bubble stays inside the phone viewport. */
+#view-ready .studio-ready-project:not(.studio-ready-status-card)>.ready-project-actions{grid-template-rows:repeat(2,40px);gap:4px;padding:6px}
+#view-ready .studio-ready-project:not(.studio-ready-status-card) .ready-project-action{min-height:40px;height:40px;gap:1px;padding:2px;border-radius:9px}
+#view-ready .studio-ready-project:not(.studio-ready-status-card) .ready-project-action svg{width:14px;height:14px}
+#view-ready .studio-ready-project:not(.studio-ready-status-card) .ready-project-action span{font-size:7.5px;line-height:9px}
+#view-ready .studio-ready-project:not(.studio-ready-status-card) .studio-ready-copy{bottom:136px}
+#view-ready .studio-ready-project>.ready-prompt-toggle{position:absolute;z-index:3;left:7px;bottom:102px;display:grid;place-items:center;width:32px;height:32px;min-height:0;padding:3px;border:1px solid #c086ed77;border-radius:11px;background:#181024a6;color:#edb6ff;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);cursor:pointer;touch-action:manipulation;box-shadow:inset 0 1px #f5c7ff26,0 0 9px #b763ed33}
+.ready-prompt-toggle svg{width:25px;height:25px;overflow:visible;filter:drop-shadow(0 0 2px #be65ff)}
+.ready-prompt-toggle .prompt-icon-body{fill:#6835a34d;stroke:#c9a0ff;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.ready-prompt-toggle .prompt-icon-lines{stroke:#f1adff;stroke-width:2;stroke-linecap:round}
+.ready-prompt-toggle .prompt-icon-spark{fill:#f7adff;stroke:#ffe4ff;stroke-width:.6;stroke-linejoin:round}
+.ready-prompt-toggle:active{transform:scale(.94)}.ready-prompt-toggle:focus-visible{outline:2px solid #e5bdff;outline-offset:2px}
+.ready-prompt-bubble{position:fixed;z-index:2300;box-sizing:border-box;width:260px;overflow:auto;overscroll-behavior:contain;padding:12px 14px;border:1px solid #ad7acb80;border-radius:16px;background:#1b1328f5;color:#f5eafa;box-shadow:0 10px 35px #0007;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);opacity:0;transform:translateY(5px) scale(.98);transform-origin:bottom left;transition:opacity .18s ease,transform .18s ease;pointer-events:none}
+.ready-prompt-bubble[hidden]{display:none!important}.ready-prompt-bubble.is-visible{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
+.ready-prompt-bubble header{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:0;padding:0;margin:0 0 7px}
+.ready-prompt-bubble header strong{font-size:11px;color:#cda8e6}
+.ready-prompt-bubble header button{display:grid;place-items:center;flex:none;width:28px;height:28px;min-height:0;padding:0;border:1px solid #ba91d444;border-radius:50%;background:#b277ce18;color:#ebd6f8;font-family:inherit;font-size:20px;line-height:1;cursor:pointer}
+.ready-prompt-bubble p{margin:0;font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;-webkit-user-select:text}
+@media(prefers-reduced-motion:reduce){.ready-prompt-bubble{transition:none;transform:none}}
