@@ -164,6 +164,52 @@ async function serveMediaFile(env,userId,jobId,headers){
  return new Response(response.body,{headers:{...headers,'Content-Type':type,'X-Content-Type-Options':'nosniff'}});
 }
 
+const MEDIA_EXPORT_CHUNK=1024*1024,MEDIA_EXPORT_TTL=30*60*1000;
+async function cleanupMediaExports(env){
+ if(!env.DB)return;
+ try{await env.DB.batch([env.DB.prepare('DELETE FROM media_export_chunks WHERE export_id IN (SELECT id FROM media_exports WHERE expires<=?)').bind(Date.now()),env.DB.prepare('DELETE FROM media_exports WHERE expires<=?').bind(Date.now())]);}catch{}
+}
+async function prepareMediaExport(env,userId,jobId,file){
+ if(!env.DB||!file||typeof file==='string'||!file.size||file.size>25*1024*1024)throw Error('Для скачивания нужен файл до 25 МБ.');
+ const owned=await env.DB.prepare('SELECT kind,status FROM media_jobs WHERE id=? AND user_id=?').bind(String(jobId||''),userId).first();
+ if(!owned||owned.status!=='completed'){const error=Error('Готовая работа не найдена.');error.status=404;throw error;}
+ const mime=String(file.type).split(';')[0],ext=({'image/png':'png','image/jpeg':'jpg','image/webp':'webp','video/mp4':'mp4','video/webm':'webm','video/quicktime':'mov'})[mime];
+ if(!ext||!mime.startsWith(owned.kind==='video'?'video/':'image/'))throw Error('Формат файла не поддерживается.');
+ await env.DB.batch([
+  env.DB.prepare('CREATE TABLE IF NOT EXISTS media_exports(id TEXT PRIMARY KEY,user_id TEXT NOT NULL,mime TEXT NOT NULL,filename TEXT NOT NULL,size INTEGER NOT NULL,expires INTEGER NOT NULL,ready INTEGER NOT NULL DEFAULT 0)'),
+  env.DB.prepare('CREATE INDEX IF NOT EXISTS media_exports_expiry ON media_exports(expires)'),
+  env.DB.prepare('CREATE INDEX IF NOT EXISTS media_exports_owner ON media_exports(user_id)'),
+  env.DB.prepare('CREATE TABLE IF NOT EXISTS media_export_chunks(export_id TEXT NOT NULL,part INTEGER NOT NULL,data BLOB NOT NULL,PRIMARY KEY(export_id,part))')
+ ]);
+ await env.DB.batch([env.DB.prepare('DELETE FROM media_export_chunks WHERE export_id IN (SELECT id FROM media_exports WHERE expires<=?)').bind(Date.now()),env.DB.prepare('DELETE FROM media_exports WHERE expires<=?').bind(Date.now())]);
+ const count=await env.DB.prepare('SELECT COUNT(*) AS total FROM media_exports WHERE user_id=?').bind(String(userId)).first();
+ if(count.total>=6)throw Error('Скачивание уже подготовлено. Повтори через несколько минут.');
+ const id=crypto.randomUUID().replaceAll('-',''),expires=Date.now()+MEDIA_EXPORT_TTL,filename='anis-'+(owned.kind==='video'?'video':'photo')+'.'+ext;
+ await env.DB.prepare('INSERT INTO media_exports(id,user_id,mime,filename,size,expires) VALUES(?,?,?,?,?,?)').bind(id,String(userId),mime,filename,file.size,expires).run();
+ try{
+  for(let offset=0;offset<file.size;offset+=MEDIA_EXPORT_CHUNK*4){
+   const statements=[];
+   for(let position=offset;position<Math.min(file.size,offset+MEDIA_EXPORT_CHUNK*4);position+=MEDIA_EXPORT_CHUNK)statements.push(env.DB.prepare('INSERT INTO media_export_chunks(export_id,part,data) VALUES(?,?,?)').bind(id,position/MEDIA_EXPORT_CHUNK,await file.slice(position,position+MEDIA_EXPORT_CHUNK).arrayBuffer()));
+   await env.DB.batch(statements);
+  }
+  await env.DB.prepare('UPDATE media_exports SET ready=1 WHERE id=?').bind(id).run();
+  return {id,expires,filename};
+ }catch(error){await env.DB.batch([env.DB.prepare('DELETE FROM media_export_chunks WHERE export_id=?').bind(id),env.DB.prepare('DELETE FROM media_exports WHERE id=?').bind(id)]);throw error;}
+}
+async function downloadMediaExport(request,env){
+ const id=new URL(request.url).pathname.split('/').at(-1);
+ if(!/^[a-f0-9]{32}$/.test(id)||!env.DB)return new Response('Файл не найден',{status:404});
+ let row;try{row=await env.DB.prepare('SELECT mime,filename,size,expires FROM media_exports WHERE id=? AND ready=1 AND expires>?').bind(id,Date.now()).first();}catch{return new Response('Файл не найден',{status:404});}
+ if(!row)return new Response('Ссылка истекла. Подготовь скачивание ещё раз.',{status:404});
+ let start=0,end=row.size-1,status=200;const range=request.headers.get('Range');
+ if(range){const match=/^bytes=(\d*)-(\d*)$/.exec(range);if(!match||!match[1]&&!match[2])return new Response(null,{status:416,headers:{'Content-Range':'bytes */'+row.size}});if(!match[1])start=Math.max(0,row.size-Number(match[2]));else{start=Number(match[1]);if(match[2])end=Math.min(end,Number(match[2]));}if(start>end||start>=row.size)return new Response(null,{status:416,headers:{'Content-Range':'bytes */'+row.size}});status=206;}
+ const headers={'Content-Type':row.mime,'Content-Disposition':'attachment; filename="'+row.filename+'"','Content-Length':String(end-start+1),'Accept-Ranges':'bytes','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Access-Control-Allow-Origin':'https://web.telegram.org'};
+ if(status===206)headers['Content-Range']='bytes '+start+'-'+end+'/'+row.size;
+ if(request.method==='HEAD')return new Response(null,{status,headers});
+ let part=Math.floor(start/MEDIA_EXPORT_CHUNK);
+ const body=new ReadableStream({async pull(controller){try{const chunk=await env.DB.prepare('SELECT data FROM media_export_chunks WHERE export_id=? AND part=?').bind(id,part).first();if(!chunk)throw Error('Файл недоступен');const bytes=chunk.data instanceof ArrayBuffer?new Uint8Array(chunk.data):Uint8Array.from(chunk.data),offset=part*MEDIA_EXPORT_CHUNK;controller.enqueue(bytes.slice(Math.max(0,start-offset),Math.min(bytes.length,end-offset+1)));part++;if(part*MEDIA_EXPORT_CHUNK>end)controller.close();}catch(error){controller.error(error);}}});
+ return new Response(body,{status,headers});
+}
 async function recordMediaUsage(db,userId,kind){
   if(!db)return;
   try{await db.prepare('INSERT INTO usage_events(id,user_id,kind) VALUES(?,?,?)').bind(crypto.randomUUID(),userId,kind).run();}
@@ -1345,8 +1391,9 @@ async function proxyVideo(form, apiKey) {
 }
 
 export default {
-  async scheduled(controller,env,ctx){ctx.waitUntil(processMediaNotifications(env));},
+  async scheduled(controller,env,ctx){ctx.waitUntil(Promise.allSettled([processMediaNotifications(env),cleanupMediaExports(env)]));},
   async fetch(request, env, ctx) {
+    if(['GET','HEAD'].includes(request.method)&&new URL(request.url).pathname.startsWith('/media-download/'))return downloadMediaExport(request,env);
     if (new URL(request.url).pathname === "/telegram/payments") return handlePaymentWebhook(request, env);
     const headers = {
       "Access-Control-Allow-Origin":
@@ -1390,6 +1437,10 @@ export default {
         const voiceUser=await verifyTelegram(String(form.get("initData")||""),env.TELEGRAM_BOT_TOKEN);
         if(!voiceUser) return json({error:"Открой ANIS AI через Telegram"},401,headers);
         const multipartAction=String(form.get("action")||"");
+        if(multipartAction==='media-export'){
+          try{const exported=await prepareMediaExport(env,voiceUser,form.get('jobId'),form.get('file'));return json({...exported,url:new URL('/media-download/'+exported.id,request.url).href},200,headers);}
+          catch(error){return json({error:error.message},error.status||400,headers);}
+        }
         if(multipartAction==="media-create"){
           try{return json(await createPremiumMedia(env,voiceUser,Object.fromEntries(form),form.get('file'),form.get('identityFile')),200,headers);}
           catch(error){return json({error:error.message},error.status||400,headers);}

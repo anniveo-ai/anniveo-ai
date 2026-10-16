@@ -59,6 +59,18 @@
   }
   setStudioVideo(new File([blob],'clip.mp4',{type:'video/mp4'}));check(document.getElementById('studioReplaceVideoLabel').textContent==='Заменить видео','Video replacement is labeled for video');clearStudioVideo();clearStudioPhoto();
   check(document.getElementById('studioReplacePhoto').hidden&&document.getElementById('studioReplaceVideo').hidden,'Replacement controls hide when source is cleared');
+  const actualTelegram=window.Telegram,actualPrepare=window.anisProjectActions.prepareDownload,downloadsRequested=[],exportedFiles=[];
+  window.Telegram={WebApp:{isVersionAtLeast:()=>true,downloadFile:(params,callback)=>{downloadsRequested.push(params);callback(true);}}};
+  window.anisProjectActions.prepareDownload=async item=>{exportedFiles.push(item.file);return {url:'https://example.test/prepared-file.png',filename:'anis-photo.png'};};
+  openProjectRoom(photo.id);await saveGeneratedMedia();check(downloadsRequested.length===1&&exportedFiles[0]===photo.media.file,'Result Save invokes Telegram native HTTPS download with export file');document.getElementById('readyMediaViewer').close();
+  const downloadRail=window.anisProjectActions.createControls(photo);document.body.append(downloadRail);await downloadRail.querySelector('[data-action="download"]').onclick();check(downloadsRequested.length===2,'Ready gallery Download invokes Telegram native download');document.getElementById('readyMediaViewer').close();
+  const cropping=downloadRail.querySelector('[data-action="crop"]').onclick();check(document.getElementById('readyCropDialog').open,'Crop dialog opens immediately before asynchronous preparation');await cropping;
+  const cropDialog=document.getElementById('readyCropDialog'),zoom=cropDialog.querySelector('input[aria-label="Приблизить"]');check(!!zoom&&!cropDialog.querySelector(':scope>button').disabled,'Crop image is decoded and save is enabled');zoom.value='2';zoom.dispatchEvent(new Event('input',{bubbles:true}));
+  const oldIds=new Set(studioProjects.keys()),originalFile=photo.media.file;cropDialog.querySelector(':scope>button').click();let cropped;
+  for(let n=0;n<200;n++){cropped=[...studioProjects.values()].find(p=>!oldIds.has(p.id));if(cropped&&downloadsRequested.length===3)break;await wait(50);}
+  check(!!cropped?.media?.file&&photo.media.file===originalFile&&cropped.exportJobId===photo.id,'Crop saves a separate result and preserves the original');
+  const cropImage=new Image();cropImage.src=cropped.media.url;await cropImage.decode();check(cropImage.naturalWidth===32&&cropImage.naturalHeight===32,'Zoomed crop exports the selected full-resolution pixels',{width:cropImage.naturalWidth,height:cropImage.naturalHeight});
+  check(downloadsRequested.length===3&&exportedFiles[2]===cropped.media.file,'Crop Save downloads the cropped file through Telegram');downloadRail.remove();window.Telegram=actualTelegram;window.anisProjectActions.prepareDownload=actualPrepare;
   report.pass=true;
  }catch(error){report.pass=false;report.error=error.stack||String(error);}
  const pre=document.createElement('pre');pre.id='qa-report';pre.textContent=JSON.stringify(report);document.body.prepend(pre);

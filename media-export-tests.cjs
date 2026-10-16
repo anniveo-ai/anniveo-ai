@@ -1,0 +1,18 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),{DatabaseSync}=require('node:sqlite'),crypto=require('node:crypto');
+const raw=new DatabaseSync(':memory:');raw.exec("CREATE TABLE media_jobs(id TEXT,user_id TEXT,kind TEXT,status TEXT);INSERT INTO media_jobs VALUES('owned','123','image','completed'),('waiting','123','image','processing')");
+let chunkReads=0;
+const db={prepare(sql){const make=params=>({sql,params,bind(...values){return make(values);},async run(){return raw.prepare(sql).run(...params.map(v=>v instanceof ArrayBuffer?Buffer.from(v):v));},async first(){if(sql.startsWith('SELECT data'))chunkReads++;const row=raw.prepare(sql).get(...params);if(row?.data)row.data=Array.from(row.data);return row||null;}});return make([]);},async batch(statements){const out=[];for(const statement of statements)out.push(await statement.run());return out;}};
+const context=vm.createContext({crypto:crypto.webcrypto,ArrayBuffer,Uint8Array,ReadableStream,URL,Response,Date,Error,Math,Number,String,env:{DB:db}}),source=fs.readFileSync('worker.js','utf8');vm.runInContext(source.slice(source.indexOf('const MEDIA_EXPORT_CHUNK='),source.indexOf('async function recordMediaUsage')),context);
+const run=code=>vm.runInContext(code,context);
+(async()=>{
+ const bytes=Buffer.alloc(3*1024*1024+19);for(let i=0;i<bytes.length;i++)bytes[i]=i%251;context.file=new File([bytes],'edited.png',{type:'image/png'});
+ await assert.rejects(run("prepareMediaExport(env,'other','owned',file)"),/не найдена/);await assert.rejects(run("prepareMediaExport(env,'123','waiting',file)"),/не найдена/);
+ const result=await run("prepareMediaExport(env,'123','owned',file)");assert.match(result.id,/^[a-f0-9]{32}$/);context.url='https://api.test/media-download/'+result.id;
+ context.request=new Request(context.url);const response=await run('downloadMediaExport(request,env)');assert.equal(response.status,200);assert.match(response.headers.get('Content-Disposition'),/attachment; filename="anis-photo.png"/);assert.equal(response.headers.get('Access-Control-Allow-Origin'),'https://web.telegram.org');assert.deepEqual(Buffer.from(await response.arrayBuffer()),bytes,'download must preserve every byte of the edited export');
+ context.request=new Request(context.url,{headers:{Range:'bytes=1000000-2200000'}});const range=await run('downloadMediaExport(request,env)');assert.equal(range.status,206);assert.deepEqual(Buffer.from(await range.arrayBuffer()),bytes.subarray(1000000,2200001));
+ context.request=new Request(context.url,{headers:{Range:'bytes=-17'}});const tail=await run('downloadMediaExport(request,env)');assert.deepEqual(Buffer.from(await tail.arrayBuffer()),bytes.subarray(-17));
+ const reads=chunkReads;context.request=new Request(context.url,{method:'HEAD'});const head=await run('downloadMediaExport(request,env)');assert.equal(head.headers.get('Content-Length'),String(bytes.length));assert.equal(chunkReads,reads,'HEAD must not read or buffer file chunks');
+ context.request=new Request(context.url,{headers:{Range:'bytes=99999999-'}});assert.equal((await run('downloadMediaExport(request,env)')).status,416);
+ raw.prepare('UPDATE media_exports SET expires=0 WHERE id=?').run(result.id);context.request=new Request(context.url);assert.equal((await run('downloadMediaExport(request,env)')).status,404);await run('cleanupMediaExports(env)');assert.equal(raw.prepare('SELECT COUNT(*) n FROM media_export_chunks').get().n,0);
+ console.log('PASS: authenticated owner-only exports, exact file bytes, ranged and HEAD downloads, private expiring links and cleanup. No paid API requests.');
+})().catch(error=>{console.error(error);process.exitCode=1;});

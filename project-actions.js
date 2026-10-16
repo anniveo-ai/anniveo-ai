@@ -18,7 +18,7 @@
     project.media=null;project.mediaBlob=null;project.previewDataUrl=null;project.error=null;
     await loadStudioProjectResult(project);
     if(!project.media?.file)throw Error(project.error||'Файл пока не удалось загрузить. Можно повторить.');
-    return project.media;
+    project.media.exportJobId=project.exportJobId||project.id;return project.media;
   }
   function showLoadError(project){
     if(selectedStudioProject!==project.id)return;
@@ -45,7 +45,7 @@
       })();exportsInProgress.set(project,exporting);}
       try{await exporting;}finally{exportsInProgress.delete(project);}
     }
-    return project.media;
+    project.media.exportJobId=project.exportJobId||project.id;return project.media;
   }
   const imagePreviews=new WeakMap();
   function ensureImagePreview(project){
@@ -93,6 +93,20 @@
   }
 
   const viewer=node('dialog',{id:'readyMediaViewer',className:'anis-dialog ready-media-viewer'}),viewerHeader=node('header'),viewerTitle=node('h2'),viewerStage=node('div',{className:'ready-media-stage'}),viewerNote=node('p',{className:'note'}),viewerActions=node('div',{className:'ready-viewer-actions'});
+  const nativeDownloads=new WeakMap();
+  function telegramDownloads(){const bridge=window.Telegram?.WebApp||(typeof tg!=='undefined'?tg:null);return typeof bridge?.downloadFile==='function'&&bridge.isVersionAtLeast?.('8.0')?bridge:null;}
+  function shareable(item){try{return !!(navigator.share&&navigator.canShare?.({files:[item.file]}));}catch{return false;}}
+  function prepareDownload(item){
+    const cached=nativeDownloads.get(item.file);if(cached&&cached.expires>Date.now()+60000)return cached.promise;
+    const promise=(async()=>{
+      if(!initData||!item.exportJobId)throw Error('Для скачивания открой работу через Telegram.');
+      const form=new FormData();form.append('action','media-export');form.append('initData',initData);form.append('jobId',item.exportJobId);form.append('file',item.file,item.file.name);
+      const response=await fetch(API_URL,{method:'POST',body:form,signal:AbortSignal.timeout(90000)}),data=await response.json();if(!response.ok)throw Error(data.error||'Не удалось подготовить скачивание.');
+      if(new URL(data.url).origin!==new URL(API_URL).origin)throw Error('Некорректная ссылка скачивания.');
+      nativeDownloads.set(item.file,{promise:Promise.resolve(data),expires:data.expires});return data;
+    })().catch(error=>{nativeDownloads.delete(item.file);throw error;});
+    nativeDownloads.set(item.file,{promise,expires:Date.now()+25*60*1000});return promise;
+  }
   viewer.setAttribute('aria-label','Просмотр готового фото или видео');
   viewerHeader.append(viewerTitle,control('×',()=>viewer.close(),'room-close'));viewerHeader.lastChild.setAttribute('aria-label','Закрыть просмотр');
   viewer.append(viewerHeader,viewerStage,viewerActions,viewerNote);document.body.append(viewer);
@@ -107,14 +121,20 @@
     }
     viewerNote.textContent=kind==='video'?'Нажми воспроизведение, чтобы посмотреть видео. Сохранение в «Фото» — через системное меню «Поделиться».':'Удерживай фото, чтобы открыть меню сохранения. Также можно сохранить его через «Поделиться».';
     if(item.width&&item.height)viewerNote.textContent=item.width+'×'+item.height+' пикс. · '+(item.warning||viewerNote.textContent);
-    if(navigator.share&&navigator.canShare?.({files:[item.file]}))viewerActions.append(control('Сохранить в Фото',()=>void saveMedia(item,kind),'anis-button primary'));
-    viewerActions.append(control('Скачать .'+item.file.name.split('.').at(-1),()=>download(item),'anis-button'));
+    if(shareable(item))viewerActions.append(control('Поделиться · сохранить в Фото',()=>{void navigator.share({files:[item.file],title:kind==='video'?'Видео ANIS AI':'Фото ANIS AI'}).catch(error=>{if(error.name!=='AbortError')viewerNote.textContent='Системное меню недоступно. Используй «Скачать», либо удерживай фото для сохранения.';});},'anis-button'));
+    viewerActions.append(control('Скачать .'+item.file.name.split('.').at(-1),()=>void saveMedia(item,kind),'anis-button primary'));
     if(!viewer.open)viewer.showModal();
   }
   async function saveMedia(item,kind){
-    if(navigator.share&&navigator.canShare?.({files:[item.file]})){
+    if(telegramDownloads()&&item.exportJobId){
+      showMedia(item,kind);viewerNote.textContent='Подготавливаем скачивание файла…';
+      try{const data=await window.anisProjectActions.prepareDownload(item);viewerNote.textContent='Подтверди скачивание в окне Telegram.';telegramDownloads().downloadFile({url:data.url,file_name:data.filename},accepted=>{viewerNote.textContent=accepted?'Скачивание началось. Файл можно открыть в загрузках Telegram.':'Скачивание отменено. Нажми «Скачать», чтобы повторить.';});}
+      catch(error){viewerNote.textContent=error.message+' Можно сохранить фото долгим нажатием или через «Поделиться».';}
+      return;
+    }
+    if(shareable(item)){
       try{await navigator.share({files:[item.file],title:kind==='video'?'Видео ANIS AI':'Фото ANIS AI'});return;}
-      catch(error){if(error.name==='AbortError')return;showMedia(item,kind);viewerNote.textContent='Файл готов. Нажми «Сохранить в Фото» ещё раз, чтобы открыть системное меню. Для фото также доступно сохранение долгим нажатием.';return;}
+      catch(error){if(error.name==='AbortError')return;showMedia(item,kind);viewerNote.textContent='Файл готов. Нажми «Поделиться · сохранить в Фото», чтобы открыть системное меню. Для фото также доступно сохранение долгим нажатием.';return;}
     }
     const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
     if(!mobile){download(item);return;}
@@ -122,9 +142,9 @@
   }
   function saveProject(project){
     // Call native Share inside the original click, before any asynchronous download.
-    if(project.media?.file&&!project.loading&&!project.resolutionPending)return window.anisProjectActions.saveMedia(project.media,project.kind);
+    if(project.media?.file&&!project.loading&&!project.resolutionPending){project.media.exportJobId=project.exportJobId||project.id;return window.anisProjectActions.saveMedia(project.media,project.kind);}
     viewerTitle.textContent=project.kind==='video'?'Подготавливаем видео':'Подготавливаем фото';viewerStage.replaceChildren();viewerActions.replaceChildren();viewerNote.textContent='Загружаем готовый файл. Новый заказ не создаётся.';if(!viewer.open)viewer.showModal();
-    return getMedia(project).then(item=>showMedia(item,project.kind)).catch(error=>{
+    return getMedia(project).then(item=>telegramDownloads()?saveMedia(item,project.kind):showMedia(item,project.kind)).catch(error=>{
       viewerNote.textContent=error.message;viewerActions.replaceChildren(control('Повторить загрузку',()=>{
         viewerActions.replaceChildren();viewerNote.textContent='Загружаем…';
         void retryResult(project).then(()=>saveProject(project)).catch(next=>{viewerNote.textContent=next.message;viewerActions.replaceChildren(control('Повторить',()=>void saveProject(project),'anis-button'));});
@@ -155,7 +175,7 @@
     for(const [action,label]of [['download','Скачать'],['edit','Изменить'],['enhance','Улучшить'],['crop','Обрезать'],['similar','Создать похожее']]){
       const b=control('',async()=>{
         b.disabled=true;b.setAttribute('aria-busy','true');
-        try{if(action==='download'){await saveProject(project);return;}if(action==='edit'){openProjectRoom(project.id);const idea=$('projectAgentIdea');idea.focus({preventScroll:true});idea.closest('.project-agent').scrollIntoView({block:'center',behavior:'smooth'});return;}const item=await getMedia(project);if(action==='crop')await openCrop(project,item);else prepareAction(project,item,action);}
+        try{if(action==='download'){await saveProject(project);return;}if(action==='edit'){openProjectRoom(project.id);const idea=$('projectAgentIdea');idea.focus({preventScroll:true});idea.closest('.project-agent').scrollIntoView({block:'center',behavior:'smooth'});return;}if(action==='crop'){await openCrop(project);return;}const item=await getMedia(project);prepareAction(project,item,action);}
         catch(error){if(error.name!=='AbortError')toast(error.message||'Не удалось открыть действие.');}
         finally{b.disabled=false;b.removeAttribute('aria-busy');}
       },'ready-project-action ready-action-'+action);
@@ -178,18 +198,20 @@
   }
   function redrawCrop(){
     const s=cropState;if(!s?.image)return;
-    const w=s.image.naturalWidth,h=s.image.naturalHeight,r=s.ratio,cw=Math.min(w,h*r),ch=cw/r;
-    s.bounds={x:(w-cw)*s.x,y:(h-ch)*s.y,w:cw,h:ch};s.canvas.width=Math.round(cw);s.canvas.height=Math.round(ch);
+    const w=s.image.naturalWidth,h=s.image.naturalHeight,r=s.ratio,cw=Math.min(w,h*r)/s.zoom,ch=cw/r,scale=Math.min(1,1024/Math.max(cw,ch));
+    s.bounds={x:(w-cw)*s.x,y:(h-ch)*s.y,w:cw,h:ch};s.canvas.width=Math.max(1,Math.round(cw*scale));s.canvas.height=Math.max(1,Math.round(ch*scale));
     s.canvas.getContext('2d').drawImage(s.image,s.bounds.x,s.bounds.y,cw,ch,0,0,s.canvas.width,s.canvas.height);
   }
-  async function openCrop(project,item){
-    if(cropDialog.open)return;
-    const s=cropState={project,item,controller:new AbortController(),x:.5,y:.5,ratio:1,exporting:false};cropStage.replaceChildren();cropFields.replaceChildren();cropSave.disabled=true;cropStatus.textContent='Открываем исходник…';cropTitle.textContent=project.kind==='video'?'Обрезать видео':'Обрезать фото';cropDialog.showModal();
+  async function openCrop(project,item,retry=false){
+    if(cropDialog.open&&!retry)return;cropState?.controller.abort();
+    const s=cropState={project,item,controller:new AbortController(),x:.5,y:.5,zoom:1,ratio:1,exporting:false};cropStage.replaceChildren();cropFields.replaceChildren();cropSave.disabled=true;cropStatus.textContent='Открываем исходник…';cropTitle.textContent=project.kind==='video'?'Обрезать видео':'Обрезать фото';if(!cropDialog.open)cropDialog.showModal();
     try{
+      item=item||await getMedia(studioProjects.get(project.id)||project);if(cropState!==s)return;s.item=item;
       if(project.kind==='image'){
         s.image=new Image();s.image.src=item.url;await s.image.decode();if(cropState!==s)return;
         s.canvas=node('canvas');cropStage.append(s.canvas);const formats=node('div',{className:'ready-crop-formats',role:'group'});formats.setAttribute('aria-label','Формат обрезки');
         for(const [label,ratio]of [['1:1',1],['9:16',9/16],['16:9',16/9]]){const b=control(label,()=>{s.ratio=ratio;for(const n of formats.children)n.setAttribute('aria-pressed',String(n===b));redrawCrop();},'anis-button');b.setAttribute('aria-pressed',String(ratio===1));formats.append(b);}cropFields.append(formats);
+        slider('Приблизить',1,4,1,.05,(value,input,output)=>{s.zoom=value;output.textContent=value.toFixed(1)+'×';redrawCrop();});
         slider('По горизонтали',0,1,.5,.01,value=>{s.x=value;redrawCrop();});slider('По вертикали',0,1,.5,.01,value=>{s.y=value;redrawCrop();});redrawCrop();
       }else{
         const video=s.video=node('video',{src:item.url,controls:true,playsInline:true,preload:'auto'});cropStage.append(video);
@@ -201,7 +223,7 @@
         const end=slider('Конец',.1,video.duration,video.duration,.1,(value,input)=>{s.end=Math.max(value,s.start+.1);input.value=String(s.end);end.output.textContent=s.end.toFixed(1)+' с';video.currentTime=Math.max(s.start,s.end-.1);});start.output.textContent='0.0 с';end.output.textContent=s.end.toFixed(1)+' с';
       }
       cropStatus.textContent='Сохраним отдельный вариант. Оригинал останется в готовых работах.';cropSave.disabled=false;
-    }catch(error){if(error.name!=='AbortError'&&cropState===s)cropStatus.textContent=error.message;}
+    }catch(error){if(error.name!=='AbortError'&&cropState===s){cropStatus.textContent=error.message;cropStage.replaceChildren(control('Повторить загрузку',()=>void openCrop(project,null,true),'anis-button'));}}
   }
   async function trimVideo(s){
     const video=s.video,canvas=node('canvas');canvas.width=video.videoWidth;canvas.height=video.videoHeight;const painter=canvas.getContext('2d');
@@ -231,10 +253,11 @@
   async function saveCrop(){
     const s=cropState;if(!s||s.exporting)return;s.exporting=true;cropSave.disabled=true;for(const input of cropFields.querySelectorAll('input,button'))input.disabled=true;
     try{
-      const blob=s.project.kind==='video'?await trimVideo(s):await new Promise(resolve=>s.canvas.toBlob(resolve,'image/png'));
+      let blob;
+      if(s.project.kind==='video')blob=await trimVideo(s);else{const output=node('canvas'),b=s.bounds;output.width=Math.max(1,Math.round(b.w));output.height=Math.max(1,Math.round(b.h));output.getContext('2d').drawImage(s.image,b.x,b.y,b.w,b.h,0,0,output.width,output.height);blob=await new Promise(resolve=>output.toBlob(resolve,'image/png'));}
       if(!blob?.size)throw Error('Не удалось сохранить обрезку.');if(cropState!==s||s.controller.signal.aborted)return;
       const media=mediaFromBlob(s.project.kind,blob),p={id:crypto.randomUUID(),groupId:s.project.groupId||s.project.id,kind:s.project.kind,status:'completed',created:Date.now(),order:++projectCounter,prompt:(s.project.prompt||'Моя работа')+' · обрезка',quality:s.project.quality||'fast',ratio:s.project.kind==='image'?(s.ratio===1?'1:1':s.ratio<1?'9:16':'16:9'):s.project.ratio,duration:s.project.kind==='video'?Math.round((s.end-s.start)*10)/10:undefined,media,mediaBlob:blob,sourceFile:media.file};
-      studioProjects.set(p.id,p);persistStudioProjects();cropDialog.close();openProjectRoom(p.id);toast('Обрезка сохранена отдельным вариантом.');
+      p.exportJobId=s.project.exportJobId||s.project.id;media.exportJobId=p.exportJobId;studioProjects.set(p.id,p);persistStudioProjects();cropDialog.close();openProjectRoom(p.id);if(telegramDownloads())void saveMedia(media,p.kind);else showMedia(media,p.kind);
     }catch(error){if(error.name!=='AbortError'){if(s.project.kind==='video')cropDialog.close();toast(error.message);}}
     finally{if(cropState===s){s.exporting=false;cropSave.disabled=false;for(const input of cropFields.querySelectorAll('input,button'))input.disabled=false;}}
   }
@@ -283,6 +306,6 @@
   document.getElementById('app')?.addEventListener('scroll',scheduleGallery,{passive:true});window.addEventListener('resize',scheduleGallery);document.getElementById('mediaResultDialog')?.addEventListener('close',scheduleGallery);
   function observeGallery(){const grid=document.getElementById('studioReadyList');if(grid){new MutationObserver(repairReadyGallery).observe(grid,{childList:true});repairReadyGallery();}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observeGallery,{once:true});else observeGallery();
-  window.anisProjectActions={createControls,normalizeBlob,saveMedia,saveProject,showMedia,getMedia,retryResult,showLoadError,ensureImagePreview,resultPreview,refreshGallery:scheduleGallery};
+  window.anisProjectActions={createControls,normalizeBlob,saveMedia,saveProject,showMedia,getMedia,prepareDownload,retryResult,showLoadError,ensureImagePreview,resultPreview,refreshGallery:scheduleGallery};
 })();
 
