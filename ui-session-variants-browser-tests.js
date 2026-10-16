@@ -41,6 +41,18 @@ async function runAnisUIRegression(appHTML){
     w.closeGeneratedMedia();
    }
    w.openProjectRoom(a);await wait(30);
+   const originalViewport=Object.getOwnPropertyDescriptor(w,'visualViewport'),keyboardViewport=new w.EventTarget();
+   Object.assign(keyboardViewport,{height:844,offsetTop:0});Object.defineProperty(w,'visualViewport',{configurable:true,value:keyboardViewport});
+   const agent=d.getElementById('projectAgentIdea'),workroom=d.getElementById('mediaResultDialog');
+   agent.focus({preventScroll:true});keyboardViewport.height=460;w.dispatchEvent(new w.Event('resize'));await wait(650);
+   const agentRect=agent.getBoundingClientRect(),agentPanel=agent.closest('.project-agent').getBoundingClientRect();
+   check(kind+' agent input is visible above keyboard',agentRect.top>=workroom.getBoundingClientRect().top&&agentRect.bottom<=460,{top:agentRect.top,bottom:agentRect.bottom});
+   check(kind+' agent action stays above keyboard',agentPanel.bottom<=460,{bottom:agentPanel.bottom});
+   const typingScroll=workroom.scrollTop;for(const letter of ['а','б','в']){agent.value+=letter;agent.dispatchEvent(new w.Event('input',{bubbles:true}));await wait(30);}
+   check(kind+' agent does not jump with each letter',Math.abs(workroom.scrollTop-typingScroll)<2);
+   agent.blur();keyboardViewport.height=844;w.dispatchEvent(new w.Event('resize'));await wait(60);
+   check(kind+' workroom returns to full height after keyboard closes',Math.abs(workroom.getBoundingClientRect().bottom-844)<1);
+   if(originalViewport)Object.defineProperty(w,'visualViewport',originalViewport);else delete w.visualViewport;
    const requestRemove=id=>d.querySelector('[data-variant-id="'+id+'"] .variant-remove').click();
    requestRemove(b);await wait(30);
    check(kind+' deletion requires confirmation',d.getElementById('variantDeleteDialog').open&&!!d.querySelector('[data-variant-id="'+b+'"]')&&!d.querySelector('.variant-removal-notice'));

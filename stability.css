@@ -195,6 +195,7 @@ dialog>.anis-banner{position:sticky;top:0;left:auto;transform:none;width:100%;ma
 body.studio-typing #bottomNav,body.studio-typing #hideKeyboard{display:none!important}
 body.studio-typing #app{overflow-anchor:none;scroll-behavior:auto;scroll-padding-top:16px;scroll-padding-bottom:16px}
 body.studio-typing .studio-prompt-box textarea{max-height:max(80px,calc(var(--studio-visible-height,100dvh) - 190px));scroll-margin-block:20px 64px}
+@media(max-width:760px){body.project-agent-typing #mediaResultDialog.room-edge-sheet{height:max(100px,calc(var(--studio-visible-bottom,100dvh) - var(--room-sheet-top,12px) - 8px));max-height:max(100px,calc(var(--studio-visible-bottom,100dvh) - var(--room-sheet-top,12px) - 8px));padding-bottom:16px;scroll-behavior:auto}body.project-agent-typing .project-agent textarea{max-height:max(64px,calc(var(--studio-visible-height,100dvh) - 220px));resize:none}}
 .anis-expiry{padding:12px 14px;border:1px solid #9878b455;border-radius:16px;margin:12px 0;color:#cdbde0;font-size:13px;line-height:1.45}.anis-expiry.warning{border-color:#d9ae63;color:#f4cd8e}
 .anis-steps{display:flex;gap:5px;margin:10px 0 16px}.anis-steps span{flex:1;height:4px;border-radius:4px;background:#76658c44}.anis-steps .done{background:#ba80ef}
 .anis-notify{display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #86739855;border-radius:16px;margin:12px 0;font-size:14px}.anis-notify input{width:22px;height:22px;accent-color:#965ad0;flex-shrink:0}

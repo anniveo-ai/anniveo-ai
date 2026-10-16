@@ -388,17 +388,19 @@
  function keyboardLayout(reveal=false){
   const field=document.activeElement,v=window.visualViewport,focused=['imagePrompt','videoPrompt','projectAgentIdea'].includes(field?.id);
   document.body.classList.toggle('studio-typing',focused);
-  if(!focused){studioViewportHeight=window.innerHeight;studioVisibleHeight=0;keyboardBar.hidden=true;document.documentElement.style.removeProperty('--studio-keyboard-inset');document.documentElement.style.removeProperty('--studio-visible-height');requestAnimationFrame(moveGlider);return;}
+  if(!focused){studioViewportHeight=window.innerHeight;studioVisibleHeight=0;keyboardBar.hidden=true;document.body.classList.remove('project-agent-typing');document.documentElement.style.removeProperty('--studio-keyboard-inset');document.documentElement.style.removeProperty('--studio-visible-height');document.documentElement.style.removeProperty('--studio-visible-bottom');requestAnimationFrame(moveGlider);return;}
   const top=v?.offsetTop||0,visibleHeight=Math.min(v?.height||window.innerHeight,tg?.viewportHeight||window.innerHeight),bottom=top+visibleHeight;
   const inset=Math.max(0,studioViewportHeight-visibleHeight,window.innerHeight-bottom);
   document.documentElement.style.setProperty('--studio-keyboard-inset',inset+'px');
   document.documentElement.style.setProperty('--studio-visible-height',visibleHeight+'px');
+  document.documentElement.style.setProperty('--studio-visible-bottom',bottom+'px');
+  document.body.classList.toggle('project-agent-typing',field.id==='projectAgentIdea'&&room.open&&inset>=80);
   keyboardBar.hidden=inset<80;
   keyboardBar.style.top=(bottom-52)+'px';
   const resized=Math.abs(visibleHeight-studioVisibleHeight)>8;studioVisibleHeight=visibleHeight;
   // Viewport panning follows the caret on iOS; it must not trigger another scroll.
   if(!reveal&&!resized)return;
-  const box=field.closest('.studio-prompt-box')||field,rect=box.getBoundingClientRect(),fieldRect=field.getBoundingClientRect();
+  const box=field.closest('.studio-prompt-box,.project-agent')||field,rect=box.getBoundingClientRect(),fieldRect=field.getBoundingClientRect();
   if(inset<80)return;
   const upper=top+16,lower=bottom-16,available=Math.max(80,lower-upper),target=rect.height<=available?rect:fieldRect;
   // An already visible prompt stays exactly where the user placed it.
