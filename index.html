@@ -1368,15 +1368,15 @@ select{
 }
 .chat-orb-hint{
   position:absolute;z-index:5;right:-1px;bottom:calc(100% + 16px);
-  display:flex;align-items:center;gap:9px;
+  display:flex;align-items:center;gap:6px;
   width:max-content;max-width:min(248px,calc(100vw - 38px));
-  min-height:43px;padding:10px 14px 10px 12px;
+  min-height:34px;padding:6px 10px;
   border:1px solid rgba(218,163,255,.83);border-radius:999px;
   color:#f8efff;background:linear-gradient(125deg,rgba(61,30,86,.95),rgba(91,40,126,.94) 58%,rgba(41,23,70,.96));
   box-shadow:0 0 7px rgba(218,133,255,.52),0 0 21px rgba(164,72,242,.32),inset 0 1px 1px rgba(255,224,255,.25);
   -webkit-backdrop-filter:blur(16px) saturate(145%);
   backdrop-filter:blur(16px) saturate(145%);
-  font-size:14px;font-weight:500;line-height:20px;
+  font-size:12px;font-weight:500;line-height:18px;
   pointer-events:none;user-select:none;-webkit-user-select:none;
   transform-origin:calc(100% - 19.5px) bottom;
   animation:chatOrbHintIn .24s cubic-bezier(.2,.8,.2,1) both;
@@ -1389,12 +1389,12 @@ select{
 }
 .chat-orb-hint-text{min-width:0;white-space:nowrap}
 .chat-orb-wave{
-  display:flex;align-items:center;justify-content:center;gap:3px;
-  flex:none;width:24px;height:24px;
+  display:flex;align-items:center;justify-content:center;gap:2px;
+  flex:none;width:20px;height:20px;
   color:#edcaff;filter:drop-shadow(0 0 5px rgba(228,169,255,.6));
 }
 .chat-orb-wave span{
-  display:block;flex:none;width:3px;height:var(--bar-height,12px);
+  display:block;flex:none;width:2px;height:calc(var(--bar-height,12px) * .75);
   border-radius:99px;background:currentColor;transform-origin:center;
 }
 .chat-orb-hint[data-phase="listening"] .chat-orb-wave span{
