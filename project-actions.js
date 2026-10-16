@@ -137,21 +137,21 @@
     const kind=project.kind;openView(kind==='video'?'video':'studio');
     if(kind==='video'){clearVideoIdentity();if(setStudioVideo(item.file)===false)return;}else if(setStudioPhoto(item.file)===false)return;
     selectValue(kind+'Ratio',project.ratio||(kind==='video'?'16:9':'1:1'));
-    selectValue(kind+'Quality',action==='enhance'?(kind==='video'&&project.ratio==='1:1'?'fhd':'uhd'):(project.quality||'fhd'));
+    selectValue(kind+'Quality',project.quality||'fhd');
     if(kind==='video')selectValue('duration',project.duration||4);
     const subject=kind==='video'?'видео':'фото',prompt=$(kind+'Prompt');
     prompt.value=action==='enhance'?'Улучши качество этого '+subject+'. Сохрани лица, композицию, цвета и все важные детали. Добавь естественную чёткость'+(kind==='video'?', плавность и стабильность движения.':', аккуратно убери шум.'):
       action==='similar'?((project.prompt||'Создай похожее '+subject)+'. Новый вариант по этому референсу: сохрани стиль и настроение, предложи немного другую композицию.').slice(0,1200):'';
     prompt.dispatchEvent(new Event('input',{bubbles:true}));
-    if(action==='edit')prompt.focus();
-    toast(action==='edit'?'Опиши, что изменить.':kind==='video'?'Всё готово. Нажми «Создать видео».':'Всё готово. Нажми «Создать фото».');
+    if(action==='enhance')requestAnimationFrame(()=>$(kind+'Quality').closest('.studio-setting-panel').scrollIntoView({block:'start',behavior:'smooth'}));
+    toast(action==='enhance'?'Выбери качество '+subject+'.':kind==='video'?'Всё готово. Нажми «Создать видео».':'Всё готово. Нажми «Создать фото».');
   }
   function createControls(project){
     const rail=node('div',{className:'ready-project-actions'});rail.setAttribute('role','group');rail.setAttribute('aria-label','Действия с '+(project.kind==='video'?'видео':'фото'));rail.dataset.projectId=project.id;
     for(const [action,label]of [['download','Скачать'],['edit','Изменить'],['enhance','Улучшить'],['crop','Обрезать'],['similar','Создать похожее']]){
       const b=control('',async()=>{
         b.disabled=true;b.setAttribute('aria-busy','true');
-        try{if(action==='download'){await saveProject(project);return;}if(action==='enhance'){openProjectRoom(project.id);const idea=$('projectAgentIdea');idea.focus({preventScroll:true});idea.closest('.project-agent').scrollIntoView({block:'center',behavior:'smooth'});return;}const item=await getMedia(project);if(action==='crop')await openCrop(project,item);else prepareAction(project,item,action);}
+        try{if(action==='download'){await saveProject(project);return;}if(action==='edit'){openProjectRoom(project.id);const idea=$('projectAgentIdea');idea.focus({preventScroll:true});idea.closest('.project-agent').scrollIntoView({block:'center',behavior:'smooth'});return;}const item=await getMedia(project);if(action==='crop')await openCrop(project,item);else prepareAction(project,item,action);}
         catch(error){if(error.name!=='AbortError')toast(error.message||'Не удалось открыть действие.');}
         finally{b.disabled=false;b.removeAttribute('aria-busy');}
       },'ready-project-action ready-action-'+action);
