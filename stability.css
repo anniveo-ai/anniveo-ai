@@ -37,6 +37,17 @@ html[data-theme=light] .anon-mini-toggle{color:#432d52;background:linear-gradien
 .ready-project-corner-actions .ready-project-action{width:40px;height:40px;min-height:40px;padding:9px;border-radius:11px;gap:0;background:#251b35d9;backdrop-filter:blur(8px)}
 .ready-project-corner-actions .ready-project-action span{display:none}
 #view-ready .studio-ready-copy .ready-billing-status{margin:7px 0 0;color:#b7dfcb;font-size:9px;line-height:1.35}
+#view-ready .studio-ready-status-card{align-self:start}
+#view-ready .studio-ready-status-card .studio-ready-preview{height:auto;min-height:0;padding:62px 12px 14px;background:radial-gradient(ellipse at top,#63338335,transparent 85%)}
+#view-ready .studio-ready-status-card .studio-ready-preview:after{display:none}
+#view-ready .studio-ready-status-card .studio-ready-copy{position:relative;display:block;inset:auto}
+#view-ready .studio-ready-status-card .studio-ready-copy strong{display:block;overflow:visible;-webkit-line-clamp:unset;font-size:13px;line-height:1.35}
+#view-ready .ready-issue-reason{display:block;margin-top:8px;font-size:11px;line-height:1.45;color:#c9bbd5;overflow-wrap:anywhere}
+#view-ready .studio-ready-status-card .ready-issue-prompt{margin:10px 0 0;padding-top:8px;border-top:1px solid #ffffff12;font-size:10px;line-height:1.4;color:#a99ab8;overflow-wrap:anywhere}
+.studio-ready-status-card .ready-project-corner-actions{flex-direction:row}
+#mediaResultDialog .media-result-preview.project-status-result{aspect-ratio:auto!important;min-height:0;height:auto;display:block;padding:18px}
+.project-issue-panel strong{display:block;font-size:17px;line-height:1.35}.project-issue-panel p{margin:10px 0;color:var(--muted);font-size:13px;line-height:1.5}.project-issue-panel small{display:block;margin:10px 0;color:#b7dfcb}.project-issue-panel button{margin-top:10px;width:100%}
+html[data-theme=light] #view-ready .ready-issue-reason{color:#796786}html[data-theme=light] #view-ready .studio-ready-status-card .ready-issue-prompt{color:#8b7896;border-color:#76568720}html[data-theme=light] #view-ready .studio-ready-copy .ready-billing-status,html[data-theme=light] .project-issue-panel small{color:#367c60}
 .ready-project-action:active{transform:scale(.96)}.ready-project-action:focus-visible,.studio-ready-preview:focus-visible{outline:2px solid #dab6f5;outline-offset:-3px}.ready-project-action[aria-busy=true] svg{animation:projectSpin 1.4s linear infinite}
 html[data-theme=light] #view-ready .studio-ready-card.studio-ready-project{background:linear-gradient(150deg,#fff,#eee5f5);border-color:#d8c4e5}html[data-theme=light] .ready-project-action{background:linear-gradient(140deg,#f6eafa,#eee8f7);border-color:#d4bcdf;color:#9465ab}html[data-theme=light] .ready-project-action span{color:#725281}html[data-theme=light] .ready-action-download{background:linear-gradient(145deg,#ae75d6,#8150b1);color:#f3dbff}html[data-theme=light] .ready-action-download span{color:#fff}
 

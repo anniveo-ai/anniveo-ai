@@ -346,11 +346,21 @@
   state.renderRoomProgress(p);
   $('anisProjectExpiry')?.remove();
   const note=$('mediaResultDialog').lastElementChild;if(note?.textContent==='Сохрани результат: файл в сервисе доступен 7 дней.')note.hidden=true;
-  if(['unknown','failed'].includes(p.status)){
-   const action=$('mediaResultPreview').querySelector('button');if(action){action.textContent=p.status==='failed'?'Вернуться к описанию':'Проверить готовность';action.onclick=()=>{if(p.status==='failed'){closeGeneratedMedia();openView(p.kind==='image'?'studio':'video');$(p.kind+'Prompt').value=p.prompt||'';}else void recoverProject(p);};}
-  }
+  const issue=projectIssueCopy(p);stage.classList.toggle('project-status-result',!!issue);
+  if(issue){
+   const issueKey=[p.id,p.status,p.error,p.billing?.state].join('|');
+   if(stage.dataset.issueKey!==issueKey||!stage.querySelector('.project-issue-panel')){stage.dataset.issueKey=issueKey;const panel=el('div',{className:'project-issue-panel'});panel.append(el('strong',{},issue.title),el('p',{},issue.reason));const billing=projectBillingLabel(p);if(billing)panel.append(el('small',{className:'ready-billing-status'},billing));panel.append(button(p.status==='unknown'?'Проверить статус':'Изменить запрос',()=>{if(p.status==='unknown')void recoverProject(p);else{const controls=window.anisProjectActions.createControls(p,{deleteOnly:true});controls.querySelector('[data-action="revise"]')?.click();}}));stage.replaceChildren(panel);}
+  }else delete stage.dataset.issueKey;
   if(/проект\s+не найден/i.test(p.error||'')){$('mediaResultPreview').replaceChildren();$('mediaResultTitle').textContent=projectLabel(p);$('projectStageStatus').textContent='';}
  };
+ function projectIssueCopy(project){
+  if(!['failed','cancelled','unknown'].includes(project.status))return null;
+  const subject=project.kind==='video'?'Видео':'Фото',error=String(project.error||'');
+  if(project.status==='unknown')return {title:'Уточняем результат…',reason:'Результат пока не подтверждён. Повторно запускать не нужно.'};
+  const reason=/недостаточно аниумов/i.test(error)?'На балансе недостаточно аниумов. Запрос не отправлен.':/баланс|недостаточно средств|API.ключ|недоступен/i.test(error)?'Сервис создания временно недоступен.':/описани|параметр|формат|файл не поддерживается|слишком большой/i.test(error)?'Не удалось обработать исходник или настройки. Измени запрос.':'Сервис сообщил об ошибке. Точная причина пока не уточнена.';
+  return {title:project.status==='cancelled'?'Создание отменено':subject+' не создано',reason};
+ }
+ function projectBillingLabel(project){const b=project.billing;return !b?null:b.state==='refunded'?'Аниумы возвращены на баланс':b.state==='not_charged'?'Аниумы не списаны':b.state==='reserved'?'Аниумы в резерве до подтверждения результата':null;}
  const readyView=el('section',{id:'view-ready',className:'view photo-studio'}),readyHeading=el('div',{className:'studio-heading'}),readyHeadingCopy=el('div'),readyGrid=el('div',{id:'studioReadyList',className:'studio-template-list studio-ready-list'});
  readyHeadingCopy.append(el('h1',{className:'page-title'},'Твои готовые работы'),el('p',{className:'subtitle'},'Фото, видео и новые варианты — всё в одном месте.'));readyHeading.append(readyHeadingCopy);readyView.append(readyHeading,readyGrid);$('view-templates').after(readyView);
  const originalOpenStudioView=openView;
@@ -363,14 +373,18 @@
   const groups=new Map();for(const p of projects){const id=p.groupId||p.id;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(p);}
   for(const family of [...groups.values()].reverse()){
    const first=family[0],last=family.at(-1),display=[...family].reverse().find(p=>p.status==='completed'&&(p.media||p.resultUrl))||last;
-   const cardKey=[display.id,display.status,last.status,!!last.loading,first.prompt,family.length,display.previewDataUrl||display.posterDataUrl||'',display.billing?.state,display.billing?.amount].join('|'),old=existing.get(display.id);
+   const cardKey=[display.id,display.status,last.status,!!last.loading,first.prompt,family.length,display.previewDataUrl||display.posterDataUrl||'',display.billing?.state,display.billing?.amount,display.error].join('|'),old=existing.get(display.id);
    if(old?.dataset.renderKey===cardKey){next.push(old);continue;}
    const card=el('article',{className:'studio-template-card studio-ready-card studio-ready-project','data-project-id':display.id});
    card.dataset.renderKey=cardKey;
+   const issue=projectIssueCopy(display);card.classList.toggle('studio-ready-status-card',!!issue);if(issue)card.dataset.issueStatus=display.status;
    const preview=button('',()=>{openProjectRoom(display.id);if(display.kind==='image'&&display.status==='completed'&&!display.media&&display.resultUrl)void loadStudioProjectResult(display);});preview.className='studio-ready-preview';preview.setAttribute('aria-label','Открыть '+(display.kind==='video'?'видео':'фото')+' · '+(first.prompt||'Мой проект').slice(0,110));
-   const source=previewSource(display);if(display.status==='completed'&&source&&(display.previewDataUrl||display.posterDataUrl))preview.append(previewElement(source));else if(!PROJECT_TERMINAL.includes(display.status))addWorkingPreview(preview,display,true);else preview.append(el('i',{className:'studio-ready-placeholder','aria-hidden':'true'},first.kind==='video'?'▷':'✦'));
-   const copy=el('span',{className:'studio-ready-copy'});copy.append(el('small',{},(first.kind==='video'?'Видео':'Фото')+' · '+projectStatusLabel(last)+(family.length>1?' · '+variantsText(family.length):'')),el('strong',{},(first.prompt||'Мой проект').slice(0,110)));preview.append(copy,el('b',{'aria-hidden':'true'},first.kind==='video'?'▷':'↗'));card.append(preview);
-   if(['failed','cancelled','unknown'].includes(display.status)&&display.billing){const billing=display.billing,text=billing.state==='refunded'?'Аниумы возвращены на баланс':billing.state==='not_charged'?'Аниумы не списаны':billing.state==='reserved'?'Аниумы в резерве · проверяем результат':null;if(text)copy.append(el('small',{className:'ready-billing-status'},text));}
+   const source=previewSource(display);if(display.status==='completed'&&source&&(display.previewDataUrl||display.posterDataUrl))preview.append(previewElement(source));else if(!PROJECT_TERMINAL.includes(display.status))addWorkingPreview(preview,display,true);else if(!issue)preview.append(el('i',{className:'studio-ready-placeholder','aria-hidden':'true'},first.kind==='video'?'▷':'✦'));
+   const copy=el('span',{className:'studio-ready-copy'});
+   if(issue)copy.append(el('small',{},first.kind==='video'?'Видео':'Фото'),el('strong',{},issue.title),el('span',{className:'ready-issue-reason'},issue.reason),el('small',{className:'ready-issue-prompt'},(first.prompt||'Мой проект').slice(0,110)));
+   else copy.append(el('small',{},(first.kind==='video'?'Видео':'Фото')+' · '+projectStatusLabel(last)+(family.length>1?' · '+variantsText(family.length):'')),el('strong',{},(first.prompt||'Мой проект').slice(0,110)));
+   preview.append(copy,el('b',{'aria-hidden':'true'},first.kind==='video'?'▷':'↗'));card.append(preview);
+   const billing=issue&&projectBillingLabel(display);if(billing)copy.append(el('small',{className:'ready-billing-status'},billing));
    if(display.status==='completed'&&source)card.append(window.anisProjectActions.createControls(display));
    else if(PROJECT_TERMINAL.includes(display.status)){
     const actions=window.anisProjectActions.createControls(display,{deleteOnly:true});actions.classList.add('ready-project-corner-actions');card.append(actions);
