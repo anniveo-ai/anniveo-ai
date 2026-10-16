@@ -41,7 +41,7 @@
   }
   function resultPreview(project){
     const media=node(project.kind==='video'?'video':'img');media.className='project-result-media';
-    media.addEventListener(project.kind==='video'?'loadeddata':'load',()=>{media.dataset.ready='true';},{once:true});
+    media.addEventListener(project.kind==='video'?'loadeddata':'load',()=>{media.dataset.ready='true';media.parentElement?.querySelector('.project-load-result')?.remove();},{once:true});
     if(project.kind==='video'){media.controls=true;media.playsInline=true;media.preload='metadata';}
     else{media.alt='Готовое фото';media.decoding='async';}
     media.src=project.previewDataUrl||project.media?.url||project.resultUrl;
@@ -51,7 +51,7 @@
     media.addEventListener('error',()=>{
       if(!media.isConnected)return;
       const host=media.parentElement;
-      const retry=control('Фото не загрузилось · повторить',async()=>{
+      const retry=control('Файл не открылся · повторить',async()=>{
         retry.disabled=true;
         if(project.media?.url?.startsWith('blob:'))URL.revokeObjectURL(project.media.url);
         project.media=null;project.mediaBlob=null;project.previewDataUrl=null;
