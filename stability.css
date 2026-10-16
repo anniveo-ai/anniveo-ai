@@ -392,3 +392,4 @@ html[data-theme=light] #welcome .idea .symbol{color:#76508f}
 .enhancement-return.is-changed{background:#9c66bf40;border-color:#cca2e888;color:#f1e0fc}
 html[data-theme=light] .enhancement-return{background:#eee1f6;color:#613c78;border-color:#c8addb}
 html[data-theme=light] .enhancement-return.is-changed{background:#e1c9ef;color:#4e2b65;border-color:#ac82c8}
+.studio-job-progress.is-viewed .studio-job-progress-status,.studio-job-progress.is-viewed .studio-job-progress-copy small,.studio-job-progress.is-viewed .studio-job-progress-arrow,.studio-job-progress.is-viewed .studio-job-progress-track{display:none}

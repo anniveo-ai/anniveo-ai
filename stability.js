@@ -236,12 +236,13 @@
    const subject=kind==='image'?'Фото':'Видео';
    ui.panel.dataset.projectId=project.id;ui.panel.dataset.status=project.status;
    ui.panel.classList.toggle('is-working',busy);ui.panel.classList.toggle('is-ready',project.status==='completed');
+   ui.panel.classList.toggle('is-viewed',viewed);
    ui.title.textContent=busy?(running.length>1?'В работе: '+running.length+' '+subject.toLowerCase():subject+' в работе'):viewed?'Последняя работа':project.status==='completed'?subject+' готово':subject+' · проверь результат';
-   ui.status.textContent=viewed?subject+' · открыть':projectStatusLabel(project);
-   ui.prompt.textContent=project.prompt||'Открыть текущий проект';
+   ui.status.textContent=viewed?'':projectStatusLabel(project);
+   ui.prompt.textContent=viewed?'':project.prompt||'Открыть текущий проект';
    ui.icon.textContent=busy?'':project.status==='completed'?'✓':'!';
    ui.panel.querySelector('.studio-job-progress-track i').style.width=(studioProjectProgress(project)*100)+'%';
-   ui.panel.setAttribute('aria-label',ui.title.textContent+'. '+ui.status.textContent+'. Открыть проект');
+   ui.panel.setAttribute('aria-label',[ui.title.textContent,ui.status.textContent,'Открыть проект'].filter(Boolean).join('. '));
   }
  };
  // Keep the native values used by generation, drafts and format help; cards are their visible controls.
