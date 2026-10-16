@@ -41,12 +41,14 @@
   const doneRect=done.getBoundingClientRect();check(document.elementFromPoint(doneRect.left+doneRect.width/2,doneRect.top+doneRect.height/2)===done,'Agent keyboard checkmark is reachable inside modal');
   done.click();fakeViewport.height=844;window.dispatchEvent(new Event('resize'));await wait(750);check(!agent.classList.contains('studio-prompt-pinned')&&document.activeElement!==document.getElementById('projectAgentIdea'),'Agent restores after closing keyboard');
   Object.defineProperty(window,'visualViewport',{configurable:true,value:actualViewport});closeGeneratedMedia();
+  const originalToast=toast,enhanceToasts=[];toast=text=>enhanceToasts.push(text);
   for(const kind of ['image','video']){
-   const target={...photo,id:'enhance-'+kind,kind,quality:'fhd',ratio:'16:9',media:photo.media};studioProjects.set(target.id,target);const actions=window.anisProjectActions.createControls(target);document.body.append(actions);await actions.querySelector('[data-action="enhance"]').onclick();await wait(650);
+   const target={...photo,id:'enhance-'+kind,kind,quality:'fhd',ratio:'16:9',media:photo.media};studioProjects.set(target.id,target);const actions=window.anisProjectActions.createControls(target);document.body.append(actions);await actions.querySelector('[data-action="enhance"]').onclick();
    const quality=document.getElementById(kind+'Quality'),panel=quality.closest('.studio-setting-panel'),rect=panel.getBoundingClientRect();
    const settings=quality.closest('.media-settings').getBoundingClientRect();
    check(currentView===(kind==='image'?'studio':'video')&&!document.getElementById('mediaResultDialog').open&&settings.top>=-2&&settings.bottom<844&&quality.value==='fhd'&&document.activeElement!==document.getElementById('projectAgentIdea'),'Enhance reveals all quality, format and duration settings: '+kind,{top:settings.top,bottom:settings.bottom});actions.remove();
   }
+  toast=originalToast;check(enhanceToasts.length===0,'Enhance instantly scrolls to existing settings without a popup');
   rail.remove();
   const source=new File([blob],'reference.png',{type:'image/png'});
   for(const [view,setter,stageId,replaceId,fileId]of [['studio',setStudioPhoto,'studioUploadStage','studioReplacePhoto','imageFile'],['video',setStudioVideo,'videoUploadStage','studioReplaceVideo','videoFile']]){

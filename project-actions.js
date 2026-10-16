@@ -143,8 +143,12 @@
     prompt.value=action==='enhance'?'Улучши качество этого '+subject+'. Сохрани лица, композицию, цвета и все важные детали. Добавь естественную чёткость'+(kind==='video'?', плавность и стабильность движения.':', аккуратно убери шум.'):
       action==='similar'?((project.prompt||'Создай похожее '+subject)+'. Новый вариант по этому референсу: сохрани стиль и настроение, предложи немного другую композицию.').slice(0,1200):'';
     prompt.dispatchEvent(new Event('input',{bubbles:true}));
-    if(action==='enhance')requestAnimationFrame(()=>$(kind+'Quality').closest('.media-settings').scrollIntoView({block:'start',behavior:'smooth'}));
-    toast(action==='enhance'?(kind==='video'?'Выбери качество, формат и длительность видео.':'Выбери качество и формат фото.'):kind==='video'?'Всё готово. Нажми «Создать видео».':'Всё готово. Нажми «Создать фото».');
+    if(action==='enhance'){
+      const settings=$(kind+'Quality').closest('.media-settings'),scroller=$('app');
+      scroller.scrollTo({top:Math.max(0,scroller.scrollTop+settings.getBoundingClientRect().top-scroller.getBoundingClientRect().top-16),behavior:'instant'});
+      return;
+    }
+    toast(kind==='video'?'Всё готово. Нажми «Создать видео».':'Всё готово. Нажми «Создать фото».');
   }
   function createControls(project){
     const rail=node('div',{className:'ready-project-actions'});rail.setAttribute('role','group');rail.setAttribute('aria-label','Действия с '+(project.kind==='video'?'видео':'фото'));rail.dataset.projectId=project.id;
