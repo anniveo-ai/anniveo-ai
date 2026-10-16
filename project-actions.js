@@ -11,7 +11,7 @@
     similar:'<rect x="3" y="8" width="13" height="13" rx="3"/><path d="M8 5V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-1M8 11l2 3 3 1"/>'
   };
   function control(text,fn,className=''){const b=node('button',{type:'button',className},text);b.onclick=fn;return b;}
-  function download(item){const link=node('a',{href:item.url,download:item.file.name});document.body.append(link);link.click();link.remove();}
+  function download(item){const link=node('a',{href:item.url,download:item.file.name,target:'_blank',rel:'noopener'});document.body.append(link);link.click();link.remove();}
   async function retryResult(project){
     project=studioProjects.get(project.id)||project;
     if(project.loading){await loadStudioProjectResult(project);if(!project.media?.file)throw Error(project.error||'Файл пока не удалось загрузить. Можно повторить.');return project.media;}
@@ -202,23 +202,35 @@
     if(!viewer.open)viewer.showModal();
   }
   async function saveMedia(item,kind){
-    if(telegramDownloads()&&item.exportJobId){
-      showMedia(item,kind);viewerNote.textContent='Подготавливаем скачивание файла…';
-      try{const data=await window.anisProjectActions.prepareDownload(item);viewerNote.textContent='Подтверди скачивание в окне Telegram.';telegramDownloads().downloadFile({url:data.url,file_name:data.filename},accepted=>{viewerNote.textContent=accepted?'Скачивание началось. Файл можно открыть в загрузках Telegram.':'Скачивание отменено. Нажми «Скачать», чтобы повторить.';});}
-      catch(error){viewerNote.textContent=error.message+' Можно сохранить фото долгим нажатием или через «Поделиться».';}
-      return;
-    }
+    // iOS requires opening the system share sheet in the original user gesture.
+    // Preparing an HTTPS export first loses that gesture and can leave Save inert.
     if(shareable(item)){
       try{await navigator.share({files:[item.file],title:kind==='video'?'Видео ANIS AI':'Фото ANIS AI'});return;}
-      catch(error){if(error.name==='AbortError')return;showMedia(item,kind);viewerNote.textContent='Файл готов. Нажми «Поделиться · сохранить в Фото», чтобы открыть системное меню. Для фото также доступно сохранение долгим нажатием.';return;}
+      catch(error){if(error.name==='AbortError')return;}
+    }
+    if(telegramDownloads()&&item.exportJobId){
+      showMedia(item,kind);viewerNote.textContent='Подготавливаем скачивание файла…';
+      try{
+        const data=await mediaDeadline(window.anisProjectActions.prepareDownload(item),45000,'Подготовка файла занимает больше времени. Повтори скачивание.');
+        viewerActions.querySelector('.download-https')?.remove();
+        const fallback=control('Открыть файл для сохранения',()=>{
+          const bridge=window.Telegram?.WebApp||(typeof tg!=='undefined'?tg:null);
+          if(bridge?.openLink)bridge.openLink(data.url);else download({url:data.url,file:{name:data.filename}});
+        },'anis-button download-https');viewerActions.append(fallback);
+        viewerNote.textContent='Подтверди скачивание в окне Telegram. Если оно не появилось, нажми «Открыть файл для сохранения».';
+        try{telegramDownloads().downloadFile({url:data.url,file_name:data.filename},accepted=>{viewerNote.textContent=accepted?'Скачивание запрошено. Файл появится в загрузках Telegram.':'Скачивание отменено. Можно повторить или открыть файл для сохранения.';});}
+        catch{viewerNote.textContent='Telegram не открыл скачивание. Нажми «Открыть файл для сохранения».';}
+      }
+      catch(error){viewerNote.textContent=error.message+(kind==='image'?' Удерживай фото, чтобы сохранить его.':' Используй «Поделиться · сохранить в Фото», если это меню доступно.');}
+      return;
     }
     const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
-    if(!mobile){download(item);return;}
-    showMedia(item,kind);
+    download(item);
+    if(mobile){showMedia(item,kind);viewerNote.textContent='Файл открыт для скачивания. В меню устройства выбери «Сохранить видео», «Сохранить изображение» или «Сохранить в Файлы».';}
   }
   function saveProject(project){
     // Call native Share inside the original click, before any asynchronous download.
-    if(project.media?.file&&!project.loading&&!project.resolutionPending){project.media.exportJobId=project.exportJobId||project.id;return window.anisProjectActions.saveMedia(project.media,project.kind);}
+    if(project.media?.file?.size&&!project.resolutionPending){project.media.exportJobId=project.exportJobId||project.id;return window.anisProjectActions.saveMedia(project.media,project.kind);}
     viewerTitle.textContent=project.kind==='video'?'Подготавливаем видео':'Подготавливаем фото';viewerStage.replaceChildren();viewerActions.replaceChildren();viewerNote.textContent='Загружаем готовый файл. Новый заказ не создаётся.';if(!viewer.open)viewer.showModal();
     return getMedia(project,{forExport:true}).then(item=>telegramDownloads()?saveMedia(item,project.kind):showMedia(item,project.kind)).catch(error=>{
       viewerNote.textContent=error.message;viewerActions.replaceChildren(control('Повторить загрузку',()=>{
@@ -260,19 +272,38 @@
     if(session.origin.roomId)openProjectRoom(session.origin.roomId);
     requestAnimationFrame(()=>{ $('app').scrollTop=session.origin.scrollTop;if(session.origin.roomId)$('mediaResultDialog').scrollTop=session.origin.roomScroll; });
   }
-  function enhancementReturnControl(kind,origin,create){
+  async function confirmEnhancement(session){
+    if(enhancementSession!==session||session.submitting)return;
+    const regenerate=session.ids.some((id,index)=>id!==session.kind+'Ratio'&&$(id).value!==session.initial[index]);
+    if(!regenerate){enhancementReturn(session);return;}
+    if(session.create.disabled){toast('Дождись загрузки исходного файла.');return;}
+    if(enhancementVariant(session.kind).groupId!==(session.project.groupId||session.project.id)){toast('Заново открой «Улучшить» у нужной работы.');return;}
+    session.submitting=true;session.back.disabled=true;
+    const before=new Set(studioProjects.keys());
+    try{
+      await generateMedia(session.kind);
+      const created=[...studioProjects.values()].some(p=>!before.has(p.id)&&(p.groupId||p.id)===(session.project.groupId||session.project.id));
+      if(created&&enhancementSession===session){enhancementSession=null;session.toolbar.remove();for(const [field,listener]of session.listeners)field.removeEventListener('change',listener);}
+    }catch(error){toast(error.message||'Не удалось создать вариант.');}
+    finally{session.submitting=false;session.back.disabled=false;}
+  }
+  function enhancementReturnControl(kind,origin,create,project){
     if(enhancementSession){enhancementSession.toolbar.remove();for(const [field,listener]of enhancementSession.listeners)field.removeEventListener('change',listener);}
     const ids=kind==='video'?['videoQuality','videoRatio','duration']:['imageQuality','imageRatio'];
     const initial=ids.map(id=>$(id).value),toolbar=node('div',{className:'enhancement-return-bar'});
-    const session={origin,toolbar,create,listeners:[]};enhancementSession=session;
-    const back=control('← Вернуться',()=>enhancementReturn(session),'enhancement-return');
-    const sync=()=>{const changed=ids.some((id,index)=>$(id).value!==initial[index]);back.textContent=changed?'✓ Готово':'← Вернуться';back.classList.toggle('is-changed',changed);back.setAttribute('aria-label',changed?'Подтвердить настройки и вернуться':'Вернуться к работе');};
+    const session={kind,project,ids,initial,origin,toolbar,create,listeners:[]};enhancementSession=session;
+    const back=session.back=control('← Вернуться',()=>void confirmEnhancement(session),'enhancement-return'),note=node('small',{},'Новый вариант оплачивается отдельно');
+    const sync=()=>{const changed=ids.some((id,index)=>$(id).value!==initial[index]),regenerate=ids.some((id,index)=>id!==kind+'Ratio'&&$(id).value!==initial[index]);back.textContent=regenerate?'✓ Создать вариант':changed?'✓ Готово':'← Вернуться';note.hidden=!regenerate;back.classList.toggle('is-changed',changed);back.setAttribute('aria-label',regenerate?'Подтвердить создание нового варианта':changed?'Подтвердить настройки и вернуться':'Вернуться к работе');};
     for(const id of ids){const field=$(id);field.addEventListener('change',sync);session.listeners.push([field,sync]);}
-    toolbar.append(back);$('view-'+(kind==='video'?'video':'studio')).querySelector('.media-settings').prepend(toolbar);sync();return session;
+    toolbar.append(back,note);$('view-'+(kind==='video'?'video':'studio')).querySelector('.media-settings').prepend(toolbar);sync();return session;
   }
   function enhancementPrompt(kind){
     const intent=enhancementSources.get(kind),file=kind==='image'?studioImageFile:studioVideoFile;
     return intent&&intent.file===file?intent.prompt:'';
+  }
+  function enhancementVariant(kind){
+    const intent=enhancementSources.get(kind);
+    return enhancementPrompt(kind)&&intent.groupId?{groupId:intent.groupId}:{};
   }
   async function enhanceProject(project){
     const kind=project.kind,view=kind==='video'?'video':'studio',create=$(kind==='video'?'makeVideo':'makeImage');
@@ -282,7 +313,7 @@
     openActionStudio(kind);
     selectValue(kind+'Ratio',project.ratio||(kind==='video'?'16:9':'1:1'));
     selectValue(kind+'Quality',project.quality||'fhd');if(kind==='video')selectValue('duration',project.duration||4);
-    const session=enhancementReturnControl(kind,origin,create);
+    const session=enhancementReturnControl(kind,origin,create,project);
     enhancementSources.delete(kind);
     const prompt=$(kind+'Prompt');prompt.value='';prompt.dispatchEvent(new Event('input',{bubbles:true}));
     revealActionSettings(kind);create.disabled=true;
@@ -292,7 +323,7 @@
       create.disabled=false;
       const attached=kind==='video'?(clearVideoIdentity(),setStudioVideo(item.file)):setStudioPhoto(item.file);
       if(attached===false)throw Error('Оригинал не удалось добавить. Проверь размер и формат файла.');
-      enhancementSources.set(kind,{file:item.file,prompt:kind==='video'?'Улучши качество этого видео. Сохрани лица, композицию и цвета, добавь чёткость и плавность движения.':'Улучши качество этого фото. Сохрани лица, композицию, цвета и детали. Добавь естественную чёткость и убери шум.'});
+      enhancementSources.set(kind,{file:item.file,groupId:project.groupId||project.id,prompt:kind==='video'?'Улучши качество этого видео. Сохрани лица, композицию и цвета, добавь чёткость и плавность движения.':'Улучши качество этого фото. Сохрани лица, композицию, цвета и детали. Добавь естественную чёткость и убери шум.'});
       // Preserve any quality/format choices made while the file was loading.
       revealActionSettings(kind);
     }finally{if(enhancementSession===session)create.disabled=false;}
@@ -469,7 +500,7 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){galleryAttempts.clear();scheduleGallery();}});window.addEventListener('online',()=>{galleryAttempts.clear();scheduleGallery();});
   function observeGallery(){const grid=document.getElementById('studioReadyList');if(grid){new MutationObserver(repairReadyGallery).observe(grid,{childList:true});repairReadyGallery();}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observeGallery,{once:true});else observeGallery();
-  window.anisProjectActions={enhancementPrompt,createControls,normalizeBlob,saveMedia,saveProject,showMedia,getMedia,prepareDownload,retryResult,showLoadError,ensureImagePreview,ensureProjectPreview,downloadMediaBlob,restorePreviews,resultPreview,refreshGallery:scheduleGallery};
+  window.anisProjectActions={enhancementVariant,enhancementPrompt,createControls,normalizeBlob,saveMedia,saveProject,showMedia,getMedia,prepareDownload,retryResult,showLoadError,ensureImagePreview,ensureProjectPreview,downloadMediaBlob,restorePreviews,resultPreview,refreshGallery:scheduleGallery};
 })();
 
 
