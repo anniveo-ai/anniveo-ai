@@ -4830,18 +4830,18 @@ function renderProjectRoom(){
  updateProjectDock();persistStudioProjects();const p=studioProjects.get(selectedStudioProject);if(!p)return;
  $('mediaResultDialog').dataset.kind=p.kind;$('mediaResultTitle').textContent=p.status==='completed'?projectLabel(p)+' готово':projectLabel(p)+' · в работе';
  $('projectStageStatus').textContent=projectStatusLabel(p);$('projectStagePrompt').textContent=p.prompt||'Созданный проект';
- const ready=p.status==='completed'&&p.media;const key=p.id+':'+p.status+':'+(p.media?.url||'');
+ const ready=p.status==='completed'&&p.media;const key=p.id+':'+p.status+':'+(p.media?.url||p.resultUrl||'');
  if(key!==workroomRenderKey){
   workroomRenderKey=key;const stage=$('mediaResultPreview');stage.querySelector('video')?.pause();stage.replaceChildren();
   if(ready){const preview=document.createElement(p.kind==='video'?'video':'img');preview.src=p.media.url;if(p.kind==='video'){preview.controls=true;preview.playsInline=true;}else preview.alt='Готовый результат';stage.append(preview);generatedMedia[p.kind]=p.media;activeGeneratedKind=p.kind;}
   else if(p.status==='completed'&&p.resultUrl){
-   if(p.kind==='image'&&!p.region){const preview=document.createElement('img');preview.src=p.resultUrl;preview.alt='Готовое фото';preview.decoding='async';stage.append(preview);}
+   if(!p.region){const preview=document.createElement(p.kind==='video'?'video':'img');preview.src=p.resultUrl;if(p.kind==='video'){preview.controls=true;preview.playsInline=true;preview.preload='metadata';}else{preview.alt='Готовое фото';preview.decoding='async';}stage.append(preview);}
    else{const button=document.createElement('button');button.className='project-load-result';button.textContent=p.kind==='image'?'Загрузить фото':'Загрузить видео';button.onclick=()=>void loadStudioProjectResult(p);stage.append(button);}
   }
   else if(p.status==='failed'||p.status==='unknown'){const note=document.createElement('div');note.className='project-error';note.textContent=p.error||'Проверь готовность проекта.';const retry=document.createElement('button');retry.className='profile-dialog-action';retry.textContent='Проверить проект';retry.onclick=()=>void watchMediaJob(p.kind,p.id);note.append(retry);stage.append(note);}
   else{const scene=document.createElement('div');scene.className='project-creation-scene';scene.innerHTML='<div class="creation-orbits"><i></i><i></i><span>✦</span></div><strong>Идея становится '+(p.kind==='video'?'историей':'изображением')+'</strong><small>Можно свернуть окно. Мы продолжим работу.</small><div class="creation-signal"><i></i><i></i><i></i></div>';stage.append(scene);}
  }
- $('projectReadyActions').hidden=!(ready||p.status==='completed'&&p.kind==='image'&&p.resultUrl&&!p.region);$('mediaResultEdit').hidden=p.kind!=='image';
+ $('projectReadyActions').hidden=!(ready||p.status==='completed'&&p.resultUrl&&!p.region);$('mediaResultEdit').hidden=p.kind!=='image';
  $('mediaResultHelp').textContent=ready?'На iPhone: «Поделиться» → сохранить в Фото.':'Новый вариант создаётся отдельно: уже отправленный запрос продолжает работу.';
  const family=projectFamily(p);$('projectAgentSend').disabled=!p.prompt;$('projectVariantCount').textContent=family.length+' '+(family.length===1?'вариант':'вариантов');
  const cards=$('projectVariantCards');cards.replaceChildren();

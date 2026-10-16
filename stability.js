@@ -83,7 +83,7 @@
   await saveDurable();
   try{return await launchOriginal(p);}finally{void saveDurable();}
  };
- projectStatusLabel=p=>p.loading?'Загружаем готовый файл':({queued:'Ждём свободное место',submitting:p.sourceFile?'Загружаем твои материалы':'Отправляем описание',creating:'Подтверждаем приём заказа',pending:'Задание принято · ждём очередь ИИ',processing:p.kind==='video'?'ИИ создаёт твоё видео':p.sourceFile?'ИИ редактирует твоё фото':'ИИ создаёт твоё фото',completed:'Готово · можно сохранить',failed:'Не удалось создать',unknown:'Нужно проверить готовность'})[p.status]||'Проверяем проект';
+ projectStatusLabel=p=>p.loading?(p.kind==='video'?'Видео':'Фото')+' готово · подготавливаем сохранение':({queued:'Ждём свободное место',submitting:p.sourceFile?'Загружаем твои материалы':'Отправляем описание',creating:'Подтверждаем приём заказа',pending:'Задание принято · ждём очередь ИИ',processing:p.kind==='video'?'ИИ создаёт твоё видео':p.sourceFile?'ИИ редактирует твоё фото':'ИИ создаёт твоё фото',completed:'Готово · можно сохранить',failed:'Не удалось создать',unknown:'Нужно проверить готовность'})[p.status]||'Проверяем проект';
  const renderRoomOriginal=renderProjectRoom;
  const variantsText=n=>n+' '+(n%10===1&&n%100!==11?'вариант':n%10>=2&&n%10<=4&&(n%100<12||n%100>14)?'варианта':'вариантов');
  const studioNav=document.querySelector('#bottomNav [data-tab="studio"]'),studioNavIcon=studioNav.querySelector('span');
@@ -208,7 +208,6 @@
   }
   const addIdea=button('+',()=>$('projectAgentIdea').focus({preventScroll:false}));addIdea.className='project-variant-add';addIdea.setAttribute('aria-label','Добавить идею для нового варианта');cards.append(addIdea);
   $('mediaResultTitle').textContent=projectLabel(p)+(p.status==='completed'?' готово':p.status==='failed'?' · ошибка':p.status==='unknown'?' · проверка':' · в работе');
-  $('mediaResultOpen').textContent=p.kind==='video'?'Открыть видео':'Открыть фото';
   if(p.status==='completed')$('mediaResultHelp').textContent=(p.outputWidth&&p.outputHeight?p.outputWidth+'×'+p.outputHeight+' пикс. · ':'')+(p.resolutionWarning||'Фото и видео открываются с предпросмотром. На iPhone: «Сохранить» → «Сохранить изображение» или «Сохранить видео» в системном меню.');
   let steps=$('anisProjectSteps');if(!steps){steps=el('div',{id:'anisProjectSteps',className:'anis-steps','aria-hidden':'true'});for(let i=0;i<4;i++)steps.append(el('span'));$('projectStageStatus').after(steps);}
   const step=p.status==='completed'?4:p.loading?3:['pending','processing'].includes(p.status)?2:['submitting','creating'].includes(p.status)?1:0;
