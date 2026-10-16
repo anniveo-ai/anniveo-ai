@@ -38,6 +38,11 @@ async function processMediaNotifications(env){
   try{if(row.status!=='completed'){const data=await polzaMediaRequest(env,'/'+encodeURIComponent(row.provider_id));await updatePremiumJob(env,row,data);if(data.status!=='completed')return;}await notifyReadyMedia(env,row);}catch{console.error('Background project check failed',{jobId:row.id});}
  }));
 }
+async function reconcileMediaBilling(env){
+ if(!env.DB)return;
+ const pending=await env.DB.prepare("SELECT j.* FROM media_jobs j JOIN media_job_charges c ON c.job_id=j.id AND c.user_id=j.user_id WHERE c.state='reserved' ORDER BY j.created_at LIMIT 8").all();
+ for(const row of pending.results||[]){try{if(['completed','failed','cancelled'].includes(row.status))await settleMediaCoins(env,row.user_id,row.id);else if(row.provider_id&&env.POLZA_API_KEY)await updatePremiumJob(env,row,await polzaMediaRequest(env,'/'+encodeURIComponent(row.provider_id)));}catch{console.error('Billing check deferred',{jobId:row.id});}}
+}
 async function improveCreationPrompt(env,body){
  const text=String(body.prompt||'').trim(),kind=body.kind==='video'?'видео':'фото';if(text.length<3||text.length>1200)throw Error('Напиши идею: от 3 до 1200 символов.');
  const detail=String(body.details||'').trim().slice(0,800);
@@ -56,20 +61,39 @@ async function polzaMediaRequest(env,path,body){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);
  try{
   const response=await fetch('https://polza.ai/api/v1/media'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+env.POLZA_API_KEY,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:controller.signal});
-  if(!response.ok){await response.body?.cancel();const error=Error(premiumError(response.status));error.status=response.status===402?402:502;throw error;}
+  if(!response.ok){await response.body?.cancel();const error=Error(premiumError(response.status));error.status=response.status===402?402:502;error.definitive=[400,401,402,403,404,413,422].includes(response.status);throw error;}
   return await response.json();
  }finally{clearTimeout(timer);}
 }
-function publicMediaJob(row){return {jobId:row.id,groupId:row.group_id||row.id,kind:row.kind,status:row.status,prompt:row.prompt||'',quality:row.quality||'fast',ratio:row.ratio||'1:1',duration:row.duration||4,createdAt:row.created_at||null,expiresAt:row.created_at?new Date(Date.parse(row.created_at.replace(' ','T')+'Z')+7*86400000).toISOString():null,region:row.region_json?JSON.parse(row.region_json):null,...(row.status==='completed'?{url:row.result_url}:{}),...(row.error?{error:row.error}:{})};}
+function mediaPrice(env,body){
+ if(!env.MEDIA_PRICES_JSON)return {amount:0,currency:'ANI',enabled:false};
+ let prices;try{prices=JSON.parse(env.MEDIA_PRICES_JSON);}catch{throw Error('Тарифы временно недоступны.');}
+ const key=[body.kind,body.quality,body.kind==='video'?Number(body.duration||4):0].join(':'),amount=prices[key];
+ if(!Number.isSafeInteger(amount)||amount<=0||amount>1000000)throw Error('Для этих настроек тариф пока не задан.');return {amount,currency:'ANI',enabled:true};
+}
+async function reserveMediaCoins(env,userId,jobId,amount){
+ if(!amount)return;
+ const result=await env.DB.prepare("INSERT OR IGNORE INTO media_job_charges(job_id,user_id,amount,state) SELECT ?,?,?,'reserved' WHERE EXISTS(SELECT 1 FROM media_jobs WHERE id=? AND user_id=? AND status='creating') AND COALESCE((SELECT SUM(r.coins) FROM payment_receipts r LEFT JOIN payment_refunds f ON f.charge_id=r.charge_id AND f.order_id=r.order_id WHERE r.user_id=? AND COALESCE(r.refunded_at,f.refunded_at) IS NULL),0)-COALESCE((SELECT SUM(amount) FROM media_job_charges WHERE user_id=? AND state IN ('reserved','charged')),0)>=?").bind(jobId,String(userId),amount,jobId,String(userId),String(userId),String(userId),amount).run();
+ if(!result.meta?.changes){const existing=await env.DB.prepare('SELECT amount,state FROM media_job_charges WHERE job_id=? AND user_id=?').bind(jobId,String(userId)).first();if(existing?.state==='reserved'&&existing.amount===amount)return;const error=Error('Недостаточно аниумов. Платный запрос не отправлен.');error.status=402;throw error;}
+}
+async function settleMediaCoins(env,userId,jobId){
+ await env.DB.prepare("UPDATE media_job_charges SET state=CASE WHEN (SELECT status FROM media_jobs WHERE id=? AND user_id=?)='completed' THEN 'charged' ELSE 'refunded' END,updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND user_id=? AND state='reserved' AND EXISTS(SELECT 1 FROM media_jobs WHERE id=? AND user_id=? AND status IN ('completed','failed','cancelled'))").bind(jobId,String(userId),jobId,String(userId),jobId,String(userId)).run();
+}
+async function billedMediaJob(env,row){
+ const charge=await env.DB.prepare('SELECT amount,state FROM media_job_charges WHERE job_id=? AND user_id=?').bind(row.id,String(row.user_id)).first();return publicMediaJob({...row,billing_amount:charge?.amount||0,billing_state:charge?.state||'not_charged'});
+}
+function publicMediaJob(row){return {jobId:row.id,groupId:row.group_id||row.id,kind:row.kind,status:row.status,prompt:row.prompt||'',quality:row.quality||'fast',ratio:row.ratio||'1:1',duration:row.duration||4,createdAt:row.created_at||null,expiresAt:row.created_at?new Date(Date.parse(row.created_at.replace(' ','T')+'Z')+7*86400000).toISOString():null,region:row.region_json?JSON.parse(row.region_json):null,...(row.billing_state?{billing:{state:row.billing_state,amount:row.billing_amount||0,currency:'ANI'}}:{}),...(row.status==='completed'?{url:row.result_url}:{}),...(row.error?{error:row.error}:{})};}
 function providerResultUrl(data){const value=data?.data?.url||data?.data?.[0]?.url||data?.output?.url;try{const u=new URL(value);return u.protocol==='https:'?u.href:null;}catch{return null;}}
 async function updatePremiumJob(env,row,data){
  const status=['pending','processing','completed','failed','cancelled'].includes(data.status)?data.status:'processing';
  const url=status==='completed'?providerResultUrl(data):null;
  if(status==='completed'&&!url)throw Error('Сервис не вернул файл результата. Проверь готовность позже.');
  const error=status==='failed'||status==='cancelled'?'Сервис не завершил генерацию. Попробуй другой запрос.':null;
- if(status!==row.status||url!==(row.result_url||null)||error!==(row.error||null))await env.DB.prepare('UPDATE media_jobs SET status=?,result_url=?,error=? WHERE id=? AND user_id=?').bind(status,url,error,row.id,row.user_id).run();
- if(status==='completed')await env.DB.prepare('INSERT OR IGNORE INTO usage_events(id,user_id,kind) VALUES(?,?,?)').bind('media:'+row.id,row.user_id,row.kind).run();
- return publicMediaJob({...row,status,result_url:url,error});
+ if(status!==row.status||url!==(row.result_url||null)||error!==(row.error||null))await env.DB.prepare("UPDATE media_jobs SET status=?,result_url=?,error=? WHERE id=? AND user_id=? AND status NOT IN ('completed','failed','cancelled')").bind(status,url,error,row.id,row.user_id).run();
+ const current=await env.DB.prepare('SELECT * FROM media_jobs WHERE id=? AND user_id=?').bind(row.id,row.user_id).first();
+ await settleMediaCoins(env,row.user_id,row.id);
+ if(current.status==='completed')await env.DB.prepare('INSERT OR IGNORE INTO usage_events(id,user_id,kind) VALUES(?,?,?)').bind('media:'+row.id,row.user_id,row.kind).run();
+ return billedMediaJob(env,current);
 }
 function choosePremiumMedia(body,file){
  const kind=body.kind,quality=body.quality;
@@ -96,7 +120,8 @@ function choosePremiumMedia(body,file){
 }
 async function getMediaHistory(db,userId,kind){
  if(!['image','video'].includes(kind))throw Error('Выбери фото или видео.');
- const result=await db.prepare('SELECT * FROM media_jobs WHERE user_id=? AND kind=? ORDER BY created_at DESC,id DESC LIMIT 50').bind(userId,kind).all();
+ await db.prepare("UPDATE media_job_charges SET state=CASE WHEN (SELECT status FROM media_jobs WHERE id=job_id AND user_id=media_job_charges.user_id)='completed' THEN 'charged' ELSE 'refunded' END,updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND state='reserved' AND EXISTS(SELECT 1 FROM media_jobs WHERE id=job_id AND user_id=media_job_charges.user_id AND status IN ('completed','failed','cancelled'))").bind(String(userId)).run();
+ const result=await db.prepare("SELECT j.*,COALESCE(c.amount,0) AS billing_amount,COALESCE(c.state,'not_charged') AS billing_state FROM media_jobs j LEFT JOIN media_job_charges c ON c.job_id=j.id AND c.user_id=j.user_id WHERE j.user_id=? AND j.kind=? ORDER BY j.created_at DESC,j.id DESC LIMIT 50").bind(userId,kind).all();
  return {items:(result.results||[]).map(row=>{const expired=Date.now()-Date.parse(row.created_at.replace(' ','T')+'Z')>7*86400000;const data=publicMediaJob(row);if(expired)delete data.url;return {...data,expired};})};
 }
 async function createPremiumMedia(env,userId,body,file,identityFile=null){
@@ -112,13 +137,14 @@ async function createPremiumMedia(env,userId,body,file,identityFile=null){
  if(identityFile&&(kind!=='video'||typeof identityFile==='string'||!identityFile.size||identityFile.size>10*1024*1024||!['image/jpeg','image/png','image/webp'].includes(identityFile.type)))throw Error('Добавь фото лица JPEG, PNG или WebP до 10 МБ.');
  if((file?.size||0)+(identityFile?.size||0)>25*1024*1024)throw Error('Общий размер файлов — до 25 МБ.');
  const existing=await env.DB.prepare('SELECT * FROM media_jobs WHERE id=? AND user_id=?').bind(id,userId).first();
- if(existing)return publicMediaJob(existing);
+ if(existing){await settleMediaCoins(env,userId,id);return billedMediaJob(env,existing);}
+ const price=mediaPrice(env,body);if(price.enabled&&Number(body.acceptedPrice)!==price.amount){const error=Error('Стоимость изменилась. Подтверди актуальную цену перед созданием.');error.status=409;throw error;}
  const groupId=String(body.groupId||id);
  if(groupId!==id){const root=await env.DB.prepare('SELECT * FROM media_jobs WHERE id=? AND user_id=?').bind(groupId,userId).first();if(!root||root.kind!==kind)throw Error('Исходный проект не найден. Открой его в своих проектах.');}
  // Reserve before the paid request. Repeated clicks never create another provider job.
- const reserve=await env.DB.prepare("INSERT OR IGNORE INTO media_jobs(id,user_id,kind,model,status) SELECT ?,?,?,?,'creating' WHERE (SELECT COUNT(*) FROM media_jobs WHERE user_id=? AND status IN ('creating','pending','processing') AND created_at>datetime('now','-1 day'))<2").bind(id,userId,kind,model,userId).run();
+ const reserve=await env.DB.prepare("INSERT OR IGNORE INTO media_jobs(id,user_id,kind,model,status) SELECT ?,?,?,?,'creating' WHERE (SELECT COUNT(*) FROM media_jobs WHERE user_id=? AND status IN ('creating','pending','processing','unknown') AND created_at>datetime('now','-1 day'))<2").bind(id,userId,kind,model,userId).run();
  if(!reserve.meta?.changes){const row=await env.DB.prepare('SELECT * FROM media_jobs WHERE id=? AND user_id=?').bind(id,userId).first();if(row)return publicMediaJob(row);throw Error('Уже обрабатываются два проекта. Дождись готовности.');}
- const row={id,user_id:userId,kind,model,status:'creating',group_id:groupId};
+ const row={id,user_id:userId,kind,model,status:'creating',group_id:groupId};let providerAttempted=false;
  try{
   await env.DB.prepare('UPDATE media_jobs SET group_id=? WHERE id=? AND user_id=?').bind(groupId,id,userId).run();
   let region=null;
@@ -131,22 +157,26 @@ async function createPremiumMedia(env,userId,body,file,identityFile=null){
   else{input.duration=String(duration);input.resolution=selection.resolution||config.resolution;if(model!=='gemini-omni-video')input.generate_audio=false;}
   if(file){const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));input[file.type.startsWith('image/')?'images':'videos']=[{type:'base64',data:'data:'+file.type+';base64,'+btoa(binary)}];}
   if(identityFile){const bytes=new Uint8Array(await identityFile.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));input.images=[...(input.images||[]),{type:'base64',data:'data:'+identityFile.type+';base64,'+btoa(binary)}];}
+  await reserveMediaCoins(env,userId,id,price.amount);providerAttempted=true;
   const data=await polzaMediaRequest(env,'',{model,input,async:true,user:'anis-'+userId});
   if(typeof data.id!=='string'||!/^[\w-]{1,200}$/.test(data.id))throw Error('Сервис не подтвердил номер проекта.');
   await env.DB.prepare('UPDATE media_jobs SET provider_id=? WHERE id=? AND user_id=?').bind(data.id,id,userId).run();
   return await updatePremiumJob(env,row,data);
  }catch(error){
   // A network timeout can occur after the provider accepted a paid request. Never retry it automatically.
-  const message=error.name==='AbortError'||error instanceof TypeError?'Не удалось подтвердить создание. Новый платный запрос автоматически не отправлен. Проверь историю Polza.':error.message;
-  await env.DB.prepare("UPDATE media_jobs SET status='failed',error=? WHERE id=? AND user_id=?").bind(message,id,userId).run();
+  const uncertain=providerAttempted&&!error.definitive;
+  const message=uncertain?'Не удалось подтвердить результат. Не запускай повторно. Поддержка проверит запрос по номеру '+id+'.':error.message;
+  await env.DB.prepare("UPDATE media_jobs SET status=?,error=? WHERE id=? AND user_id=? AND status NOT IN ('completed','failed','cancelled')").bind(uncertain?'unknown':'failed',message,id,userId).run();
+  await settleMediaCoins(env,userId,id);
+  if(uncertain)return billedMediaJob(env,await env.DB.prepare('SELECT * FROM media_jobs WHERE id=? AND user_id=?').bind(id,userId).first());
   error.message=message;throw error;
  }
 }
 async function readPremiumMedia(env,userId,id){
  const row=await env.DB.prepare('SELECT * FROM media_jobs WHERE id=? AND user_id=?').bind(String(id||''),userId).first();
  if(!row){const error=Error('Проект не найден. Можно создать новый.');error.status=404;throw error;}
- if(['completed','failed','cancelled'].includes(row.status))return publicMediaJob(row);
- if(!row.provider_id)return {...publicMediaJob(row),error:'Подтверждаем создание проекта. Не запускай его повторно.'};
+ if(['completed','failed','cancelled'].includes(row.status)){await settleMediaCoins(env,userId,row.id);return billedMediaJob(env,row);}
+ if(!row.provider_id)return {...await billedMediaJob(env,row),error:row.status==='unknown'?'Результат не подтверждён. Не запускай повторно. Обратись в поддержку с номером '+row.id+'.':'Подтверждаем создание проекта. Не запускай его повторно.'};
  const data=await polzaMediaRequest(env,'/'+encodeURIComponent(row.provider_id));return updatePremiumJob(env,row,data);
 }
 
@@ -334,7 +364,8 @@ async function paymentWebhookSecret(env) {
 async function readWallet(db, userId) {
   const balance = await db.prepare('SELECT COALESCE(SUM(CASE WHEN COALESCE(r.refunded_at,f.refunded_at) IS NULL THEN r.coins ELSE 0 END),0) AS balance FROM payment_receipts r LEFT JOIN payment_refunds f ON f.charge_id=r.charge_id AND f.order_id=r.order_id WHERE r.user_id=?').bind(userId).first();
   const history = await db.prepare('SELECT r.order_id,r.coins,r.stars,r.paid_at,COALESCE(r.refunded_at,f.refunded_at) AS refunded_at FROM payment_receipts r LEFT JOIN payment_refunds f ON f.charge_id=r.charge_id AND f.order_id=r.order_id WHERE r.user_id=? ORDER BY r.paid_at DESC LIMIT 30').bind(userId).all();
-  return { balance: Number(balance.balance), packs: STAR_PACKS, history: history.results };
+  const spent=await db.prepare("SELECT COALESCE(SUM(CASE WHEN state IN ('reserved','charged') THEN amount ELSE 0 END),0) AS unavailable,COALESCE(SUM(CASE WHEN state='reserved' THEN amount ELSE 0 END),0) AS reserved FROM media_job_charges WHERE user_id=?").bind(String(userId)).first();
+  return { balance: Math.max(0,Number(balance.balance)-Number(spent.unavailable)), reserved:Number(spent.reserved), packs: STAR_PACKS, history: history.results };
 }
 
 async function createWalletInvoice(env, userId, packId) {
@@ -1436,7 +1467,7 @@ async function proxyVideo(form, apiKey) {
 }
 
 export default {
-  async scheduled(controller,env,ctx){ctx.waitUntil(Promise.allSettled([processMediaNotifications(env),cleanupMediaExports(env)]));},
+  async scheduled(controller,env,ctx){ctx.waitUntil(Promise.allSettled([processMediaNotifications(env),cleanupMediaExports(env),reconcileMediaBilling(env)]));},
   async fetch(request, env, ctx) {
     if(['GET','HEAD'].includes(request.method)&&new URL(request.url).pathname.startsWith('/media-playback/'))return serveMediaPlayback(request,env);
     if(['GET','HEAD'].includes(request.method)&&new URL(request.url).pathname.startsWith('/media-download/'))return downloadMediaExport(request,env);
@@ -1574,6 +1605,9 @@ export default {
           const data=action.startsWith('chat-thread-')?await handleChatThreadAction(env.DB,userId,body):action==='notification-get'?await readNotificationPreference(env.DB,userId):action==='notification-set'?await setNotificationPreference(env.DB,userId,body.enabled):await improveCreationPrompt(env,body);
           return json(data,200,headers);
         }catch(error){return json({error:error.message},error.status||400,headers);}
+      }
+      if(action==='media-quote'){
+        try{return json(mediaPrice(env,body),200,headers);}catch(error){return json({error:error.message},400,headers);}
       }
       if(action==='media-playback'){
         try{return json(await prepareMediaPlayback(env,userId,body.jobId,request.url),200,headers);}catch(error){return json({error:error.message},error.status||502,headers);}

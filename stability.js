@@ -127,12 +127,16 @@
   if(creationLock||lastCreation.fingerprint===stamp&&now-lastCreation.time<2500){if(lastCreation.id)openProjectRoom(lastCreation.id);return;}
   creationLock=true;lastCreation={fingerprint:stamp,time:now,id:null};
   try{
+   if(snapshot.prompt.trim().length>=3&&snapshot.prompt.trim().length<=1200){
+    const quote=await mediaJSON({action:'media-quote',kind:snapshot.kind,quality:snapshot.quality,duration:snapshot.duration});
+    if(quote.enabled){const text='Создать '+(snapshot.kind==='video'?'видео':'фото')+' за '+quote.amount+' аниумов? При подтверждённой ошибке создания сумма вернётся на баланс.';const confirmed=typeof tg!=='undefined'&&tg?.showConfirm?await new Promise(resolve=>tg.showConfirm(text,resolve)):window.confirm(text);if(!confirmed)return;snapshot={...snapshot,acceptedPrice:quote.amount};}
+   }
    if(snapshot.kind==='video'&&['qhd','uhd'].includes(snapshot.quality)&&snapshot.sourceFile?.type.startsWith('video/')){const source=await window.anisMediaQuality.inspectVideo(snapshot.sourceFile);if(source.duration>10.1){toast('Для 2K и 4K добавь видео до 10 секунд. Можно сначала обрезать ролик.');return;}}
    // Original creator adds the ID synchronously. Pump is held until the snapshot is committed.
    const held=projectPumpBusy,existing=new Set(studioProjects.keys());projectPumpBusy=true;
    try{await createOriginal(snapshot);if(!existing.has(selectedStudioProject)&&studioProjects.has(selectedStudioProject))lastCreation.id=selectedStudioProject;}finally{projectPumpBusy=held;}
    if(lastCreation.id){await saveDurable();consumeStudioDraft(snapshot);void pumpStudioQueue();}
-  }finally{creationLock=false;}
+  }finally{creationLock=false;if(!lastCreation.id)lastCreation={fingerprint:'',time:0,id:null};}
  };
  const launchOriginal=launchStudioProject;
  launchStudioProject=async function(p){
@@ -352,18 +356,19 @@
  state.openReadyProjects=()=>openView('ready');
  let readyRenderKey='';
  function renderReadyProjects(){
-  const projects=[...studioProjects.values()].filter(p=>!p.removedFromVariants).sort((a,b)=>(a.created||0)-(b.created||0)||(a.order||0)-(b.order||0)),key=[state.restoring,state.historyLoading,state.historyLoaded,state.historyError,...projects.map(p=>[p.id,p.groupId,p.status,p.loading,p.error,p.previewDataUrl?'preview':p.posterDataUrl?'poster':previewSource(p)?.url,p.prompt].join(':'))].join('|');if(readyGrid.childElementCount&&key===readyRenderKey)return;readyRenderKey=key;
+  const projects=[...studioProjects.values()].filter(p=>!p.removedFromVariants).sort((a,b)=>(a.created||0)-(b.created||0)||(a.order||0)-(b.order||0)),key=[state.restoring,state.historyLoading,state.historyLoaded,state.historyError,...projects.map(p=>[p.id,p.groupId,p.status,p.loading,p.error,p.previewDataUrl?'preview':p.posterDataUrl?'poster':previewSource(p)?.url,p.prompt,p.billing?.state,p.billing?.amount].join(':'))].join('|');if(readyGrid.childElementCount&&key===readyRenderKey)return;readyRenderKey=key;
   const existing=new Map([...readyGrid.querySelectorAll('.studio-ready-project')].map(card=>[card.dataset.projectId,card])),next=[];
   const groups=new Map();for(const p of projects){const id=p.groupId||p.id;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(p);}
   for(const family of [...groups.values()].reverse()){
    const first=family[0],last=family.at(-1),display=[...family].reverse().find(p=>p.status==='completed'&&(p.media||p.resultUrl))||last;
-   const cardKey=[display.id,display.status,last.status,!!last.loading,first.prompt,family.length,display.previewDataUrl||display.posterDataUrl||''].join('|'),old=existing.get(display.id);
+   const cardKey=[display.id,display.status,last.status,!!last.loading,first.prompt,family.length,display.previewDataUrl||display.posterDataUrl||'',display.billing?.state,display.billing?.amount].join('|'),old=existing.get(display.id);
    if(old?.dataset.renderKey===cardKey){next.push(old);continue;}
    const card=el('article',{className:'studio-template-card studio-ready-card studio-ready-project','data-project-id':display.id});
    card.dataset.renderKey=cardKey;
    const preview=button('',()=>{openProjectRoom(display.id);if(display.kind==='image'&&display.status==='completed'&&!display.media&&display.resultUrl)void loadStudioProjectResult(display);});preview.className='studio-ready-preview';preview.setAttribute('aria-label','Открыть '+(display.kind==='video'?'видео':'фото')+' · '+(first.prompt||'Мой проект').slice(0,110));
    const source=previewSource(display);if(display.status==='completed'&&source&&(display.previewDataUrl||display.posterDataUrl))preview.append(previewElement(source));else if(!PROJECT_TERMINAL.includes(display.status))addWorkingPreview(preview,display,true);else preview.append(el('i',{className:'studio-ready-placeholder','aria-hidden':'true'},first.kind==='video'?'▷':'✦'));
    const copy=el('span',{className:'studio-ready-copy'});copy.append(el('small',{},(first.kind==='video'?'Видео':'Фото')+' · '+projectStatusLabel(last)+(family.length>1?' · '+variantsText(family.length):'')),el('strong',{},(first.prompt||'Мой проект').slice(0,110)));preview.append(copy,el('b',{'aria-hidden':'true'},first.kind==='video'?'▷':'↗'));card.append(preview);
+   if(['failed','cancelled','unknown'].includes(display.status)&&display.billing){const billing=display.billing,text=billing.state==='refunded'?'Аниумы возвращены на баланс':billing.state==='not_charged'?'Аниумы не списаны':billing.state==='reserved'?'Аниумы в резерве · проверяем результат':null;if(text)copy.append(el('small',{className:'ready-billing-status'},text));}
    if(display.status==='completed'&&source)card.append(window.anisProjectActions.createControls(display));
    else if(PROJECT_TERMINAL.includes(display.status)){
     const actions=window.anisProjectActions.createControls(display,{deleteOnly:true});actions.classList.add('ready-project-corner-actions');card.append(actions);
@@ -420,7 +425,7 @@
     for(const row of [...rows].reverse()){
      if(!row.jobId)continue;
      let p=studioProjects.get(row.jobId);if(!p){p={id:row.jobId,kind,order:++projectCounter,created:Date.parse(row.createdAt?.replace(' ','T')+'Z')||Date.now(),prompt:row.prompt,quality:row.quality,ratio:row.ratio,duration:row.duration};studioProjects.set(p.id,p);}
-     Object.assign(p,{groupId:row.groupId||p.groupId||p.id,status:p.media?'completed':row.status,resultUrl:row.url||p.resultUrl,expiresAt:row.expiresAt||p.expiresAt,error:row.error,region:p.region||row.region});
+     Object.assign(p,{groupId:row.groupId||p.groupId||p.id,status:p.media?'completed':row.status,resultUrl:row.url||p.resultUrl,expiresAt:row.expiresAt||p.expiresAt,error:row.error,region:p.region||row.region,billing:row.billing||p.billing});
     }
    }
    try{await window.anisProjectActions.restorePreviews([...studioProjects.values()]);}catch{}state.historyLoading=false;state.historyLoaded=!failure;

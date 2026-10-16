@@ -9,6 +9,7 @@ const db={prepare(sql){return{bind(...params){return{
   async all(){return{results:raw.prepare(sql).all(...params)}},
   async run(){const r=raw.prepare(sql).run(...params);return{meta:{changes:Number(r.changes)}}}
 }}}},async batch(ops){raw.exec('BEGIN');try{const r=[];for(const op of ops)r.push(await op.run());raw.exec('COMMIT');return r}catch(e){raw.exec('ROLLBACK');throw e}}};
+raw.exec(fs.readFileSync('media-billing.sql','utf8'));
 const calls=[];
 const context=vm.createContext({crypto:require('node:crypto').webcrypto,TextEncoder,AbortSignal,Response,Request,console,
  fetch:async(url,opts)=>{const method=url.split('/').pop();const body=JSON.parse(opts.body);calls.push({method,body});return Response.json({ok:true,result:method==='getWebhookInfo'?{url:'https://anniveo-ai-api.yaylaevismail.workers.dev/telegram/payments'}:method==='createInvoiceLink'?'https://t.me/$test':true})}});

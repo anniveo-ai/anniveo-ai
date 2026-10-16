@@ -248,16 +248,17 @@
   }
   function createControls(project,{deleteOnly=false}={}){
     const rail=node('div',{className:'ready-project-actions'});rail.setAttribute('role','group');rail.setAttribute('aria-label','Действия с '+(project.kind==='video'?'видео':'фото'));rail.dataset.projectId=project.id;
-    for(const [action,label]of (deleteOnly?[['delete','Удалить']]:[['download','Скачать'],['edit','Изменить'],['enhance','Улучшить'],['crop','Обрезать'],['delete','Удалить'],['similar','Создать похожее']])){
+    for(const [action,label]of (deleteOnly?(['failed','cancelled'].includes(project.status)?[['delete','Удалить'],['revise','Изменить запрос']]:[['delete','Удалить']]):[['download','Скачать'],['edit','Изменить'],['enhance','Улучшить'],['crop','Обрезать'],['delete','Удалить'],['similar','Создать похожее']])){
       const b=control('',async()=>{
         if(action==='delete'){window.anisStability.requestWorkDeletion(project);return;}
+        if(action==='revise'){closeGeneratedMedia();const kind=project.kind;openView(kind==='video'?'video':'studio');if(project.sourceFile)(kind==='video'?setStudioVideo:setStudioPhoto)(project.sourceFile);if(kind==='video'&&project.identityFile)setVideoIdentity(project.identityFile);const idea=$(kind+'Prompt');idea.value=project.prompt||'';idea.dispatchEvent(new Event('input',{bubbles:true}));idea.focus({preventScroll:true});if(project.hasSource&&!project.sourceFile)toast('Добавь исходный файл заново. Новый заказ ещё не создан.');return;}
         b.disabled=true;b.setAttribute('aria-busy','true');
         try{if(action==='download'){await saveProject(project);return;}if(action==='edit'){openProjectRoom(project.id);const idea=$('projectAgentIdea');idea.focus({preventScroll:true});idea.closest('.project-agent').scrollIntoView({block:'center',behavior:'smooth'});return;}if(action==='crop'){await openCrop(project);return;}const item=await getMedia(project);prepareAction(project,item,action);}
         catch(error){if(error.name!=='AbortError')toast(error.message||'Не удалось открыть действие.');}
         finally{b.disabled=false;b.removeAttribute('aria-busy');}
       },'ready-project-action ready-action-'+action);
       b.dataset.action=action;b.setAttribute('aria-label',label+(project.kind==='video'?' видео':' фото'));b.title=label;
-      b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+icons[action]+'</svg>';
+      b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+icons[action==='revise'?'edit':action]+'</svg>';
       b.append(node('span',{},label));rail.append(b);
     }
     return rail;
