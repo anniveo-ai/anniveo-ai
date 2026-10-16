@@ -167,6 +167,36 @@
     }catch(error){if(error.name!=='AbortError'){if(s.project.kind==='video')cropDialog.close();toast(error.message);}}
     finally{if(cropState===s){s.exporting=false;cropSave.disabled=false;for(const input of cropFields.querySelectorAll('input,button'))input.disabled=false;}}
   }
+  // Restore ready results automatically when opening a project, including after app restart.
+  const pendingPreviews=new WeakSet();
+  const originalRoomRender=window.renderProjectRoom;
+  if(typeof originalRoomRender==='function'){
+    window.renderProjectRoom=function(...args){
+      const result=originalRoomRender.apply(this,args);
+      const project=studioProjects.get(selectedStudioProject);
+      if(!project||project.status!=='completed'||project.media||!project.resultUrl)return result;
+      const stage=document.getElementById('mediaResultPreview');
+      if(!stage||pendingPreviews.has(project))return result;
+      pendingPreviews.add(project);
+      const showLoading=()=>{
+        if(selectedStudioProject!==project.id||project.media)return;
+        stage.replaceChildren();
+        const status=node('div',{className:'project-creation-scene'},project.kind==='video'?'Открываем готовое видео…':'Открываем готовое фото…');
+        stage.append(status);
+      };
+      showLoading();
+      Promise.resolve(loadStudioProjectResult(project)).catch(error=>{
+        if(selectedStudioProject!==project.id)return;
+        stage.replaceChildren();
+        const retry=control('Повторить загрузку',()=>{
+          pendingPreviews.delete(project);
+          window.renderProjectRoom();
+        },'project-load-result');
+        stage.append(node('p',{className:'note'},error?.message||'Не удалось открыть файл.'),retry);
+      }).finally(()=>pendingPreviews.delete(project));
+      return result;
+    };
+  }
   window.anisProjectActions={createControls,normalizeBlob,saveMedia,showMedia,getMedia};
 })();
 
