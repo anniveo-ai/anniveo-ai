@@ -108,6 +108,32 @@
     })().finally(()=>videoPreviews.delete(project));videoPreviews.set(project,task);return task;
   }
   const ensureProjectPreview=project=>project.kind==='video'?ensureVideoPoster(project):ensureImagePreview(project);
+  const playbackLinks=new WeakMap();
+  async function playbackSource(project){
+    if(!initData||!project.resultUrl||project.exportJobId&&project.exportJobId!==project.id)return project.media?.url||project.resultUrl;
+    const cached=playbackLinks.get(project);if(cached&&cached.expires>Date.now()+60000)return cached.url;
+    const data=await mediaJSON({action:'media-playback',jobId:project.id},10000);if(new URL(data.url).origin!==new URL(API_URL).origin)throw Error('Некорректный адрес видео.');playbackLinks.set(project,data);return data.url;
+  }
+  function attachVideoPlayback(media,project){
+    let timer,lastTime=0,lastAdvance=Date.now(),wanted=false,recovering=false,recovered=false;
+    const note=text=>{if(!media.isConnected)return;let n=media.parentElement?.querySelector('.project-file-progress');if(!n){n=node('span',{className:'project-file-progress'});n.dataset.projectId=project.id;media.parentElement?.append(n);}n.textContent=text;};
+    const recover=async()=>{
+      if(recovering||recovered||!media.isConnected)return;recovering=true;recovered=true;clearInterval(timer);note('Загружаем видео целиком для просмотра…');
+      const time=media.currentTime||0,resume=wanted;
+      try{await loadStudioProjectResult(project);if(!project.media?.file)throw Error(project.error||'Не удалось загрузить видео.');if(!media.isConnected)return;media.src=project.media.url;media.addEventListener('loadedmetadata',()=>{if(time>0&&time<media.duration)media.currentTime=time;},{once:true});media.load();if(resume)void media.play().catch(()=>{note('Видео загружено. Нажми Play.');});}
+      catch(error){project.error=error.message;if(media.isConnected)showLoadError(project);}
+      finally{recovering=false;}
+    };
+    const monitor=()=>{clearInterval(timer);lastAdvance=Date.now();timer=setInterval(()=>{if(!media.isConnected||media.ended){clearInterval(timer);return;}if(media.currentTime>lastTime+.05){lastTime=media.currentTime;lastAdvance=Date.now();}if(wanted&&!media.ended&&Date.now()-lastAdvance>8000)void recover();},1000);};
+    media.addEventListener('play',()=>{wanted=true;monitor();});
+    media.addEventListener('pause',()=>{wanted=false;if(!recovering)clearInterval(timer);});
+    media.addEventListener('playing',()=>{lastAdvance=Date.now();media.parentElement?.querySelector('.project-file-progress')?.remove();});
+    media.addEventListener('waiting',()=>{if(wanted)note('Буферизация видео…');});
+    media.addEventListener('ended',()=>{clearInterval(timer);media.parentElement?.querySelector('.project-file-progress')?.remove();});
+    media.addEventListener('error',()=>{if(!recovered){void recover();}else if(media.isConnected){project.error='Видео не удалось воспроизвести. Повтори загрузку файла.';showLoadError(project);}});
+    // Obtain an authenticated range-capable URL before loading a remote video.
+    queueMicrotask(()=>{void playbackSource(project).then(source=>{if(!media.isConnected||recovering||recovered)return;if(source){media.src=source;media.load();}}).catch(()=>{if(media.isConnected&&!recovering&&!recovered){media.src=project.media?.url||project.resultUrl;media.load();}});});
+  }
   function resultPreview(project){
     const media=node(project.kind==='video'?'video':'img');media.className='project-result-media';
     media.dataset.projectId=project.id;
@@ -115,14 +141,14 @@
     media.addEventListener(project.kind==='video'?'loadeddata':'load',ready,{once:true});
     if(project.kind==='video'){media.controls=true;media.playsInline=true;media.preload='auto';if(project.posterDataUrl){media.poster=project.posterDataUrl;media.dataset.ready='true';}media.addEventListener('loadedmetadata',ready,{once:true});}
     else{media.alt='Готовое фото';media.decoding='async';}
-    const source=project.media?.url||(project.kind==='image'?project.previewDataUrl:null)||(project.kind==='video'?project.resultUrl:null);if(source)media.src=source;
+    const source=project.media?.url||(project.kind==='image'?project.previewDataUrl:null);if(project.kind==='video')attachVideoPlayback(media,project);else if(source)media.src=source;
     if(project.loading)queueMicrotask(()=>{if(!media.isConnected||!project.loading)return;const note=node('span',{className:'project-file-progress'},'Загружаем оригинал…');note.dataset.projectId=project.id;media.parentElement?.append(note);});
     if(project.kind==='image'&&!project.previewDataUrl&&project.media?.blob){
       void ensureImagePreview(project).then(url=>{if(url&&media.isConnected)media.src=url;}).catch(()=>{});
     }
     let repaired=false;
     media.addEventListener('error',()=>{
-      if(!media.isConnected)return;
+      if(!media.isConnected||project.kind==='video')return;
       if(!repaired&&project.media?.file){repaired=true;if(project.kind==='image'){void ensureImagePreview(project).then(url=>{if(media.isConnected&&url)media.src=url;}).catch(()=>showLoadError(project));return;}project.media.url=URL.createObjectURL(project.media.file);media.src=project.media.url;media.load();return;}
       project.error='Готовый файл не открылся. Повтори загрузку — новый заказ не создаётся.';showLoadError(project);
     });

@@ -179,6 +179,8 @@ async function readMediaPreviews(env,userId,ids){
  return {items:(rows.results||[]).map(row=>{const bytes=row.data instanceof ArrayBuffer?new Uint8Array(row.data):Uint8Array.from(row.data);let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));return {jobId:row.job_id,dataUrl:'data:'+row.mime+';base64,'+btoa(binary)};})};
 }
 async function cleanupMediaExports(env){
+ try{await env.DB.prepare('DELETE FROM media_playback_links WHERE expires<=?').bind(Date.now()).run();}catch{}
+ try{await env.DB.batch([env.DB.prepare('DELETE FROM media_playback_chunks WHERE job_id IN (SELECT job_id FROM media_playback_cache WHERE expires<=?)').bind(Date.now()),env.DB.prepare('DELETE FROM media_playback_cache WHERE expires<=?').bind(Date.now())]);}catch{}
  if(!env.DB)return;
  try{await env.DB.batch([env.DB.prepare('DELETE FROM media_export_chunks WHERE export_id IN (SELECT id FROM media_exports WHERE expires<=?)').bind(Date.now()),env.DB.prepare('DELETE FROM media_exports WHERE expires<=?').bind(Date.now())]);}catch{}
  try{await env.DB.prepare('DELETE FROM media_previews WHERE created_at<?').bind(Date.now()-8*86400000).run();}catch{}
@@ -223,6 +225,35 @@ async function downloadMediaExport(request,env){
  let part=Math.floor(start/MEDIA_EXPORT_CHUNK);
  const body=new ReadableStream({async pull(controller){try{const chunk=await env.DB.prepare('SELECT data FROM media_export_chunks WHERE export_id=? AND part=?').bind(id,part).first();if(!chunk)throw Error('Файл недоступен');const bytes=chunk.data instanceof ArrayBuffer?new Uint8Array(chunk.data):Uint8Array.from(chunk.data),offset=part*MEDIA_EXPORT_CHUNK;controller.enqueue(bytes.slice(Math.max(0,start-offset),Math.min(bytes.length,end-offset+1)));part++;if(part*MEDIA_EXPORT_CHUNK>end)controller.close();}catch(error){controller.error(error);}}});
  return new Response(body,{status,headers});
+}
+// Short-lived, owner-issued playback links support Safari's byte-range requests.
+async function prepareMediaPlayback(env,userId,jobId,origin){
+ const row=await env.DB.prepare('SELECT kind,status,result_url FROM media_jobs WHERE id=? AND user_id=?').bind(String(jobId||''),String(userId)).first();
+ if(!row||row.kind!=='video'||row.status!=='completed'||!row.result_url){const e=Error('Готовое видео не найдено.');e.status=404;throw e;}
+ await env.DB.prepare('CREATE TABLE IF NOT EXISTS media_playback_links(id TEXT PRIMARY KEY,job_id TEXT NOT NULL,user_id TEXT NOT NULL,expires INTEGER NOT NULL)').run();
+ await env.DB.prepare('DELETE FROM media_playback_links WHERE expires<=?').bind(Date.now()).run();
+ const existing=await env.DB.prepare('SELECT id,expires FROM media_playback_links WHERE job_id=? AND user_id=? AND expires>? LIMIT 1').bind(String(jobId),String(userId),Date.now()+60000).first();
+ const expires=existing?.expires||Date.now()+30*60*1000,id=existing?.id||crypto.randomUUID().replace(/-/g,'');
+ if(!existing)await env.DB.prepare('INSERT INTO media_playback_links(id,job_id,user_id,expires) VALUES(?,?,?,?)').bind(id,String(jobId),String(userId),expires).run();
+ return {url:new URL('/media-playback/'+id,origin).href,expires};
+}
+async function serveMediaPlayback(request,env){
+ const id=new URL(request.url).pathname.split('/').at(-1);if(!env.DB||!/^[a-f0-9]{32}$/.test(id))return new Response('Нет доступа',{status:403});
+ let link;try{link=await env.DB.prepare('SELECT job_id,user_id FROM media_playback_links WHERE id=? AND expires>?').bind(id,Date.now()).first();}catch{}if(!link)return new Response('Ссылка просмотра истекла',{status:403});const {job_id:jobId,user_id:userId}=link;
+ const owned=await env.DB.prepare('SELECT kind,status,result_url FROM media_jobs WHERE id=? AND user_id=?').bind(jobId,userId).first();if(!owned||owned.kind!=='video'||owned.status!=='completed')return new Response('Видео не найдено',{status:404});
+ const headers={'Content-Type':'video/mp4','Accept-Ranges':'bytes','Content-Disposition':'inline','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Access-Control-Allow-Origin':'*','Access-Control-Expose-Headers':'Content-Length, Content-Range, Accept-Ranges'};
+ let cached;try{cached=await env.DB.prepare('SELECT size,mime FROM media_playback_cache WHERE job_id=? AND user_id=? AND expires>?').bind(jobId,userId,Date.now()).first();}catch{}
+ const range=request.headers.get('Range');
+ if(cached){
+  let start=0,end=cached.size-1,status=200;
+  if(range){const m=/^bytes=(\d*)-(\d*)$/.exec(range);if(!m||!m[1]&&!m[2])return new Response(null,{status:416,headers:{'Content-Range':'bytes */'+cached.size}});if(!m[1])start=Math.max(0,cached.size-Number(m[2]));else{start=Number(m[1]);if(m[2])end=Math.min(end,Number(m[2]));}if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start>end||start>=cached.size)return new Response(null,{status:416,headers:{'Content-Range':'bytes */'+cached.size}});status=206;}
+  headers['Content-Type']=cached.mime;headers['Content-Length']=String(end-start+1);if(status===206)headers['Content-Range']='bytes '+start+'-'+end+'/'+cached.size;
+  if(request.method==='HEAD')return new Response(null,{status,headers});
+  const chunkSize=128*1024;let part=Math.floor(start/chunkSize);
+  const body=new ReadableStream({async pull(controller){try{const row=await env.DB.prepare('SELECT data FROM media_playback_chunks WHERE job_id=? AND part=?').bind(jobId,part).first();if(!row)throw Error('Видео временно недоступно');const bytes=row.data instanceof ArrayBuffer?new Uint8Array(row.data):Uint8Array.from(row.data),offset=part*chunkSize;controller.enqueue(bytes.slice(Math.max(0,start-offset),Math.min(bytes.length,end-offset+1)));part++;if(part*chunkSize>end)controller.close();}catch(e){controller.error(e);}}});return new Response(body,{status,headers});
+ }
+ const source=new URL(owned.result_url);if(source.origin!=='https://s3.polza.ai'||source.username||source.password)return new Response('Некорректный адрес',{status:502});
+ try{const upstream=await fetch(source.href,{method:request.method,headers:range?{Range:range}:{},redirect:'error',signal:AbortSignal.timeout(45000)});if(![200,206,416].includes(upstream.status)){await upstream.body?.cancel();return new Response('Видео временно недоступно',{status:502});}for(const name of ['Content-Type','Content-Length','Content-Range','Accept-Ranges'])if(upstream.headers.has(name))headers[name]=upstream.headers.get(name);return new Response(upstream.body,{status:upstream.status,headers});}catch{return new Response('Не удалось загрузить видео',{status:502});}
 }
 async function recordMediaUsage(db,userId,kind){
   if(!db)return;
@@ -1407,6 +1438,7 @@ async function proxyVideo(form, apiKey) {
 export default {
   async scheduled(controller,env,ctx){ctx.waitUntil(Promise.allSettled([processMediaNotifications(env),cleanupMediaExports(env)]));},
   async fetch(request, env, ctx) {
+    if(['GET','HEAD'].includes(request.method)&&new URL(request.url).pathname.startsWith('/media-playback/'))return serveMediaPlayback(request,env);
     if(['GET','HEAD'].includes(request.method)&&new URL(request.url).pathname.startsWith('/media-download/'))return downloadMediaExport(request,env);
     if (new URL(request.url).pathname === "/telegram/payments") return handlePaymentWebhook(request, env);
     const headers = {
@@ -1542,6 +1574,9 @@ export default {
           const data=action.startsWith('chat-thread-')?await handleChatThreadAction(env.DB,userId,body):action==='notification-get'?await readNotificationPreference(env.DB,userId):action==='notification-set'?await setNotificationPreference(env.DB,userId,body.enabled):await improveCreationPrompt(env,body);
           return json(data,200,headers);
         }catch(error){return json({error:error.message},error.status||400,headers);}
+      }
+      if(action==='media-playback'){
+        try{return json(await prepareMediaPlayback(env,userId,body.jobId,request.url),200,headers);}catch(error){return json({error:error.message},error.status||502,headers);}
       }
       if(action==='media-file'){
         if(!env.DB)return json({error:'Файлы временно недоступны'},503,headers);
