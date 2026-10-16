@@ -1578,6 +1578,8 @@ export default {
         const voiceUser=await verifyTelegram(String(form.get("initData")||""),env.TELEGRAM_BOT_TOKEN);
         if(!voiceUser) return json({error:"Открой ANIS AI через Telegram"},401,headers);
         const multipartAction=String(form.get("action")||"");
+        // Retired media commands must never reach a provider outside media-create billing.
+        if(['image','image-edit','video'].includes(multipartAction))return json({error:'Этот способ создания отключён. Открой актуальную версию приложения.',code:'LEGACY_MEDIA_DISABLED'},410,headers);
         if(multipartAction==='media-preview'){
           try{return json(await storeMediaPreview(env,voiceUser,form.get('jobId'),form.get('file')),200,headers);}catch(error){return json({error:error.message},error.status||400,headers);}
         }
@@ -1663,6 +1665,8 @@ export default {
         );
       }
 
+      // Keep chat, voice and the current media-create flow available.
+      if(['image','image-edit','video'].includes(action))return json({error:'Этот способ создания отключён. Открой актуальную версию приложения.',code:'LEGACY_MEDIA_DISABLED'},410,headers);
       if(['chat-thread-list','chat-thread-create','chat-thread-rename','notification-get','notification-set','prompt-improve'].includes(action)){
         if(!env.DB)return json({error:'Сервис временно недоступен. Попробуй позже.'},503,headers);
         try{
