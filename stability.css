@@ -347,15 +347,18 @@ html[data-theme=light] #view-ready .studio-ready-status-card .studio-ready-copy{
 .ready-prompt-bubble header button{display:grid;place-items:center;flex:none;width:28px;height:28px;min-height:0;padding:0;border:1px solid #ba91d444;border-radius:50%;background:#b277ce18;color:#ebd6f8;font-family:inherit;font-size:20px;line-height:1;cursor:pointer}
 .ready-prompt-bubble p{margin:0;font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;-webkit-user-select:text}
 @media(prefers-reduced-motion:reduce){.ready-prompt-bubble{transition:none;transform:none}}
+#view-ready .studio-ready-status-card{position:relative}
+#view-ready .studio-ready-status-card>.ready-prompt-toggle{top:7px;bottom:auto}
 
-/* Crop editor uses the available screen and bounds both media and controls. */
-#readyCropDialog.ready-crop-dialog{position:fixed;inset:0;margin:0;box-sizing:border-box;width:100%;max-width:none;height:100dvh;max-height:100dvh;min-width:0;padding:max(12px,env(safe-area-inset-top,0px)) 12px max(12px,env(safe-area-inset-bottom,0px));border:0;border-radius:0;overflow:hidden;background:#100d1a}
-#readyCropDialog[open]{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(100px,1fr) auto auto auto;gap:10px}
+/* Keep the crop window below Telegram's native header. */
+#readyCropDialog.ready-crop-dialog{position:fixed;inset:var(--crop-top,80px) 0 var(--crop-bottom,24px);margin:auto;box-sizing:border-box;width:min(92vw,500px);max-width:92vw;height:min(640px,calc(100dvh - var(--crop-top,80px) - var(--crop-bottom,24px)));max-height:calc(100dvh - var(--crop-top,80px) - var(--crop-bottom,24px));min-width:0;padding:12px;border:1px solid #aa79c655;border-radius:22px;overflow:hidden;background:#100d1a}
+#readyCropDialog::backdrop{background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
+#readyCropDialog[open]{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(72px,1fr) minmax(0,auto) auto auto;gap:10px}
 #readyCropDialog>header{margin:0;padding:0;min-width:0;gap:12px}
 #readyCropDialog>header h2{font-size:19px;line-height:1.3;min-width:0}
 #readyCropDialog>header button{flex:none;width:40px;height:40px;min-height:40px;padding:0;border:1px solid #aa79c655;border-radius:50%;background:#a16ac41a;color:#ecd8fa;font-size:26px}
 #readyCropDialog .ready-crop-stage{width:100%;height:100%;min-width:0;min-height:0;overflow:hidden;position:relative;border:1px solid #b183ce55;background:#08060e}
-#readyCropDialog .ready-crop-stage canvas,#readyCropDialog .ready-crop-stage video{display:block;box-sizing:border-box;width:auto;height:auto;min-width:0;min-height:0;max-width:100%;max-height:100%;object-fit:contain}
+#readyCropDialog .ready-crop-stage canvas,#readyCropDialog .ready-crop-stage video,#readyCropDialog .ready-crop-stage img{display:block;box-sizing:border-box;width:auto;height:auto;min-width:0;min-height:0;max-width:100%;max-height:100%;object-fit:contain}
 #readyCropDialog .ready-crop-stage canvas{touch-action:none;cursor:grab}
 #readyCropDialog .ready-crop-stage canvas:active{cursor:grabbing}
 #readyCropDialog .ready-crop-fields{box-sizing:border-box;min-width:0;max-height:32dvh;margin:0;padding:0 2px;gap:8px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
@@ -366,3 +369,13 @@ html[data-theme=light] #view-ready .studio-ready-status-card .studio-ready-copy{
 #readyCropDialog>.note{margin:0;font-size:11px;line-height:1.4}
 #readyCropDialog>button{min-width:0;margin:0;min-height:44px}
 html[data-theme=light] #readyCropDialog{background:#fffaff;color:#3b284b}
+@media(max-height:500px){#readyCropDialog[open]{gap:6px;padding:10px;grid-template-rows:auto minmax(64px,1fr) minmax(0,auto) auto auto}#readyCropDialog>.note{display:none}#readyCropDialog>header button{width:32px;height:32px;min-height:32px}#readyCropDialog>header h2{font-size:16px}#readyCropDialog>button{min-height:36px;padding:5px}}
+
+/* Home captions need their own foregrounds in the light palette. */
+html[data-theme=light] #voiceAssistantButton .voice-status{color:#493055;text-shadow:none}
+html[data-theme=light] #voiceAssistantButton .voice-assistant-mic{color:#715087;filter:none}
+html[data-theme=light] #voiceAssistantButton:before{opacity:.2}
+html[data-theme=light] #welcome .idea{background:linear-gradient(135deg,#fff,#f0e7f7);border-color:#cbb5da;color:#3f2b50}
+html[data-theme=light] #welcome .idea strong{color:#3f2b50}
+html[data-theme=light] #welcome .idea small{color:#65516f}
+html[data-theme=light] #welcome .idea .symbol{color:#76508f}

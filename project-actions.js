@@ -250,6 +250,25 @@
     const cancel=()=>{if(version===settingsRevealVersion)settingsRevealVersion++;};
     scroller.addEventListener('touchstart',cancel,{once:true,passive:true});scroller.addEventListener('wheel',cancel,{once:true,passive:true});
   }
+  async function enhanceProject(project){
+    const kind=project.kind,view=kind==='video'?'video':'studio',create=$(kind==='video'?'makeVideo':'makeImage');
+    if(create.disabled)throw Error('Дождись завершения текущей отправки и повтори улучшение.');
+    // Navigation does not depend on downloading the original file.
+    openActionStudio(kind);
+    selectValue(kind+'Ratio',project.ratio||(kind==='video'?'16:9':'1:1'));
+    selectValue(kind+'Quality',project.quality||'fhd');if(kind==='video')selectValue('duration',project.duration||4);
+    const prompt=$(kind+'Prompt');prompt.value=kind==='video'?'Улучши качество этого видео. Сохрани лица, композицию и цвета, добавь чёткость и плавность движения.':'Улучши качество этого фото. Сохрани лица, композицию, цвета и детали. Добавь естественную чёткость и убери шум.';prompt.dispatchEvent(new Event('input',{bubbles:true}));
+    revealActionSettings(kind);create.disabled=true;
+    try{
+      const item=await mediaDeadline(getMedia(studioProjects.get(project.id)||project),15000,'Не удалось загрузить оригинал для улучшения. Повтори нажатие.');
+      if(currentView!==view)return;
+      create.disabled=false;
+      const attached=kind==='video'?(clearVideoIdentity(),setStudioVideo(item.file)):setStudioPhoto(item.file);
+      if(attached===false)throw Error('Оригинал не удалось добавить. Проверь размер и формат файла.');
+      // Preserve any quality/format choices made while the file was loading.
+      revealActionSettings(kind);
+    }finally{create.disabled=false;}
+  }
   function prepareAction(project,item,action){
     const kind=project.kind;openActionStudio(kind);
     if(kind==='video'){clearVideoIdentity();if(setStudioVideo(item.file)===false)throw Error('Не удалось добавить видео. Проверь размер файла и заверши текущую отправку.');}else if(setStudioPhoto(item.file)===false)throw Error('Не удалось добавить фото. Проверь размер файла и заверши текущую отправку.');
@@ -273,7 +292,7 @@
         if(action==='delete'){window.anisStability.requestWorkDeletion(project);return;}
         if(action==='revise'){closeGeneratedMedia();const kind=project.kind;openView(kind==='video'?'video':'studio');if(project.sourceFile)(kind==='video'?setStudioVideo:setStudioPhoto)(project.sourceFile);if(kind==='video'&&project.identityFile)setVideoIdentity(project.identityFile);const idea=$(kind+'Prompt');idea.value=project.prompt||'';idea.dispatchEvent(new Event('input',{bubbles:true}));idea.focus({preventScroll:true});if(project.hasSource&&!project.sourceFile)toast('Добавь исходный файл заново. Новый заказ ещё не создан.');return;}
         b.disabled=true;b.setAttribute('aria-busy','true');
-        try{if(action==='download'){await saveProject(project);return;}if(action==='edit'){openProjectRoom(project.id);const idea=$('projectAgentIdea');idea.focus({preventScroll:true});idea.closest('.project-agent').scrollIntoView({block:'center',behavior:'smooth'});return;}if(action==='crop'){await openCrop(project);return;}const item=await getMedia(project);prepareAction(project,item,action);}
+        try{if(action==='download'){await saveProject(project);return;}if(action==='edit'){openProjectRoom(project.id);const idea=$('projectAgentIdea');idea.focus({preventScroll:true});idea.closest('.project-agent').scrollIntoView({block:'center',behavior:'smooth'});return;}if(action==='enhance'){await enhanceProject(project);return;}if(action==='crop'){await openCrop(project);return;}const item=await getMedia(project);prepareAction(project,item,action);}
         catch(error){if(error.name!=='AbortError')toast(error.message||'Не удалось открыть действие.');}
         finally{b.disabled=false;b.removeAttribute('aria-busy');}
       },'ready-project-action ready-action-'+action);
@@ -289,6 +308,12 @@
   cropHeader.append(cropTitle,control('×',()=>cropDialog.close(),'room-close'));cropHeader.lastChild.setAttribute('aria-label','Отменить обрезку');
   cropDialog.append(cropHeader,cropStage,cropFields,cropStatus,cropSave);document.body.append(cropDialog);
   let cropState=null;
+  function syncCropInsets(){
+    const bridge=window.Telegram?.WebApp||(typeof tg!=='undefined'?tg:null),safe=bridge?.safeAreaInset,content=bridge?.contentSafeAreaInset;
+    cropDialog.style.setProperty('--crop-top',Math.max(80,(Number(safe?.top)||0)+(Number(content?.top)||0)+12)+'px');
+    cropDialog.style.setProperty('--crop-bottom',Math.max(24,(Number(safe?.bottom)||0)+(Number(content?.bottom)||0)+12)+'px');
+  }
+  window.addEventListener('resize',syncCropInsets);window.Telegram?.WebApp?.onEvent?.('safeAreaChanged',syncCropInsets);window.Telegram?.WebApp?.onEvent?.('contentSafeAreaChanged',syncCropInsets);
   cropDialog.addEventListener('close',()=>{cropState?.controller.abort();cropState?.video?.pause();if(cropState?.imageUrl)URL.revokeObjectURL(cropState.imageUrl);cropStage.replaceChildren();cropState=null;});
   function slider(label,min,max,value,step,onInput){
     const row=node('label'),copy=node('span',{},label),output=node('output'),input=node('input',{type:'range',min:String(min),max:String(max),value:String(value),step:String(step)});
@@ -303,9 +328,11 @@
   async function openCrop(project,item,retry=false){
     if(cropDialog.open&&!retry)return;cropState?.controller.abort();
     if(cropState?.imageUrl)URL.revokeObjectURL(cropState.imageUrl);
-    const s=cropState={project,item,controller:new AbortController(),x:.5,y:.5,zoom:1,ratio:1,exporting:false};cropStage.replaceChildren();cropFields.replaceChildren();cropSave.disabled=true;cropStatus.textContent='Открываем исходник…';cropTitle.textContent=project.kind==='video'?'Обрезать видео':'Обрезать фото';if(!cropDialog.open)cropDialog.showModal();
+    const s=cropState={project,item,controller:new AbortController(),x:.5,y:.5,zoom:1,ratio:1,exporting:false};cropStage.replaceChildren();cropFields.replaceChildren();cropSave.disabled=true;cropStatus.textContent='Загружаем оригинал для обрезки…';cropTitle.textContent=project.kind==='video'?'Обрезать видео':'Обрезать фото';syncCropInsets();
+    const thumbnail=project.previewDataUrl||project.posterDataUrl;if(thumbnail)cropStage.append(node('img',{src:thumbnail,alt:'Предпросмотр работы'}));
+    if(!cropDialog.open)cropDialog.showModal();
     try{
-      item=item||await getMedia(studioProjects.get(project.id)||project);if(cropState!==s)return;s.item=item;
+      item=item||await mediaDeadline(getMedia(studioProjects.get(project.id)||project),15000,'Оригинал загружается дольше обычного. Нажми «Повторить загрузку».');if(cropState!==s)return;s.item=item;cropStage.replaceChildren();
       if(project.kind==='image'){
         // Use the original bytes: a gallery object URL may already have been revoked.
         s.image=new Image();s.imageUrl=URL.createObjectURL(item.file);s.image.src=s.imageUrl;

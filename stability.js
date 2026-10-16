@@ -157,7 +157,7 @@
  function acknowledgeStudioResults(){let changed=false;for(const p of completedStudioResults())if(!seenStudioResults.has(p.id)){seenStudioResults.add(p.id);changed=true;}if(changed)write('studio-seen-results',[...seenStudioResults].slice(-500));}
  state.ackStudioResults=()=>{acknowledgeStudioResults();updateProjectDock();};
  state.updateStudioIndicator=function(){
-  const projects=[...studioProjects.values()],active=projects.filter(p=>(!PROJECT_TERMINAL.includes(p.status)||p.loading)&&!(p.removedFromVariants&&p.status==='queued')).length;
+  const projects=[...studioProjects.values()],active=projects.filter(p=>!PROJECT_TERMINAL.includes(p.status)&&!(p.removedFromVariants&&p.status==='queued')).length;
   if(['studio','video','templates','ready'].includes(currentView)&&!state.restoring)acknowledgeStudioResults();
   const unseen=completedStudioResults().some(p=>!seenStudioResults.has(p.id));
   studioNav.classList.toggle('studio-nav-working',active>0);studioNav.classList.toggle('studio-nav-ready',unseen);
@@ -175,22 +175,29 @@
   if(project.status==='completed')return 1;
   return {queued:.03,submitting:.12,creating:.22,pending:.32,processing:.62,unknown:.32,failed:0,cancelled:0}[project.status]||0;
  }
- const studioNavTracks=new Map(),studioNavTracked=new Map();
+ const studioNavTracks=new Map(),studioNavTracked=new Map(),studioNavFinishing=new Map();
  for(const kind of ['image','video']){
   const track=el('span',{className:'studio-nav-job-track','data-kind':kind,'aria-hidden':'true',hidden:true}),fill=el('i');track.append(fill);studioNavIcon.append(track);studioNavTracks.set(kind,{track,fill});
  }
  state.renderStudioNavProgress=function(projects){
-  const running=projects.filter(p=>(!PROJECT_TERMINAL.includes(p.status)||p.loading)&&!(p.removedFromVariants&&p.status==='queued'));
+  const running=projects.filter(p=>!PROJECT_TERMINAL.includes(p.status)&&!(p.removedFromVariants&&p.status==='queued'));
   let rows=0;
   for(const [kind,ui]of studioNavTracks){
    const project=running.filter(p=>p.kind===kind).sort((a,b)=>(b.created||0)-(a.created||0))[0];
-   if(project)studioNavTracked.set(kind,project.id);
-   const tracked=running.length&&studioProjects.get(studioNavTracked.get(kind));
+   if(project){studioNavTracked.set(kind,project.id);studioNavFinishing.delete(kind);}
+   let tracked=studioProjects.get(studioNavTracked.get(kind));
+   if(tracked?.status==='completed'&&!studioNavFinishing.has(kind)){
+    const id=tracked.id;studioNavFinishing.set(kind,id);
+    // Let the 100% fill finish before restoring the Studio icon.
+    setTimeout(()=>{if(studioNavFinishing.get(kind)!==id)return;studioNavFinishing.delete(kind);studioNavTracked.delete(kind);state.updateStudioIndicator?.();},900);
+   }else if(tracked&&PROJECT_TERMINAL.includes(tracked.status)&&tracked.status!=='completed'){
+    studioNavTracked.delete(kind);studioNavFinishing.delete(kind);tracked=null;
+   }
    ui.track.hidden=!tracked;if(!tracked)continue;rows++;
    ui.fill.style.width=(studioProjectProgress(tracked)*100)+'%';
    ui.track.title=(kind==='image'?'Фото':'Видео')+' · '+projectStatusLabel(tracked);
   }
-  if(!running.length)studioNavTracked.clear();
+  studioNav.classList.toggle('studio-nav-working',rows>0);
   studioNav.classList.toggle('studio-nav-dual-progress',rows===2);
  };
  state.renderRoomProgress=function(project){
@@ -430,7 +437,7 @@
    else copy.append(el('small',{},(first.kind==='video'?'Видео':'Фото')+' · '+projectStatusLabel(last)+(family.length>1?' · '+variantsText(family.length):'')),el('strong',{},(first.prompt||'Мой проект').slice(0,110)));
    if(issue||display.status!=='completed')preview.append(copy);
    preview.append(el('b',{'aria-hidden':'true'},issue?'↗':first.kind==='video'?'▷':'↗'));if(issue)preview.setAttribute('aria-label',issue.title+'. '+issue.reason+'. Открыть работу');card.append(preview);
-   if(!issue&&display.status==='completed')card.append(readyPromptControl(display.prompt||first.prompt));
+   if(issue||display.status==='completed')card.append(readyPromptControl(display.prompt||first.prompt));
    const billing=issue&&projectBillingLabel(display);if(billing)copy.append(el('small',{className:'ready-billing-status'},billing));
    if(display.status==='completed'&&source)card.append(window.anisProjectActions.createControls(display));
    else if(PROJECT_TERMINAL.includes(display.status)){
