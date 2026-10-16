@@ -61,15 +61,26 @@
  }
  persistStudioProjects=function(){if(state.restoring)return;metadataPersist();clearTimeout(persistTimer);persistTimer=setTimeout(()=>void saveDurable(),180);};
  const draftIds=['messageInput','imagePrompt','videoPrompt','projectAgentIdea','imageQuality','videoQuality','imageRatio','videoRatio','duration'];
- function saveDrafts(){const values={};for(const id of draftIds)if($(id))values[id]=id==='messageInput'&&anonymous?'':$(id).value;write('drafts',{values,view:currentView});}
+ const studioPromptEditedAt={...(read('drafts',null)?.promptEditedAt||{})};
+ function saveDrafts(){const values={};for(const id of draftIds)if($(id))values[id]=id==='messageInput'&&anonymous?'':$(id).value;write('drafts',{values,view:currentView,promptEditedAt:{...studioPromptEditedAt}});}
  function consumeStudioDraft(snapshot){
   if(!snapshot.consumeDraft)return;
   const image=snapshot.kind==='image',prompt=$(snapshot.kind+'Prompt'),source=image?studioImageFile:studioVideoFile;
   // A user may already have started another idea while the project was being saved.
-  if(prompt.value.trim()!==snapshot.prompt.trim()||source!==(snapshot.regionOriginalFile||snapshot.sourceFile||null)||!image&&studioVideoIdentityFile!==(snapshot.identityFile||null))return;
+  if(prompt.value.trim()!==snapshot.prompt.trim()||source&&source!==(snapshot.regionOriginalFile||snapshot.sourceFile||null)||!image&&studioVideoIdentityFile!==(snapshot.identityFile||null))return;
   prompt.value='';
   if(image)clearStudioPhoto(true);else{clearStudioVideo(true);clearVideoIdentity();}
   saveDrafts();void saveFileDrafts().catch(storageWarning);
+ }
+ function clearSubmittedPromptDrafts(){
+  let changed=false;
+  for(const kind of ['image','video']){
+   const field=$(kind+'Prompt'),source=kind==='image'?studioImageFile:studioVideoFile;
+   if(source||!field.value.trim())continue;
+   const sent=[...studioProjects.values()].some(p=>p.kind===kind&&p.consumeDraft&&p.prompt?.trim()===field.value.trim()&&(p.created||0)>=(studioPromptEditedAt[kind]||0));
+   if(sent){field.value='';changed=true;}
+  }
+  if(changed)saveDrafts();
  }
  const draftFileBytes=new WeakMap();let fileDraftSaveQueue=Promise.resolve();
  function packDraftFile(file){
@@ -95,7 +106,7 @@
    await dbRecord('files',{image,video,identity,region});
   });fileDraftSaveQueue=save;return save;
  }
- document.addEventListener('input',event=>{if(draftIds.includes(event.target.id))saveDrafts();});
+ document.addEventListener('input',event=>{const kind=event.target.id==='imagePrompt'?'image':event.target.id==='videoPrompt'?'video':null;if(kind)studioPromptEditedAt[kind]=Math.max(Date.now(),(studioPromptEditedAt[kind]||0)+1);if(draftIds.includes(event.target.id))saveDrafts();});
  document.addEventListener('change',event=>{if(draftIds.includes(event.target.id))saveDrafts();});
  for(const name of ['setStudioPhoto','setStudioVideo','setVideoIdentity','clearVideoIdentity','clearStudioPhoto','clearStudioVideo']){
   // Named declarations in the original classic script are window functions.
@@ -647,7 +658,7 @@
   persistStudioProjects();
   state.fileDraftsLoading=true;
   let fileDraftsRestored=false;
-  void dbRecord('files').then(async files=>{if(!files)return;const [image,video,identity]=await Promise.all([files.image,files.video,files.identity].map(restoreDraftFile));if(image&&!studioImageFile)setStudioPhoto(image);if(video&&!studioVideoFile)setStudioVideo(video);if(identity&&!studioVideoIdentityFile)setVideoIdentity(identity);state.region=state.region||files.region||null;updateRegionButton();fileDraftsRestored=true;}).catch(storageWarning).finally(()=>{state.fileDraftsLoading=false;if(fileDraftsRestored)void saveFileDrafts().catch(storageWarning);scheduleReleaseApply();});
+  void dbRecord('files').then(async files=>{if(!files)return;const [image,video,identity]=await Promise.all([files.image,files.video,files.identity].map(restoreDraftFile));if(image&&!studioImageFile)setStudioPhoto(image);if(video&&!studioVideoFile)setStudioVideo(video);if(identity&&!studioVideoIdentityFile)setVideoIdentity(identity);state.region=state.region||files.region||null;updateRegionButton();fileDraftsRestored=true;}).catch(storageWarning).finally(()=>{state.fileDraftsLoading=false;clearSubmittedPromptDrafts();if(fileDraftsRestored)void saveFileDrafts().catch(storageWarning);scheduleReleaseApply();});
   state.threads=read('threads',[]);renderThreads();normalHistory=cleanHistory(read('chat:'+state.activeChatId,normalHistory));renderChat();
   // Restore draft contents, never the previously open screen.
   if(updateHandoff){

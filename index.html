@@ -4139,7 +4139,7 @@ function endVoiceSession(){
   $("mic").title="Записать голосовое сообщение";
   $("voiceStatus").closest(".voice-status-row")?.classList.remove("voice-chat-active");
   $("voiceOrb").classList.remove("voice-chat-active");
-  setVoiceChatStatus("Голосовой чат завершён. Нажми на шар и скажи, что нужно","idle");
+  setVoiceChatStatus("Нажми на шар и скажи, что нужно","idle");
   $("chatStatus").textContent="";
   updateControls();
 }

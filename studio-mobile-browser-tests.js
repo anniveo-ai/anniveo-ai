@@ -7,6 +7,7 @@
   studioProjects.set(photo.id,photo);studioProjects.set(video.id,video);updateProjectDock();
   openView('video');openProjectRoom(video.id);closeGeneratedMedia();openView('history');openView('video');
   check(!document.getElementById('videoCreationProgress').hidden&&!document.getElementById('mediaResultDialog').open,'Ongoing video remains visible after navigation');
+  check(document.getElementById('voiceStatus').textContent==='Нажми на шар и скажи, что нужно','Navigation immediately restores idle voice hint without completed-chat flash');
   check([...document.querySelectorAll('.studio-nav-job-track')].filter(n=>!n.hidden).length===2,'Separate photo and video navigation tracks');
   document.getElementById('videoCreationProgress').click();check(selectedStudioProject===video.id&&document.getElementById('mediaResultDialog').open,'Reopens the same ongoing job');closeGeneratedMedia();
   const actualViewport=window.visualViewport,fakeViewport={height:420,offsetTop:0};
@@ -43,7 +44,8 @@
   for(const kind of ['image','video']){
    const target={...photo,id:'enhance-'+kind,kind,quality:'fhd',ratio:'16:9',media:photo.media};studioProjects.set(target.id,target);const actions=window.anisProjectActions.createControls(target);document.body.append(actions);await actions.querySelector('[data-action="enhance"]').onclick();await wait(650);
    const quality=document.getElementById(kind+'Quality'),panel=quality.closest('.studio-setting-panel'),rect=panel.getBoundingClientRect();
-   check(currentView===(kind==='image'?'studio':'video')&&!document.getElementById('mediaResultDialog').open&&rect.top>=-2&&rect.top<844&&quality.value==='fhd'&&document.activeElement!==document.getElementById('projectAgentIdea'),'Enhance reveals quality selection without opening agent: '+kind,{top:rect.top,bottom:rect.bottom});actions.remove();
+   const settings=quality.closest('.media-settings').getBoundingClientRect();
+   check(currentView===(kind==='image'?'studio':'video')&&!document.getElementById('mediaResultDialog').open&&settings.top>=-2&&settings.bottom<844&&quality.value==='fhd'&&document.activeElement!==document.getElementById('projectAgentIdea'),'Enhance reveals all quality, format and duration settings: '+kind,{top:settings.top,bottom:settings.bottom});actions.remove();
   }
   rail.remove();
   const source=new File([blob],'reference.png',{type:'image/png'});
