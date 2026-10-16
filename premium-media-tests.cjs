@@ -9,11 +9,11 @@ const code=fs.readFileSync('worker.js','utf8');vm.runInContext(code.slice(0,code
 const run=s=>vm.runInContext(s,context);context.body={kind:'image',requestId:'test-request-000001',model:'google/gemini-3.1-flash-image-preview',prompt:'Горы на рассвете',ratio:'1:1'};
 (async()=>{
  const first=await run("createPremiumMedia(env,'123',body,null)");assert.equal(first.status,'pending');assert.equal(calls.length,1);
- const sent=JSON.parse(calls[0].options.body);assert.equal(sent.async,true);assert.equal(sent.input.image_resolution,'1K');
+ const sent=JSON.parse(calls[0].options.body);assert.equal(sent.async,true);assert.equal(sent.input.image_resolution,'1K');assert.equal(sent.input.output_format,'jpeg');
  await run("createPremiumMedia(env,'123',body,null)");assert.equal(calls.length,1,'same request cannot bill twice');
  await assert.rejects(run("readPremiumMedia(env,'456',body.requestId)"),/не найден/);assert.equal(calls.length,1,'other account cannot poll task');
  providerState='completed';const ready=await run("readPremiumMedia(env,'123',body.requestId)");assert.equal(ready.url,'https://s3.polza.ai/result.png');await run("readPremiumMedia(env,'123',body.requestId)");assert.equal(raw.prepare('SELECT COUNT(*) n FROM usage_events').get().n,1);
- context.file=new File(['reference'],'ref.png',{type:'image/png'});context.body={...context.body,requestId:'test-request-000002',model:'google/gemini-3-pro-image-preview'};providerState='pending';await run("createPremiumMedia(env,'123',body,file)");assert.equal(JSON.parse(calls.at(-1).options.body).input.images[0].data,'data:image/png;base64,cmVmZXJlbmNl');
+ context.file=new File(['reference'],'ref.png',{type:'image/png'});context.body={...context.body,requestId:'test-request-000002',model:'google/gemini-3-pro-image-preview'};providerState='pending';await run("createPremiumMedia(env,'123',body,file)");assert.equal(JSON.parse(calls.at(-1).options.body).input.images[0].data,'data:image/png;base64,cmVmZXJlbmNl');assert.equal(JSON.parse(calls.at(-1).options.body).input.output_format,'png');
  context.body={...context.body,requestId:'test-request-000003',kind:'video',model:'bytedance/seedance-2-fast',duration:6};await run("createPremiumMedia(env,'123',body,null)");assert.equal(JSON.parse(calls.at(-1).options.body).input.duration,'6');
  context.body.requestId='test-request-000004';await assert.rejects(run("createPremiumMedia(env,'123',body,null)"),/два проекта/);
  context.body={...context.body,model:'arbitrary/billable-model'};await assert.rejects(run("createPremiumMedia(env,'123',body,null)"),/доступную модель/);

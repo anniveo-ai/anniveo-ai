@@ -13,7 +13,7 @@
   function download(item){const link=node('a',{href:item.url,download:item.file.name});document.body.append(link);link.click();link.remove();}
   const exportsInProgress=new WeakMap();
   async function getMedia(project){
-    if(!project.media&&project.resultUrl){await loadStudioProjectResult(project);if(!project.media&&project.loadingPromise)await project.loadingPromise;}
+    if(project.loading||!project.media&&project.resultUrl){await loadStudioProjectResult(project);if(!project.media&&project.loadingPromise)await project.loadingPromise;}
     if(!project.media?.file)throw Error(project.error||'Не удалось открыть результат. Попробуй ещё раз.');
     if(project.resolutionPending&&window.anisMediaQuality){
       let exporting=exportsInProgress.get(project);
@@ -36,7 +36,11 @@
     // A byte-backed image also survives WKWebView object-URL invalidation.
     const task=new Promise((resolve,reject)=>{
       const reader=new FileReader(),timer=setTimeout(()=>{reader.abort();reject(Error('Не удалось прочитать фото.'));},10000);reader.onload=()=>{clearTimeout(timer);resolve(String(reader.result));};reader.onerror=()=>{clearTimeout(timer);reject(reader.error||Error('Не удалось прочитать фото.'));};reader.readAsDataURL(blob);
-    }).then(url=>{project.previewDataUrl=url;return url;}).finally(()=>imagePreviews.delete(project));
+    }).then(async url=>{
+      // Only the screen preview is reduced; the export keeps its original pixels.
+      try{const image=new Image();image.src=url;await image.decode();const scale=Math.min(1,1280/Math.max(image.naturalWidth,image.naturalHeight));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);url=canvas.toDataURL('image/webp',.9);}catch{}
+      project.previewDataUrl=url;return url;
+    }).finally(()=>imagePreviews.delete(project));
     imagePreviews.set(project,task);return task;
   }
   function resultPreview(project){
@@ -214,12 +218,14 @@
   // must not restart all the full-size downloads or create an infinite retry loop.
   const galleryLoads=new Set(),galleryAttempts=new Map(),galleryQueue=[];
   function pumpGallery(){
-    while(galleryLoads.size<2&&galleryQueue.length){
+    while(currentView==='ready'&&!document.getElementById('mediaResultDialog')?.open&&galleryLoads.size<1&&galleryQueue.length){
       const project=galleryQueue.shift();if(project.media||galleryLoads.has(project.id))continue;
+      const card=document.querySelector('.studio-ready-project[data-project-id=\"'+CSS.escape(project.id)+'\"]');if(!card||!nearViewport(card)){galleryAttempts.delete(project.id);continue;}
       galleryLoads.add(project.id);
       Promise.resolve().then(()=>loadStudioProjectResult(project)).finally(()=>{galleryLoads.delete(project.id);repairReadyGallery();pumpGallery();});
     }
   }
+  function nearViewport(card){const rect=card.getBoundingClientRect();return rect.bottom>=-250&&rect.top<=window.innerHeight+250;}
   function repairReadyGallery(){
     const grid=document.getElementById('studioReadyList');if(!grid)return;
     for(const card of grid.querySelectorAll('.studio-ready-project[data-project-id]')){
@@ -235,12 +241,15 @@
       let status=preview.querySelector('.ready-preview-status');
       if(!status){status=node('span',{className:'ready-preview-status',role:'status'});preview.prepend(status);}
       status.textContent=project.error&&!project.loading?'Нажми, чтобы загрузить':'Загружаем '+(project.kind==='video'?'видео…':'фото…');
-      if(!galleryLoads.has(project.id)&&galleryAttempts.get(project.id)!==project.resultUrl){galleryAttempts.set(project.id,project.resultUrl);galleryQueue.push(project);}
+      if(nearViewport(card)&&!galleryLoads.has(project.id)&&galleryAttempts.get(project.id)!==project.resultUrl){galleryAttempts.set(project.id,project.resultUrl);galleryQueue.push(project);}
     }
     pumpGallery();
   }
+  let galleryFrame=0;
+  function scheduleGallery(){cancelAnimationFrame(galleryFrame);galleryFrame=requestAnimationFrame(repairReadyGallery);}
+  document.getElementById('app')?.addEventListener('scroll',scheduleGallery,{passive:true});window.addEventListener('resize',scheduleGallery);document.getElementById('mediaResultDialog')?.addEventListener('close',scheduleGallery);
   function observeGallery(){const grid=document.getElementById('studioReadyList');if(grid){new MutationObserver(repairReadyGallery).observe(grid,{childList:true});repairReadyGallery();}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observeGallery,{once:true});else observeGallery();
-  window.anisProjectActions={createControls,normalizeBlob,saveMedia,showMedia,getMedia,ensureImagePreview,resultPreview};
+  window.anisProjectActions={createControls,normalizeBlob,saveMedia,showMedia,getMedia,ensureImagePreview,resultPreview,refreshGallery:scheduleGallery};
 })();
 

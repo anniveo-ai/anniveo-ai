@@ -77,7 +77,7 @@ function choosePremiumMedia(body,file){
  if(kind==='image'){
   if(['fhd','qhd','uhd'].includes(quality)){
    const resolution=quality==='uhd'||quality==='qhd'&&body.ratio==='1:1'?'4K':'2K';
-   return {model:resolution==='4K'||!!file?'google/gemini-3-pro-image-preview':'google/gemini-3.1-flash-image-preview',resolution};
+   return {model:resolution==='4K'||/текст|надпис|логотип|шрифт|инфограф|text|logo|typography/i.test(String(body.prompt||''))?'google/gemini-3-pro-image-preview':'google/gemini-3.1-flash-image-preview',resolution};
   }
   if(!['fast','high','max'].includes(quality))throw Error('Выбери качество фото.');
   const complex=!!file||/текст|надпис|логотип|шрифт|портрет|идентич|сохрани|дизайн|инфограф|text|logo|portrait/i.test(String(body.prompt||''));
@@ -127,7 +127,7 @@ async function createPremiumMedia(env,userId,body,file,identityFile=null){
   row.prompt=prompt;row.quality=String(body.quality||'fast');row.ratio=ratio;row.duration=duration;row.region_json=region?JSON.stringify(region):null;
   await env.DB.prepare('UPDATE media_jobs SET prompt=?,quality=?,ratio=?,duration=?,region_json=? WHERE id=? AND user_id=?').bind(prompt,row.quality,ratio,duration,row.region_json,id,userId).run();
   const input={prompt,aspect_ratio:ratio};
-  if(kind==='image'){input.image_resolution=selection.resolution||config.resolution;input.output_format='png';}
+  if(kind==='image'){input.image_resolution=selection.resolution||config.resolution;input.output_format=file?.type==='image/png'||/прозрач|transparent|alpha|\bpng\b|без фона|удали(?:ть)? фон|убери фон/i.test(prompt)?'png':'jpeg';}
   else{input.duration=String(duration);input.resolution=selection.resolution||config.resolution;if(model!=='gemini-omni-video')input.generate_audio=false;}
   if(file){const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));input[file.type.startsWith('image/')?'images':'videos']=[{type:'base64',data:'data:'+file.type+';base64,'+btoa(binary)}];}
   if(identityFile){const bytes=new Uint8Array(await identityFile.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));input.images=[...(input.images||[]),{type:'base64',data:'data:'+identityFile.type+';base64,'+btoa(binary)}];}
@@ -157,7 +157,7 @@ async function serveMediaFile(env,userId,jobId,headers){
  if(row.status!=='completed'||!row.result_url){const error=Error('Файл ещё не готов.');error.status=409;throw error;}
  const url=new URL(row.result_url);
  if(url.origin!=='https://s3.polza.ai'||url.username||url.password)throw Error('Адрес результата не поддерживается.');
- const response=await fetch(url.href,{redirect:'error',signal:AbortSignal.timeout(90000)});
+ const response=await fetch(url.href,{redirect:'error',signal:AbortSignal.timeout(90000),cf:{cacheEverything:true,cacheTtlByStatus:{'200-299':86400,'400-599':-1}}});
  if(!response.ok){await response.body?.cancel();const error=Error('Не удалось загрузить готовый файл. Попробуй ещё раз.');error.status=502;throw error;}
  const type=response.headers.get('Content-Type')||'application/octet-stream';
  if(!/^(image|video)\//i.test(type)&&!/^application\/octet-stream/i.test(type)){await response.body?.cancel();throw Error('Сервис вернул некорректный файл.');}

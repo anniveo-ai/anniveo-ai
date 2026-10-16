@@ -30,7 +30,13 @@
  async function dbRecord(name,value){const db=await database();return new Promise((resolve,reject)=>{const tx=db.transaction('records',value===undefined?'readonly':'readwrite'),req=value===undefined?tx.objectStore('records').get(key(name)):tx.objectStore('records').put(value,key(name));tx.oncomplete=()=>resolve(req.result);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('Не удалось сохранить'));});}
  function storageWarning(){state.storageUnavailable=true;}
  const metadataPersist=persistStudioProjects;
- function projectRecord(p){const {media,loading,...row}=p;return {...row,hasSource:!!p.sourceFile||!!p.hasSource,hasIdentity:!!p.identityFile||!!p.hasIdentity,mediaBlob:media?.blob||p.mediaBlob};}
+ const projectRecordCache=new WeakMap();
+ function projectRecord(p){
+  const {media,loading,...rest}=p,row={...rest,hasSource:!!p.sourceFile||!!p.hasSource,hasIdentity:!!p.identityFile||!!p.hasIdentity,mediaBlob:media?.blob||p.mediaBlob};
+  const previous=projectRecordCache.get(p),names=Object.keys(row);
+  if(previous&&names.length===Object.keys(previous).length&&names.every(name=>previous[name]===row[name]))return previous;
+  projectRecordCache.set(p,row);return row;
+ }
  function mergeProjectRecords(previous,incoming){
   const records=new Map();for(const row of [...(Array.isArray(previous)?previous:[]),...(Array.isArray(incoming)?incoming:[])]){
    if(!row?.id||!['image','video'].includes(row.kind))continue;
@@ -38,14 +44,20 @@
    if(p.mediaBlob)p.status='completed';records.set(p.id,p);
   }return [...records.values()];
  }
+ let durableSavePromise,savedDurableRows;
  async function saveDurable(){
   if(state.restoring)return false;
+  if(durableSavePromise)return durableSavePromise.then(saved=>saved?saveDurable():false);
   const rows=[...studioProjects.values()].map(projectRecord);
-  try{const db=await database();await new Promise((resolve,reject)=>{
-   const tx=db.transaction('records','readwrite'),records=tx.objectStore('records'),request=records.get(key('projects'));
-   request.onsuccess=()=>records.put(mergeProjectRecords(request.result,rows),key('projects'));
-   tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('Не удалось сохранить'));
-  });return true;}catch{storageWarning();return false;}
+  if(savedDurableRows&&rows.length===savedDurableRows.length&&rows.every((row,index)=>row===savedDurableRows[index]))return true;
+  durableSavePromise=(async()=>{
+   try{const db=await database();await new Promise((resolve,reject)=>{
+    const tx=db.transaction('records','readwrite'),records=tx.objectStore('records'),request=records.get(key('projects'));
+    request.onsuccess=()=>records.put(mergeProjectRecords(request.result,rows),key('projects'));
+    tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('Не удалось сохранить'));
+   });savedDurableRows=rows;return true;}catch{storageWarning();return false;}
+  })();
+  try{return await durableSavePromise;}finally{durableSavePromise=null;}
  }
  persistStudioProjects=function(){if(state.restoring)return;metadataPersist();clearTimeout(persistTimer);persistTimer=setTimeout(()=>void saveDurable(),180);};
  const draftIds=['messageInput','imagePrompt','videoPrompt','projectAgentIdea','imageQuality','videoQuality','imageRatio','videoRatio','duration'];
@@ -79,7 +91,7 @@
  for(const name of ['setStudioPhoto','setStudioVideo','setVideoIdentity','clearVideoIdentity','clearStudioPhoto','clearStudioVideo']){
   // Named declarations in the original classic script are window functions.
   const original=window[name];if(typeof original!=='function')continue;
-  window[name]=function(...args){const result=original(...args);if(name==='setStudioPhoto'||name==='clearStudioPhoto'){state.region=null;updateRegionButton();}if(name==='setStudioPhoto'&&result!==false&&state.regionAfterUpload){state.regionAfterUpload=false;queueMicrotask(()=>void openRegion());}if(!state.restoring)void saveFileDrafts().catch(storageWarning);return result;};
+  window[name]=function(...args){const result=original(...args);if(name==='setStudioPhoto'||name==='clearStudioPhoto'){state.region=null;updateRegionButton();if(name==='setStudioPhoto'&&result!==false&&studioImageFile)void prepareStudioImage(studioImageFile);}if(name==='setStudioPhoto'&&result!==false&&state.regionAfterUpload){state.regionAfterUpload=false;queueMicrotask(()=>void openRegion());}if(!state.restoring)void saveFileDrafts().catch(storageWarning);return result;};
  }
  window.addEventListener('pagehide',()=>{saveDrafts();persistStudioProjects();void saveDurable();void saveFileDrafts().catch(()=>{});});
  document.addEventListener('visibilitychange',()=>{if(document.hidden){saveDrafts();void saveDurable();}else void resumeMediaProjects();});
@@ -206,7 +218,7 @@
   const old=previewUrls.get(p.id);if(old?.blob===blob)return old;
   if(old)URL.revokeObjectURL(old.url);const item={blob,url:URL.createObjectURL(blob),type:blob.type.startsWith('video/')?'video':'img'};previewUrls.set(p.id,item);return item;
  }
- function previewElement(source){const n=el(source.type,{src:source.url});if(source.type==='video'){n.muted=true;n.playsInline=true;n.preload='metadata';n.onloadedmetadata=()=>{if(n.duration>0)n.currentTime=Math.min(.1,n.duration/2);};}else n.alt='';return n;}
+ function previewElement(source){const n=el(source.type,{src:source.url});if(source.type==='video'){n.muted=true;n.playsInline=true;n.preload='metadata';n.onloadedmetadata=()=>{if(n.duration>0)n.currentTime=Math.min(.1,n.duration/2);};}else{n.alt='';n.loading='lazy';n.decoding='async';}return n;}
  function addWorkingPreview(host,p,mini=false){
   const source=previewSource(p);host.classList.add('project-reveal-loading');if(source){const image=previewElement(source);image.className='project-blurred-preview';host.prepend(image);}else host.classList.add('project-abstract-preview');
   const layer=el('div',{className:'project-reveal-overlay'}),spinner=el('span',{className:'project-reveal-spinner','aria-hidden':'true'});layer.append(spinner);if(!mini)layer.append(el('strong',{},projectStatusLabel(p)),el('small',{},'Можно свернуть и вернуться позже'));host.append(layer);
@@ -246,7 +258,7 @@
  const readyView=el('section',{id:'view-ready',className:'view photo-studio'}),readyHeading=el('div',{className:'studio-heading'}),readyHeadingCopy=el('div'),readyGrid=el('div',{id:'studioReadyList',className:'studio-template-list studio-ready-list'});
  readyHeadingCopy.append(el('h1',{className:'page-title'},'Твои готовые работы'),el('p',{className:'subtitle'},'Фото, видео и новые варианты — всё в одном месте.'));readyHeading.append(readyHeadingCopy);readyView.append(readyHeading,readyGrid);$('view-templates').after(readyView);
  const originalOpenStudioView=openView;
- openView=function(name){originalOpenStudioView(name);const tabs=$('mediaProjectSwitcher'),ready=currentView==='ready';tabs.classList.toggle('ready-selected',ready);if(ready){tabs.hidden=false;tabs.classList.remove('video-selected','templates-selected');tabs.querySelectorAll('[data-media-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mediaTab==='ready')));studioNav.classList.add('active');state.ackStudioResults();renderReadyProjects();if(!state.restoring&&!state.historyLoading&&(!state.historyLoaded||state.historyError))void resumeMediaProjects();requestAnimationFrame(moveGlider);}};
+ openView=function(name){originalOpenStudioView(name);const tabs=$('mediaProjectSwitcher'),ready=currentView==='ready';tabs.classList.toggle('ready-selected',ready);if(ready){tabs.hidden=false;tabs.classList.remove('video-selected','templates-selected');tabs.querySelectorAll('[data-media-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mediaTab==='ready')));studioNav.classList.add('active');state.ackStudioResults();renderReadyProjects();window.anisProjectActions.refreshGallery?.();if(!state.restoring&&!state.historyLoading&&(!state.historyLoaded||state.historyError))void resumeMediaProjects();requestAnimationFrame(moveGlider);}};
  state.openReadyProjects=()=>openView('ready');
  let readyRenderKey='';
  function renderReadyProjects(){
@@ -256,7 +268,7 @@
    const first=family[0],last=family.at(-1),display=[...family].reverse().find(p=>p.status==='completed'&&(p.media||p.resultUrl))||last;
    const card=el('article',{className:'studio-template-card studio-ready-card studio-ready-project','data-project-id':display.id});
    const preview=button('',()=>{openProjectRoom(display.id);if(display.status==='completed'&&!display.media&&display.resultUrl)void loadStudioProjectResult(display);});preview.className='studio-ready-preview';preview.setAttribute('aria-label','Открыть '+(display.kind==='video'?'видео':'фото')+' · '+(first.prompt||'Мой проект').slice(0,110));
-   const source=previewSource(display);if(display.status==='completed'&&source)preview.append(previewElement(source));else if(!PROJECT_TERMINAL.includes(display.status))addWorkingPreview(preview,display,true);else preview.append(el('i',{className:'studio-ready-placeholder','aria-hidden':'true'},first.kind==='video'?'▷':'✦'));
+   const source=previewSource(display);if(display.status==='completed'&&source&&(display.media||display.previewDataUrl))preview.append(previewElement(source));else if(!PROJECT_TERMINAL.includes(display.status))addWorkingPreview(preview,display,true);else preview.append(el('i',{className:'studio-ready-placeholder','aria-hidden':'true'},first.kind==='video'?'▷':'✦'));
    const copy=el('span',{className:'studio-ready-copy'});copy.append(el('small',{},(first.kind==='video'?'Видео':'Фото')+' · '+projectStatusLabel(last)+(family.length>1?' · '+variantsText(family.length):'')),el('strong',{},(first.prompt||'Мой проект').slice(0,110)));preview.append(copy,el('b',{'aria-hidden':'true'},first.kind==='video'?'▷':'↗'));card.append(preview);
    if(display.status==='completed'&&source)card.append(window.anisProjectActions.createControls(display));
    readyGrid.append(card);
@@ -267,8 +279,8 @@
  }
  const resultLoads=new WeakMap();
  loadStudioProjectResult=function(p){
-  if(p.media?.file)return Promise.resolve(p.media);
   if(resultLoads.has(p))return resultLoads.get(p);
+  if(p.media?.file)return Promise.resolve(p.media);
   // Register before rendering: room and gallery renders can request this same file.
   const task=Promise.resolve().then(async()=>{
    p.loading=true;renderProjectRoom();
@@ -284,11 +296,11 @@
     // Publish the decoded file immediately; saving to storage must not hold up previews.
     p.media=mediaFromBlob(p.kind,blob);p.mediaBlob=blob;p.error=null;generatedMedia[p.kind]=p.media;
     workroomRenderKey='';renderProjectRoom();
-    await window.anisProjectActions.ensureImagePreview(p).catch(()=>null);workroomRenderKey='';renderProjectRoom();
+    const previewTask=window.anisProjectActions.ensureImagePreview(p).catch(()=>null).then(()=>{if(selectedStudioProject===p.id){workroomRenderKey='';renderProjectRoom();}else updateProjectDock();});
     const prepared=await window.anisMediaQuality.prepare(p,blob);
     p.outputWidth=prepared.width;p.outputHeight=prepared.height;p.resolutionWarning=prepared.warning||null;p.resolutionPending=!!prepared.pending;
     if(prepared.blob!==blob){const old=p.media.url;p.media=mediaFromBlob(p.kind,prepared.blob);p.mediaBlob=prepared.blob;URL.revokeObjectURL(old);}
-    Object.assign(p.media,{width:p.outputWidth,height:p.outputHeight,warning:p.resolutionWarning});generatedMedia[p.kind]=p.media;invalidateUsageStats();persistStudioProjects();void saveDurable();
+    Object.assign(p.media,{width:p.outputWidth,height:p.outputHeight,warning:p.resolutionWarning});generatedMedia[p.kind]=p.media;invalidateUsageStats();persistStudioProjects();void previewTask.then(()=>persistStudioProjects());
     if(selectedStudioProject===p.id)room.querySelector('.anis-inline-error')?.remove();
     return p.media;
    }catch(error){p.error=p.region?readableMediaError(error):(p.kind==='image'?'Фото':'Видео')+' готово, но файл не загрузился. Нажми на работу, чтобы повторить загрузку.';if(selectedStudioProject===p.id&&room.open)explain(Error(p.error),()=>loadStudioProjectResult(p),'Повторить загрузку');}

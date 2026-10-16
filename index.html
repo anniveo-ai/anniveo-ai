@@ -4681,27 +4681,33 @@ function readableMediaError(error){
   return error?.message||'Не удалось обработать запрос. Попробуй ещё раз.';
 }
 const preparedStudioImageCache=new WeakMap();
+const materializedStudioUploads=new WeakMap();
 async function materializeStudioUpload(file,fallbackName){
   if(!file)return null;
-  try{const bytes=await file.arrayBuffer();if(!bytes.byteLength||bytes.byteLength!==file.size)throw Error('incomplete');return new File([bytes],file.name||fallbackName,{type:file.type,lastModified:file.lastModified||Date.now()});}
-  catch{throw Error('Не удалось прочитать сохранённый исходник. Добавь это фото или видео снова — новый заказ ещё не отправлен.');}
+  if(!materializedStudioUploads.has(file))materializedStudioUploads.set(file,(async()=>{
+    try{const bytes=await file.arrayBuffer();if(!bytes.byteLength||bytes.byteLength!==file.size)throw Error('incomplete');return new File([bytes],file.name||fallbackName,{type:file.type,lastModified:file.lastModified||Date.now()});}
+    catch{materializedStudioUploads.delete(file);throw Error('Не удалось прочитать сохранённый исходник. Добавь это фото или видео снова — новый заказ ещё не отправлен.');}
+  })());
+  return materializedStudioUploads.get(file);
 }
 async function prepareStudioImage(file){
-  if(!file||file.type==='image/png'||file.size<=2*1024*1024)return file;
+  if(!file||file.size<=512*1024)return file;
   if(!preparedStudioImageCache.has(file))preparedStudioImageCache.set(file,prepareStudioImageUncached(file));
   return preparedStudioImageCache.get(file);
 }
 async function prepareStudioImageUncached(file){
-  if(!file||file.type==='image/png'||file.size<=2*1024*1024)return file;
+  if(!file||file.size<=512*1024)return file;
   // Resize large uploads locally; avoid waiting for a multi-megabyte transfer on mobile.
   const url=URL.createObjectURL(file),image=new Image();
   try{
     await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject;image.src=url;});
-    const scale=Math.min(1,2048/Math.max(image.naturalWidth,image.naturalHeight));
+    const scale=Math.min(1,2560/Math.max(image.naturalWidth,image.naturalHeight));
     const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
-    const ctx=canvas.getContext('2d');if(!ctx)return file;ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);
-    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.92));
-    return blob&&blob.size<file.size?new File([blob],'reference.jpg',{type:'image/jpeg'}):file;
+    const ctx=canvas.getContext('2d');if(!ctx)return file;ctx.drawImage(image,0,0,canvas.width,canvas.height);
+    let transparent=false;
+    if(file.type==='image/png'||file.type==='image/webp'){const pixels=ctx.getImageData(0,0,canvas.width,canvas.height).data;for(let i=3;i<pixels.length;i+=4)if(pixels[i]!==255){transparent=true;break;}}
+    const type=transparent?'image/png':'image/jpeg',blob=await new Promise(resolve=>canvas.toBlob(resolve,type,.94));
+    return blob&&blob.size<file.size?new File([blob],transparent?'reference.png':'reference.jpg',{type}):file;
   }catch{return file;}finally{URL.revokeObjectURL(url);}
 }
 const mediaMicIgnoreUntil={image:0,video:0};

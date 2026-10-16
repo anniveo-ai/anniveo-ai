@@ -63,7 +63,8 @@
     if(original.width<target.width||original.height<target.height)return {blob,...original,warning:'Сервис вернул '+original.width+'×'+original.height+' вместо '+target.width+'×'+target.height+'. Сохранён исходный файл.'};
     if(original.width===target.width&&original.height===target.height)return {blob,...original};
     const canvas=document.createElement('canvas');canvas.width=target.width;canvas.height=target.height;const ctx=canvas.getContext('2d'),scale=Math.max(target.width/original.width,target.height/original.height),w=original.width*scale,h=original.height*scale;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(image,(target.width-w)/2,(target.height-h)/2,w,h);
-    const resized=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!resized)throw Error('Не удалось подготовить размер фото.');return {blob:resized,...target};
+    const type=['image/jpeg','image/webp'].includes(blob.type)?blob.type:'image/png';
+    const resized=await new Promise(resolve=>canvas.toBlob(resolve,type,.96));if(!resized)throw Error('Не удалось подготовить размер фото.');return {blob:resized,...target};
    }finally{URL.revokeObjectURL(url);}
   }catch(error){return {blob,...original,warning:error.message,pending:project.kind==='video'&&project.quality==='qhd'};}
   finally{if(audioStart&&audioStart.audio.state!=='closed')void audioStart.audio.close();}
