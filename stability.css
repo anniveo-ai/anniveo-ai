@@ -283,8 +283,8 @@ html[data-theme=light] .studio-replace-file{background:#eee2f5;color:#72418c;bor
 #view-ready .studio-ready-project .studio-ready-copy strong{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:11px;line-height:14px}
 #view-ready .studio-ready-preview>b{top:7px;right:7px;width:25px;height:25px;font-size:15px;background:#251b35d9}
 #view-ready .studio-ready-project>.ready-project-actions{position:relative;flex:0 0 108px;z-index:2;grid-template-rows:repeat(2,44px);gap:6px;padding:7px;background:transparent}
-#view-ready .studio-ready-project .ready-project-action{min-height:44px;height:44px;padding:4px 2px;gap:3px;border-radius:10px}
-#view-ready .studio-ready-project .ready-project-action svg{width:17px;height:17px}
+#view-ready .studio-ready-project .ready-project-action{min-height:44px;height:44px;padding:2px;gap:2px;border-radius:10px}
+#view-ready .studio-ready-project .ready-project-action svg{width:16px;height:16px}
 #view-ready .studio-ready-project .ready-project-action span{font-size:8px;line-height:10px}
 #view-ready .studio-ready-status-card .studio-ready-preview{display:flex;align-items:center;justify-content:center;padding:34px 10px 10px}
 #view-ready .studio-ready-status-card .studio-ready-copy{position:relative;inset:auto;height:auto;padding:0;text-align:center;background:transparent}
