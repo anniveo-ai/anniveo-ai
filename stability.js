@@ -16,6 +16,8 @@
   if(retry)note.append(button(label,()=>{note.remove();void retry();}));
  }
  readableMediaError=error=>!navigator.onLine?'Нет интернета. Уже отправленный проект не нужно заказывать заново.':error?.status===401?'Открой приложение заново через бота ANIS AI в Telegram.':error?.status===429?'Сервис занят. Подожди немного и проверь готовность.':error?.status===402?'У сервиса ИИ закончились средства. Мы сохранили задание; обратись в поддержку.':error?.name==='AbortError'||error instanceof TypeError||/load failed|failed to fetch|networkerror/i.test(error?.message||'')?'Соединение прервалось. Проверь уже отправленное задание — новый заказ не создан.':error?.message||'Не удалось выполнить действие. Попробуй позже.';
+ const readableAccountError=readableMediaError;
+ readableMediaError=error=>error?.status===402&&/аниум/i.test(error?.message||'')?error.message:readableAccountError(error);
  window.addEventListener('online',()=>{void resumeMediaProjects();void loadHistory();});
 
  // IndexedDB stores originals and completed files, not just temporary object URLs.
@@ -128,7 +130,7 @@
   creationLock=true;lastCreation={fingerprint:stamp,time:now,id:null};
   try{
    if(snapshot.prompt.trim().length>=3&&snapshot.prompt.trim().length<=1200){
-    const quote=await mediaJSON({action:'media-quote',kind:snapshot.kind,quality:snapshot.quality,duration:snapshot.duration});
+    let quote;try{quote=await mediaJSON({action:'media-quote',kind:snapshot.kind,quality:snapshot.quality,duration:snapshot.duration});}catch(error){toast(readableMediaError(error));return;}
     if(quote.enabled){const text='Создать '+(snapshot.kind==='video'?'видео':'фото')+' за '+quote.amount+' аниумов? При подтверждённой ошибке создания сумма вернётся на баланс.';const confirmed=typeof tg!=='undefined'&&tg?.showConfirm?await new Promise(resolve=>tg.showConfirm(text,resolve)):window.confirm(text);if(!confirmed)return;snapshot={...snapshot,acceptedPrice:quote.amount};}
    }
    if(snapshot.kind==='video'&&['qhd','uhd'].includes(snapshot.quality)&&snapshot.sourceFile?.type.startsWith('video/')){const source=await window.anisMediaQuality.inspectVideo(snapshot.sourceFile);if(source.duration>10.1){toast('Для 2K и 4K добавь видео до 10 секунд. Можно сначала обрезать ролик.');return;}}
@@ -284,7 +286,7 @@
  function requestVariantDeletion(item,whole=false){
   if(variantDeleteDialog.open)return;variantToDelete=item;deleteWholeWork=whole;
   $('variantDeleteTitle').textContent=whole?'Удалить работу?':'Удалить вариант?';
-  variantDeleteText.textContent=projectLabel(item)+(whole?' будет удалён из готовых работ вместе с вариантами.':' будет удалён из списка вариантов.')+(['submitting','creating','pending','processing'].includes(item.status)?' Уже начатое создание продолжится.':'');
+  variantDeleteText.textContent=projectLabel(item)+(whole?' будет удалён из готовых работ вместе с вариантами.':' будет удалён из списка вариантов.')+(['submitting','creating','pending','processing','unknown'].includes(item.status)?' Удаление карточки не отменяет отправленный запрос.':'')+(item.billing?.state==='reserved'?' Аниумы останутся в резерве до подтверждения результата.':'');
   variantDeleteDialog.showModal();cancelVariantDelete.focus({preventScroll:true});
  }
  state.requestWorkDeletion=item=>requestVariantDeletion(item,true);
