@@ -90,11 +90,11 @@
  studioNavIcon.classList.add('studio-nav-icon');studioNavIcon.append(el('i',{className:'studio-nav-progress','aria-hidden':'true'}));
  const studioReadyBadge=el('i',{className:'studio-nav-ready-badge','aria-hidden':'true'});studioReadyBadge.innerHTML='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 8 2.5 2.5L12 5"/></svg>';studioNav.append(studioReadyBadge);
  const seenStudioResults=new Set(read('studio-seen-results',[]));
- function completedStudioResults(){return [...studioProjects.values()].filter(p=>p.status==='completed'&&!p.loading&&(p.media||p.resultUrl));}
+ function completedStudioResults(){return [...studioProjects.values()].filter(p=>!p.removedFromVariants&&p.status==='completed'&&!p.loading&&(p.media||p.resultUrl));}
  function acknowledgeStudioResults(){let changed=false;for(const p of completedStudioResults())if(!seenStudioResults.has(p.id)){seenStudioResults.add(p.id);changed=true;}if(changed)write('studio-seen-results',[...seenStudioResults].slice(-500));}
  state.ackStudioResults=()=>{acknowledgeStudioResults();updateProjectDock();};
  state.updateStudioIndicator=function(){
-  const projects=[...studioProjects.values()],active=projects.filter(p=>!PROJECT_TERMINAL.includes(p.status)||p.loading).length;
+  const projects=[...studioProjects.values()],active=projects.filter(p=>(!PROJECT_TERMINAL.includes(p.status)||p.loading)&&!(p.removedFromVariants&&p.status==='queued')).length;
   if(['studio','video','templates','ready'].includes(currentView)&&!state.restoring)acknowledgeStudioResults();
   const unseen=completedStudioResults().some(p=>!seenStudioResults.has(p.id));
   studioNav.classList.toggle('studio-nav-working',active>0);studioNav.classList.toggle('studio-nav-ready',unseen);
@@ -130,7 +130,31 @@
  $('videoRatio').addEventListener('change',syncQualityFormats);$('videoQuality').addEventListener('change',syncQualityFormats);syncQualityFormats();
  const formatHelpOriginal=applyFormatHelp;applyFormatHelp=function(...args){const result=formatHelpOriginal(...args);settingCardSync.forEach(sync=>sync());saveDrafts();return result;};
  const room=$('mediaResultDialog'),roomHeader=room.querySelector('header'),roomTitle=$('mediaResultTitle'),roomClose=button('×',()=>closeGeneratedMedia());roomClose.className='room-close';roomClose.setAttribute('aria-label','Свернуть окно проекта');roomHeader.prepend(roomClose);roomHeader.after(roomTitle);
+ const openRoomOriginal=openProjectRoom;
+ openProjectRoom=function(...args){
+  const wasOpen=room.open;if(!wasOpen)room.classList.remove('room-edge-sheet');
+  const result=openRoomOriginal(...args);
+  if(!wasOpen&&room.open&&window.matchMedia('(max-width:760px)').matches){
+   room.style.setProperty('--room-sheet-top',Math.max(0,room.getBoundingClientRect().top)+'px');room.classList.add('room-edge-sheet');
+  }
+  return result;
+ };
  const variantPanel=el('section',{className:'room-variants','aria-label':'Варианты проекта'}),variantHeading=room.querySelector('.project-variants-heading');variantHeading.before(variantPanel);variantPanel.append(variantHeading,$('projectVariantCards'));
+ function removeVariant(item){
+  item.removedFromVariants=true;
+  const remaining=projectFamily(item);
+  if(selectedStudioProject===item.id)selectedStudioProject=remaining.at(-1)?.id||null;
+  workroomRenderKey='';persistStudioProjects();void saveDurable();
+  if(selectedStudioProject)renderProjectRoom();else closeGeneratedMedia();
+  updateProjectDock();
+  document.querySelector('.variant-removal-notice')?.remove();
+  const notice=el('div',{className:'variant-removal-notice',role:'status'});
+  const ongoing=['submitting','creating','pending','processing'].includes(item.status);
+  notice.append(el('span',{},ongoing?'Вариант убран. Создание продолжится.':'Вариант удалён из списка.'),button('Отменить',()=>{
+   item.removedFromVariants=false;notice.remove();persistStudioProjects();void saveDurable();openProjectRoom(item.id);updateProjectDock();void pumpStudioQueue();
+  }));
+  (room.open?room:document.body).append(notice);setTimeout(()=>notice.remove(),8000);
+ }
  function previewSource(p){
   if(p.media?.url)return {url:p.media.url,type:p.kind==='video'?'video':'img'};
   if(p.status==='completed')return p.resultUrl&&!p.region?{url:p.resultUrl,type:p.kind==='video'?'video':'img'}:null;
@@ -156,7 +180,11 @@
    const card=button('',()=>{openProjectRoom(item.id);if(item.status==='completed'&&!item.media&&item.resultUrl)void loadStudioProjectResult(item);});card.className='project-variant-card';card.classList.toggle('selected',item.id===p.id);card.setAttribute('aria-label',projectLabel(item)+' · '+projectStatusLabel(item));
    const visual=el('div',{className:'project-variant-visual'}),source=previewSource(item);
    if(item.status==='completed'&&source)visual.append(previewElement(source));else if(!PROJECT_TERMINAL.includes(item.status))addWorkingPreview(visual,item,true);else visual.append(el('span',{},item.status==='completed'?'✓':'!'));
-   if(item.kind==='video')visual.append(el('b',{className:'project-video-tag'},'▷'));card.append(visual,el('small',{},projectLabel(item)));cards.append(card);
+   if(item.kind==='video')visual.append(el('b',{className:'project-video-tag'},'▷'));card.append(visual,el('small',{},projectLabel(item)));
+   const tile=el('div',{className:'project-variant-item','data-variant-id':item.id}),remove=button('',event=>{event.stopPropagation();removeVariant(item);});
+   remove.className='variant-remove';remove.title='Удалить вариант';remove.setAttribute('aria-label','Удалить '+projectLabel(item));
+   remove.innerHTML='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m5 5 6 6M11 5l-6 6"/></svg>';
+   tile.append(card,remove);cards.append(tile);
   }
   const addIdea=button('+',()=>$('projectAgentIdea').focus({preventScroll:false}));addIdea.className='project-variant-add';addIdea.setAttribute('aria-label','Добавить идею для нового варианта');cards.append(addIdea);
   $('mediaResultTitle').textContent=projectLabel(p)+(p.status==='completed'?' готово':p.status==='failed'?' · ошибка':p.status==='unknown'?' · проверка':' · в работе');
@@ -179,7 +207,7 @@
  state.openReadyProjects=()=>openView('ready');
  let readyRenderKey='';
  function renderReadyProjects(){
-  const projects=[...studioProjects.values()].sort((a,b)=>(a.created||0)-(b.created||0)||(a.order||0)-(b.order||0)),key=[state.restoring,state.historyLoading,state.historyLoaded,state.historyError,...projects.map(p=>[p.id,p.groupId,p.status,p.loading,previewSource(p)?.url,p.prompt].join(':'))].join('|');if(readyGrid.childElementCount&&key===readyRenderKey)return;readyRenderKey=key;readyGrid.replaceChildren();
+  const projects=[...studioProjects.values()].filter(p=>!p.removedFromVariants).sort((a,b)=>(a.created||0)-(b.created||0)||(a.order||0)-(b.order||0)),key=[state.restoring,state.historyLoading,state.historyLoaded,state.historyError,...projects.map(p=>[p.id,p.groupId,p.status,p.loading,previewSource(p)?.url,p.prompt].join(':'))].join('|');if(readyGrid.childElementCount&&key===readyRenderKey)return;readyRenderKey=key;readyGrid.replaceChildren();
   const groups=new Map();for(const p of projects){const id=p.groupId||p.id;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(p);}
   for(const family of [...groups.values()].reverse()){
    const first=family[0],last=family.at(-1),display=[...family].reverse().find(p=>p.status==='completed'&&(p.media||p.resultUrl))||last;
@@ -235,15 +263,12 @@
    if(failure)state.historyError=failure.status===401?'Не удалось подтвердить вход. Закрой приложение и открой его через бота ANIS AI.':'Не удалось загрузить все работы. Проверь соединение и попробуй ещё раз.';
    for(const p of studioProjects.values())if(['submitting','creating','pending','processing','unknown'].includes(p.status))void recoverProject(p);
    void pumpStudioQueue();updateProjectDock();persistStudioProjects();
-   const requested=new URL(location.href).searchParams.get('project');if(requested&&studioProjects.has(requested)){openProjectRoom(requested);const p=studioProjects.get(requested);if(p.status==='completed'&&!p.media&&p.resultUrl)void loadStudioProjectResult(p);}
   })().finally(()=>resumePromise=null);
  };
 
  // Scrolling from the landing content into messages is also entering the chat.
  function syncChatScrollNavigation(){
-  const chat=currentView==='chat',hasMessages=$('messages').childElementCount>0;
-  const top=Math.max($('app').getBoundingClientRect().top,window.visualViewport?.offsetTop||0);
-  const inConversation=chat&&(!showWelcome||hasMessages&&$('welcome').getBoundingClientRect().bottom<=top+110);
+  const chat=currentView==='chat',inConversation=isChatConversationVisible();
   if(inConversation)chatOpenedThisSession=true;
   $('homePrivacyBar').classList.toggle('hidden',!chat);
   $('homePrivacyBar').classList.toggle('chat-privacy-bar',inConversation);
@@ -396,10 +421,16 @@
   persistStudioProjects();
   void dbRecord('files').then(files=>{if(!files)return;if(files.image&&!studioImageFile)setStudioPhoto(files.image);if(files.video&&!studioVideoFile)setStudioVideo(files.video);if(files.identity&&!studioVideoIdentityFile)setVideoIdentity(files.identity);state.region=state.region||files.region||null;updateRegionButton();}).catch(storageWarning);
   state.threads=read('threads',[]);renderThreads();normalHistory=cleanHistory(read('chat:'+state.activeChatId,normalHistory));renderChat();
-  if(drafts?.view&&['home','chat','studio','video','profile','history','statistics','templates','ready'].includes(drafts.view))openView(drafts.view);
+  // Restore draft contents, never the previously open screen.
   void refreshThreads().catch(()=>{}).then(()=>loadHistory());
   if(initData&&user)void mediaJSON({action:'notification-get'}).then(data=>notifyToggle.checked=data.enabled).catch(()=>{});
   void resumeMediaProjects();void checkRelease();
  }
  void start();
+ window.addEventListener('pageshow',event=>{
+  if(!event.persisted)return;
+  document.activeElement?.blur();document.querySelectorAll('dialog[open]').forEach(dialog=>dialog.close());
+  showWelcome=true;chatOpenedThisSession=false;returnToChatAvailable=false;newestFirstChat=true;openView('home');
+ });
 })();
+
