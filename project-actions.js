@@ -197,6 +197,41 @@
       return result;
     };
   }
+  // Recover thumbnails in the Ready gallery without regenerating projects.
+  const galleryLoads=new Set();
+  function repairReadyGallery(){
+    const grid=document.querySelector('.studio-ready-grid, #readyProjects, #readyGrid');
+    const cards=grid?grid.querySelectorAll('[data-project-id]'):document.querySelectorAll('.studio-ready-project[data-project-id]');
+    for(const card of cards){
+      const id=card.dataset.projectId,project=studioProjects.get(id);
+      if(!project||project.status!=='completed'||project.media||!project.resultUrl||galleryLoads.has(id))continue;
+      const preview=card.querySelector('.studio-ready-preview');
+      if(!preview)continue;
+      const media=preview.querySelector('img,video');
+      if(media&&media.complete&&media.naturalWidth>0)continue;
+      const start=()=>{
+        if(galleryLoads.has(id)||project.media)return;
+        galleryLoads.add(id);
+        Promise.resolve(loadStudioProjectResult(project)).catch(()=>{}).finally(()=>{
+          galleryLoads.delete(id);
+          const current=document.querySelector('.studio-ready-project[data-project-id="'+CSS.escape(id)+'"] .studio-ready-preview');
+          if(current&&project.media?.url){
+            const previous=current.querySelector('img,video');
+            const next=document.createElement(project.kind==='video'?'video':'img');
+            next.src=project.media.url;
+            if(project.kind==='video'){next.muted=true;next.playsInline=true;next.preload='metadata';}
+            if(previous)previous.replaceWith(next);else current.prepend(next);
+          }
+        });
+      };
+      if(media){media.addEventListener('error',start,{once:true});if(media.tagName==='IMG'&&media.complete&&!media.naturalWidth)start();}
+      else start();
+    }
+  }
+  document.addEventListener('DOMContentLoaded',()=>{
+    const grid=document.querySelector('#readyGrid, #readyProjects, .studio-ready-grid');
+    if(grid){new MutationObserver(()=>repairReadyGallery()).observe(grid,{childList:true,subtree:false});repairReadyGallery();}
+  });
   window.anisProjectActions={createControls,normalizeBlob,saveMedia,showMedia,getMedia};
 })();
 
