@@ -251,7 +251,7 @@ async function downloadMediaExport(request,env){
  if(!row)return new Response('Ссылка истекла. Подготовь скачивание ещё раз.',{status:404});
  let start=0,end=row.size-1,status=200;const range=request.headers.get('Range');
  if(range){const match=/^bytes=(\d*)-(\d*)$/.exec(range);if(!match||!match[1]&&!match[2])return new Response(null,{status:416,headers:{'Content-Range':'bytes */'+row.size}});if(!match[1])start=Math.max(0,row.size-Number(match[2]));else{start=Number(match[1]);if(match[2])end=Math.min(end,Number(match[2]));}if(start>end||start>=row.size)return new Response(null,{status:416,headers:{'Content-Range':'bytes */'+row.size}});status=206;}
- const headers={'Content-Type':row.mime,'Content-Disposition':'attachment; filename="'+row.filename+'"','Content-Length':String(end-start+1),'Accept-Ranges':'bytes','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Access-Control-Allow-Origin':'https://web.telegram.org'};
+ const headers={'Content-Type':row.mime,'Content-Disposition':'attachment; filename="'+row.filename+'"','Content-Length':String(end-start+1),'Accept-Ranges':'bytes','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Access-Control-Allow-Origin':(['https://web.telegram.org','https://anniveo-ai.pages.dev','https://anniveo-ai-app.pages.dev'].includes(request.headers.get('Origin'))?request.headers.get('Origin'):'https://web.telegram.org'),'Vary':'Origin'};
  if(status===206)headers['Content-Range']='bytes '+start+'-'+end+'/'+row.size;
  if(request.method==='HEAD')return new Response(null,{status,headers});
  let part=Math.floor(start/MEDIA_EXPORT_CHUNK);
