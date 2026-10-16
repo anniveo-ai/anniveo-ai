@@ -37,14 +37,17 @@ html[data-theme=light] .anon-mini-toggle{color:#432d52;background:linear-gradien
 .ready-project-corner-actions .ready-project-action{width:40px;height:40px;min-height:40px;padding:9px;border-radius:11px;gap:0;background:#251b35d9;backdrop-filter:blur(8px)}
 .ready-project-corner-actions .ready-project-action span{display:none}
 #view-ready .studio-ready-copy .ready-billing-status{margin:7px 0 0;color:#b7dfcb;font-size:9px;line-height:1.35}
-#view-ready .studio-ready-status-card{align-self:start}
-#view-ready .studio-ready-status-card .studio-ready-preview{height:auto;min-height:0;padding:62px 12px 14px;background:radial-gradient(ellipse at top,#63338335,transparent 85%)}
+#view-ready .studio-ready-status-card{align-self:stretch}
+#view-ready .studio-ready-status-card .studio-ready-preview{flex:1 0 auto;display:flex;align-items:center;justify-content:center;height:auto;min-height:0;padding:54px 12px 22px;background:radial-gradient(ellipse at top,#63338335,transparent 85%)}
 #view-ready .studio-ready-status-card .studio-ready-preview:after{display:none}
-#view-ready .studio-ready-status-card .studio-ready-copy{position:relative;display:block;inset:auto}
+#view-ready .studio-ready-status-card .studio-ready-copy{position:relative;display:block;width:100%;inset:auto;text-align:center}
 #view-ready .studio-ready-status-card .studio-ready-copy strong{display:block;overflow:visible;-webkit-line-clamp:unset;font-size:13px;line-height:1.35}
 #view-ready .ready-issue-reason{display:block;margin-top:8px;font-size:11px;line-height:1.45;color:#c9bbd5;overflow-wrap:anywhere}
 #view-ready .studio-ready-status-card .ready-issue-prompt{margin:10px 0 0;padding-top:8px;border-top:1px solid #ffffff12;font-size:10px;line-height:1.4;color:#a99ab8;overflow-wrap:anywhere}
-.studio-ready-status-card .ready-project-corner-actions{flex-direction:row}
+.studio-ready-status-card .ready-project-corner-actions{position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px;background:#0e0a142b}
+.studio-ready-status-card .ready-project-corner-actions .ready-project-action{grid-column:auto;width:100%;height:auto;min-height:57px;padding:8px 3px;gap:6px;background:linear-gradient(140deg,#3d264b7d,#191521)}
+.studio-ready-status-card .ready-project-corner-actions .ready-project-action:only-child{grid-column:1/-1}
+.studio-ready-status-card .ready-project-corner-actions .ready-project-action span{display:block;font-size:9px;line-height:1.25}
 #mediaResultDialog .media-result-preview.project-status-result{aspect-ratio:auto!important;min-height:0;height:auto;display:block;padding:18px}
 .project-issue-panel strong{display:block;font-size:17px;line-height:1.35}.project-issue-panel p{margin:10px 0;color:var(--muted);font-size:13px;line-height:1.5}.project-issue-panel small{display:block;margin:10px 0;color:#b7dfcb}.project-issue-panel button{margin-top:10px;width:100%}
 html[data-theme=light] #view-ready .ready-issue-reason{color:#796786}html[data-theme=light] #view-ready .studio-ready-status-card .ready-issue-prompt{color:#8b7896;border-color:#76568720}html[data-theme=light] #view-ready .studio-ready-copy .ready-billing-status,html[data-theme=light] .project-issue-panel small{color:#367c60}
