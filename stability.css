@@ -32,7 +32,7 @@ html[data-theme=light] .anon-mini-toggle{color:#432d52;background:linear-gradien
 .ready-project-action svg{width:20px;height:20px;flex:none;stroke:currentColor;filter:drop-shadow(0 0 5px #b879e026)}
 .ready-project-action span{font-size:8px;line-height:1.15;text-align:center;color:#e2d5ee;overflow-wrap:anywhere}
 .ready-action-download{background:linear-gradient(145deg,#7534b894,#3a1d6b9c);border-color:#b07de492;color:#dea4ff;box-shadow:inset 0 1px #d8acff26,0 0 8px #a252cb13}
-.ready-action-edit{color:#adbbff}.ready-action-enhance{color:#e5a1df}.ready-action-crop{grid-column:span 3;color:#ecc297}.ready-action-similar{grid-column:span 3;color:#9ed8df}
+.ready-action-edit{color:#adbbff}.ready-action-enhance{color:#e5a1df}.ready-action-crop{color:#ecc297}.ready-action-delete{color:#efa7b8}.ready-action-similar{color:#9ed8df}
 .ready-project-action:active{transform:scale(.96)}.ready-project-action:focus-visible,.studio-ready-preview:focus-visible{outline:2px solid #dab6f5;outline-offset:-3px}.ready-project-action[aria-busy=true] svg{animation:projectSpin 1.4s linear infinite}
 html[data-theme=light] #view-ready .studio-ready-card.studio-ready-project{background:linear-gradient(150deg,#fff,#eee5f5);border-color:#d8c4e5}html[data-theme=light] .ready-project-action{background:linear-gradient(140deg,#f6eafa,#eee8f7);border-color:#d4bcdf;color:#9465ab}html[data-theme=light] .ready-project-action span{color:#725281}html[data-theme=light] .ready-action-download{background:linear-gradient(145deg,#ae75d6,#8150b1);color:#f3dbff}html[data-theme=light] .ready-action-download span{color:#fff}
 

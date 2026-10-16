@@ -267,23 +267,25 @@
  };
  const variantPanel=el('section',{className:'room-variants','aria-label':'Варианты проекта'}),variantHeading=room.querySelector('.project-variants-heading');variantHeading.before(variantPanel);variantPanel.append(variantHeading,$('projectVariantCards'));
  const variantDeleteDialog=dialog('variantDeleteDialog','Удалить вариант?'),variantDeleteText=el('p'),variantDeleteActions=el('div',{className:'anis-toolbar'});
- let variantToDelete=null;
+ let variantToDelete=null,deleteWholeWork=false;
  const cancelVariantDelete=button('Отмена',()=>variantDeleteDialog.close()),confirmVariantDelete=button('Удалить',()=>{
-  const item=variantToDelete;variantDeleteDialog.close();if(item&&!item.removedFromVariants)removeVariant(item);
+  const item=variantToDelete,whole=deleteWholeWork;variantDeleteDialog.close();if(item&&!item.removedFromVariants)removeVariant(item,whole);
  },true);
  cancelVariantDelete.id='variantDeleteCancel';confirmVariantDelete.id='variantDeleteConfirm';variantDeleteText.id='variantDeleteDescription';
  variantDeleteDialog.setAttribute('aria-labelledby','variantDeleteTitle');variantDeleteDialog.querySelector('h2').id='variantDeleteTitle';variantDeleteDialog.setAttribute('aria-describedby',variantDeleteText.id);
  variantDeleteActions.append(cancelVariantDelete,confirmVariantDelete);variantDeleteDialog.append(variantDeleteText,variantDeleteActions);
  variantDeleteDialog.addEventListener('close',()=>{if(!variantDeleteDialog.open)variantToDelete=null;});
- function requestVariantDeletion(item){
-  if(variantDeleteDialog.open)return;variantToDelete=item;
-  variantDeleteText.textContent=projectLabel(item)+' будет удалён из списка вариантов.'+(['submitting','creating','pending','processing'].includes(item.status)?' Уже начатое создание продолжится.':'');
+ function requestVariantDeletion(item,whole=false){
+  if(variantDeleteDialog.open)return;variantToDelete=item;deleteWholeWork=whole;
+  $('variantDeleteTitle').textContent=whole?'Удалить работу?':'Удалить вариант?';
+  variantDeleteText.textContent=projectLabel(item)+(whole?' будет удалён из готовых работ вместе с вариантами.':' будет удалён из списка вариантов.')+(['submitting','creating','pending','processing'].includes(item.status)?' Уже начатое создание продолжится.':'');
   variantDeleteDialog.showModal();cancelVariantDelete.focus({preventScroll:true});
  }
- function removeVariant(item){
-  item.removedFromVariants=true;
+ state.requestWorkDeletion=item=>requestVariantDeletion(item,true);
+ function removeVariant(item,whole=false){
+  const removed=whole?projectFamily(item):[item];for(const p of removed)p.removedFromVariants=true;
   const remaining=projectFamily(item);
-  if(selectedStudioProject===item.id)selectedStudioProject=remaining.at(-1)?.id||null;
+  if(removed.some(p=>selectedStudioProject===p.id))selectedStudioProject=remaining.at(-1)?.id||null;
   workroomRenderKey='';persistStudioProjects();void saveDurable();
   if(selectedStudioProject)renderProjectRoom();else closeGeneratedMedia();
   updateProjectDock();
@@ -291,7 +293,7 @@
   const notice=el('div',{className:'variant-removal-notice',role:'status'});
   const ongoing=['submitting','creating','pending','processing'].includes(item.status);
   notice.append(el('span',{},ongoing?'Вариант убран. Создание продолжится.':'Вариант удалён из списка.'),button('Отменить',()=>{
-   item.removedFromVariants=false;notice.remove();persistStudioProjects();void saveDurable();openProjectRoom(item.id);updateProjectDock();void pumpStudioQueue();
+   for(const p of removed)p.removedFromVariants=false;notice.remove();persistStudioProjects();void saveDurable();openProjectRoom(item.id);updateProjectDock();void pumpStudioQueue();
   }));
   (room.open?room:document.body).append(notice);setTimeout(()=>notice.remove(),3000);
  }
@@ -361,6 +363,7 @@
    const source=previewSource(display);if(display.status==='completed'&&source&&(display.previewDataUrl||display.posterDataUrl))preview.append(previewElement(source));else if(!PROJECT_TERMINAL.includes(display.status))addWorkingPreview(preview,display,true);else preview.append(el('i',{className:'studio-ready-placeholder','aria-hidden':'true'},first.kind==='video'?'▷':'✦'));
    const copy=el('span',{className:'studio-ready-copy'});copy.append(el('small',{},(first.kind==='video'?'Видео':'Фото')+' · '+projectStatusLabel(last)+(family.length>1?' · '+variantsText(family.length):'')),el('strong',{},(first.prompt||'Мой проект').slice(0,110)));preview.append(copy,el('b',{'aria-hidden':'true'},first.kind==='video'?'▷':'↗'));card.append(preview);
    if(display.status==='completed'&&source)card.append(window.anisProjectActions.createControls(display));
+   else if(PROJECT_TERMINAL.includes(display.status))card.append(window.anisProjectActions.createControls(display,{deleteOnly:true}));
    next.push(card);
   }
   if(state.restoring||state.historyLoading){const note=el('p',{className:'note ready-history-status',role:'status'},'Загружаем твои работы…');next.unshift(note);}

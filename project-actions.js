@@ -7,6 +7,7 @@
     edit:'<path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 14Z"/>',
     enhance:'<path d="m4 20 11-11 3 3L7 23ZM14 3v4m-2-2h4M21 14v4m-2-2h4M19 2l1 3 3 1-3 1-1 3-1-3-3-1 3-1Z"/>',
     crop:'<path d="M6 2v14a2 2 0 0 0 2 2h14M2 6h14a2 2 0 0 1 2 2v14"/>',
+    delete:'<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/>',
     similar:'<rect x="3" y="8" width="13" height="13" rx="3"/><path d="M8 5V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-1M8 11l2 3 3 1"/>'
   };
   function control(text,fn,className=''){const b=node('button',{type:'button',className},text);b.onclick=fn;return b;}
@@ -219,10 +220,11 @@
     }
     toast(kind==='video'?'Всё готово. Нажми «Создать видео».':'Всё готово. Нажми «Создать фото».');
   }
-  function createControls(project){
+  function createControls(project,{deleteOnly=false}={}){
     const rail=node('div',{className:'ready-project-actions'});rail.setAttribute('role','group');rail.setAttribute('aria-label','Действия с '+(project.kind==='video'?'видео':'фото'));rail.dataset.projectId=project.id;
-    for(const [action,label]of [['download','Скачать'],['edit','Изменить'],['enhance','Улучшить'],['crop','Обрезать'],['similar','Создать похожее']]){
+    for(const [action,label]of (deleteOnly?[['delete','Удалить']]:[['download','Скачать'],['edit','Изменить'],['enhance','Улучшить'],['crop','Обрезать'],['delete','Удалить'],['similar','Создать похожее']])){
       const b=control('',async()=>{
+        if(action==='delete'){window.anisStability.requestWorkDeletion(project);return;}
         b.disabled=true;b.setAttribute('aria-busy','true');
         try{if(action==='download'){await saveProject(project);return;}if(action==='edit'){openProjectRoom(project.id);const idea=$('projectAgentIdea');idea.focus({preventScroll:true});idea.closest('.project-agent').scrollIntoView({block:'center',behavior:'smooth'});return;}if(action==='crop'){await openCrop(project);return;}const item=await getMedia(project);prepareAction(project,item,action);}
         catch(error){if(error.name!=='AbortError')toast(error.message||'Не удалось открыть действие.');}
