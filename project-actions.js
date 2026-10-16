@@ -151,7 +151,7 @@
     for(const [action,label]of [['download','Скачать'],['edit','Изменить'],['enhance','Улучшить'],['crop','Обрезать'],['similar','Создать похожее']]){
       const b=control('',async()=>{
         b.disabled=true;b.setAttribute('aria-busy','true');
-        try{if(action==='download'){await saveProject(project);return;}const item=await getMedia(project);if(action==='crop')await openCrop(project,item);else prepareAction(project,item,action);}
+        try{if(action==='download'){await saveProject(project);return;}if(action==='enhance'){openProjectRoom(project.id);const idea=$('projectAgentIdea');requestAnimationFrame(()=>{idea.closest('.project-agent').scrollIntoView({block:'center',behavior:'smooth'});idea.focus({preventScroll:true});});return;}const item=await getMedia(project);if(action==='crop')await openCrop(project,item);else prepareAction(project,item,action);}
         catch(error){if(error.name!=='AbortError')toast(error.message||'Не удалось открыть действие.');}
         finally{b.disabled=false;b.removeAttribute('aria-busy');}
       },'ready-project-action ready-action-'+action);

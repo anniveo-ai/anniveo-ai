@@ -31,6 +31,18 @@
   const shared=[];Object.defineProperty(navigator,'share',{configurable:true,value:data=>{shared.push(data);return Promise.resolve();}});Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});
   const saving=saveGeneratedMedia();check(shared.length===1,'Native save is called synchronously inside original gesture');await saving;
   check(shared[0].files[0]===photo.media.file,'Save uses export file rather than preview');
+  closeGeneratedMedia();openView('ready');
+  const rail=window.anisProjectActions.createControls(photo);document.body.append(rail);rail.querySelector('[data-action="enhance"]').click();await wait(350);
+  check(selectedStudioProject===photo.id&&document.getElementById('mediaResultDialog').open&&document.activeElement===document.getElementById('projectAgentIdea'),'Enhance opens the selected result agent');rail.remove();closeGeneratedMedia();
+  const source=new File([blob],'reference.png',{type:'image/png'});
+  for(const [view,setter,stageId,replaceId,fileId]of [['studio',setStudioPhoto,'studioUploadStage','studioReplacePhoto','imageFile'],['video',setStudioVideo,'videoUploadStage','studioReplaceVideo','videoFile']]){
+   openView(view);setter(source);await wait(100);const stage=document.getElementById(stageId),rect=stage.getBoundingClientRect(),preview=stage.querySelector('img.studio-photo-preview:not([hidden])'),replace=document.getElementById(replaceId);
+   check(Math.abs(rect.width-rect.height)<2&&getComputedStyle(preview).objectFit==='contain'&&getComputedStyle(stage.querySelector('.studio-upload-content')).display==='none','Square source preview shows the whole image: '+view,{width:rect.width,height:rect.height});
+   let picked=0;const input=document.getElementById(fileId),originalClick=input.click;input.click=()=>picked++;replace.click();input.click=originalClick;
+   check(!replace.hidden&&picked===1&&replace.textContent.includes('Заменить фото'),'Separate replacement button opens file picker: '+view);
+  }
+  setStudioVideo(new File([blob],'clip.mp4',{type:'video/mp4'}));check(document.getElementById('studioReplaceVideoLabel').textContent==='Заменить видео','Video replacement is labeled for video');clearStudioVideo();clearStudioPhoto();
+  check(document.getElementById('studioReplacePhoto').hidden&&document.getElementById('studioReplaceVideo').hidden,'Replacement controls hide when source is cleared');
   report.pass=true;
  }catch(error){report.pass=false;report.error=error.stack||String(error);}
  const pre=document.createElement('pre');pre.id='qa-report';pre.textContent=JSON.stringify(report);document.body.prepend(pre);

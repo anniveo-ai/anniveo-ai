@@ -239,3 +239,13 @@ html[data-theme=light] .studio-job-progress{background:linear-gradient(115deg,#f
 .studio-prompt-placeholder{pointer-events:none;flex:none}
 @media(max-width:760px){#imagePrompt,#videoPrompt{font-size:16px!important}}
 html[data-theme=light] .studio-prompt-pinned{background:#fffafefc!important}
+/* Keep the complete source visible; replacement controls sit outside the image. */
+.photo-studio .studio-upload-stage.has-photo{width:100%;height:auto;aspect-ratio:1/1;max-width:420px;margin-bottom:10px}
+.photo-studio .studio-upload-stage.has-photo .studio-upload-square{position:absolute;inset:0;width:100%;height:100%;max-width:none;transform:none;border-radius:24px;padding:0}
+.photo-studio .studio-upload-stage.has-photo .studio-upload-content{display:none}
+.photo-studio .studio-upload-stage.has-photo .studio-photo-preview{display:block;position:absolute;inset:0;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;object-position:center;border-radius:inherit}
+.photo-studio .studio-upload-stage.has-photo .studio-photo-preview[hidden]{display:none}
+.photo-studio .studio-upload-stage.has-photo .studio-remove-photo{top:9px;right:9px}
+.studio-replace-file{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;max-width:420px;margin:0 auto 18px;padding:12px 15px;border:1px solid #bd8cde66;border-radius:14px;background:#aa70d218;color:#e6ccf8;text-align:left}
+.studio-replace-file[hidden]{display:none!important}.studio-replace-file span{flex:none;font-size:13px;font-weight:600}.studio-replace-file small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:10px}.studio-replace-file:focus-visible{outline:2px solid var(--purple);outline-offset:3px}
+html[data-theme=light] .studio-replace-file{background:#eee2f5;color:#72418c;border-color:#c7abd9}

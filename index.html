@@ -1773,6 +1773,7 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
     <button class="studio-remove-photo" id="studioRemovePhoto" type="button" onclick="clearStudioPhoto()" aria-label="Убрать выбранное фото" hidden>×</button>
     <input id="imageFile" type="file" accept="image/jpeg,image/png,image/webp" onchange="studioPhotoPicked(this)" hidden>
   </div>
+  <button id="studioReplacePhoto" class="studio-replace-file" type="button" onclick="pickStudioPhoto()" hidden><span>Заменить фото</span><small id="studioSelectedFilename"></small></button>
   <div class="studio-prompt-box"><label for="imagePrompt">Напиши, что хочешь сделать</label><textarea id="imagePrompt" maxlength="1200" placeholder="Например: сделай свет мягче, замени фон на закат…"></textarea><div class="media-prompt-actions"><span id="imageVoiceNote" class="media-voice-note" role="status"></span><button id="imagePromptCancel" class="media-prompt-cancel" type="button" aria-label="Отменить голосовой ввод" onclick="cancelMediaDictation()" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button><button id="imagePromptMic" class="media-prompt-mic" type="button" aria-label="Продиктовать описание" aria-pressed="false" onclick="mediaMicClick(event,'image')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg></button><button id="makeImage" class="studio-create-button" type="button" onclick="generateMedia('image')"><span id="studioCreateLabel">Создать фото</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"/></svg></button></div></div>
 <div class="media-settings studio-fields"><div><label for="imageQuality">Качество фото</label><select id="imageQuality"><option value="fhd">1080p · Full HD</option><option value="qhd">2K · 1440p</option><option value="uhd">4K · 2160p</option></select></div><div><div class="format-field-heading"><label for="imageRatio">Формат</label><button type="button" class="format-help-trigger" onclick="openFormatHelp('image')" aria-haspopup="dialog" aria-controls="formatHelpDialog"><span aria-hidden="true">?</span> Подсказка</button></div><select id="imageRatio"><option value="1:1">Квадрат · 1:1</option><option value="9:16">Вертикальный · 9:16</option><option value="16:9">Широкий · 16:9</option></select></div></div><p class="studio-tool-hint">Опиши идею — ANIS AI выберет подходящий способ обработки.</p>
   <div id="imageStatus" class="status studio-result-status" role="status" aria-live="polite"></div><div id="imageResult" class="result studio-result"></div>
@@ -1790,6 +1791,7 @@ html[data-theme=light] :is(.studio-prompt-box,.media-settings,.project-agent) la
     <button class="studio-remove-photo" id="videoRemoveFile" type="button" onclick="clearStudioVideo()" aria-label="Убрать выбранное видео" hidden>×</button>
     <input id="videoFile" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" onchange="studioVideoPicked(this)" hidden>
   </div>
+  <button id="studioReplaceVideo" class="studio-replace-file" type="button" onclick="pickStudioVideo()" hidden><span id="studioReplaceVideoLabel">Заменить видео</span><small id="studioSelectedVideoFilename"></small></button>
 <div class="studio-prompt-box"><label for="videoPrompt">Напиши, что хочешь сделать</label><textarea id="videoPrompt" maxlength="1200" placeholder="Например: плавный пролёт камеры, закат и мягкий кинематографичный свет…"></textarea><div class="media-prompt-actions"><span id="videoVoiceNote" class="media-voice-note" role="status"></span><button id="videoPromptCancel" class="media-prompt-cancel" type="button" aria-label="Отменить голосовой ввод" onclick="cancelMediaDictation()" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button><button id="videoPromptMic" class="media-prompt-mic" type="button" aria-label="Продиктовать описание" aria-pressed="false" onclick="mediaMicClick(event,'video')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg></button><button id="makeVideo" class="studio-create-button" type="button" onclick="generateMedia('video')"><span id="videoCreateLabel">Создать видео</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"/></svg></button></div></div>
 <div class="source-mode-chips"><button type="button" onclick="clearStudioVideo();$('videoPrompt').focus({preventScroll:true})">✦ По описанию</button><button type="button" onclick="pickStudioVideo('image')">▧ Оживить фото</button><button type="button" onclick="pickStudioVideo('video')">▷ Из видео</button></div>
 <div class="media-settings studio-fields"><div><label for="videoQuality">Качество видео</label><select id="videoQuality"><option value="fhd">1080p · Full HD</option><option value="qhd">2K · 1440p</option><option value="uhd">4K · 2160p</option></select></div><div><div class="format-field-heading"><label for="videoRatio">Формат</label><button type="button" class="format-help-trigger" onclick="openFormatHelp('video')" aria-haspopup="dialog" aria-controls="formatHelpDialog"><span aria-hidden="true">?</span> Подсказка</button></div><select id="videoRatio"><option value="16:9">Широкий · 16:9</option><option value="9:16">Вертикальный · 9:16</option><option value="1:1">Квадрат · 1:1</option></select></div><div class="media-duration-setting"><label for="duration">Длительность</label><select id="duration"><option value="4">4 секунды</option><option value="6">6 секунд</option><option value="8">8 секунд</option></select></div></div><p class="studio-tool-hint">Добавь фото для оживления, ролик до 15 секунд или просто опиши новое видео.</p>
@@ -4617,6 +4619,7 @@ function setStudioVideo(file){
  studioVideoFile=file;studioVideoPreviewUrl=URL.createObjectURL(file);
  const isImage=file.type.startsWith('image/'),preview=$(isImage?'studioVideoImagePreview':'studioVideoPreview');$('studioVideoPreview').hidden=isImage;$('studioVideoImagePreview').hidden=!isImage;preview.src=studioVideoPreviewUrl;preview.hidden=false;
  $('videoUploadStage').classList.add('has-photo');$('videoRemoveFile').hidden=false;
+ $('studioReplaceVideo').hidden=false;$('studioReplaceVideoLabel').textContent=isImage?'Заменить фото':'Заменить видео';$('studioSelectedVideoFilename').textContent=file.name;
  $('videoUploadButton').setAttribute('aria-label','Заменить файл');$('videoUploadLabel').textContent='Заменить файл';$('videoUploadCaption').textContent=file.name;
  return true;
 }
@@ -4626,6 +4629,7 @@ function clearStudioVideo(force=false){
  $('studioVideoImagePreview').hidden=true;$('studioVideoImagePreview').removeAttribute('src');const preview=$('studioVideoPreview');preview.pause?.();preview.hidden=true;preview.removeAttribute('src');preview.load?.();
  if(studioVideoPreviewUrl)URL.revokeObjectURL(studioVideoPreviewUrl);
  studioVideoFile=null;studioVideoPreviewUrl=null;$('videoFile').value='';$('videoUploadStage').classList.remove('has-photo','drag-over');$('videoRemoveFile').hidden=true;
+ $('studioReplaceVideo').hidden=true;$('studioSelectedVideoFilename').textContent='';
  $('videoUploadButton').setAttribute('aria-label','Добавить фото или видео');$('videoUploadLabel').textContent='Добавить фото или видео';$('videoUploadCaption').textContent='Нажми или перетащи сюда';
 }
 function videoDragOver(event){event.preventDefault();if(!$('makeVideo').disabled)$('videoUploadStage').classList.add('drag-over');}
@@ -4646,6 +4650,7 @@ function setStudioPhoto(file){
   const preview=$('studioPhotoPreview');preview.src=studioPreviewUrl;preview.hidden=false;
   $('studioUploadStage').classList.add('has-photo');
   $('studioRemovePhoto').hidden=false;
+  $('studioReplacePhoto').hidden=false;$('studioSelectedFilename').textContent=file.name||'Выбрано фото';
   $('studioUploadButton').setAttribute('aria-label','Заменить фото');
   $('studioUploadLabel').textContent='Заменить фото';$('studioUploadCaption').textContent=file.name||'Выбрано фото';
   return true;
@@ -4658,6 +4663,7 @@ function clearStudioPhoto(force=false){
   const preview=$('studioPhotoPreview');preview.hidden=true;preview.removeAttribute('src');
   $('imageFile').value='';$('studioUploadStage').classList.remove('has-photo','drag-over');
   $('studioRemovePhoto').hidden=true;$('studioUploadButton').setAttribute('aria-label','Добавить фото');
+  $('studioReplacePhoto').hidden=true;$('studioSelectedFilename').textContent='';
   $('studioUploadLabel').textContent='Добавить фото';$('studioUploadCaption').textContent='Нажми или перетащи сюда';
 
 }
