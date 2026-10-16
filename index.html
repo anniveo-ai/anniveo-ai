@@ -4826,7 +4826,7 @@ function persistStudioProjects(){
  try{
   const key=studioProjectKey(),previous=localStorage.getItem(key),records=new Map();
   try{const saved=JSON.parse(previous||'[]');if(Array.isArray(saved))for(const row of saved)if(row?.id&&['image','video'].includes(row.kind))records.set(row.id,row);}catch{}
-  for(const p of studioProjects.values())records.set(p.id,{...records.get(p.id),id:p.id,groupId:p.groupId||p.id,kind:p.kind,status:p.status,prompt:p.prompt,quality:p.quality,ratio:p.ratio,duration:p.duration,resultUrl:p.resultUrl,error:p.error,created:p.created,order:p.order,hasSource:!!p.sourceFile||!!p.hasSource,hasIdentity:!!p.identityFile||!!p.hasIdentity,outputWidth:p.outputWidth,outputHeight:p.outputHeight,resolutionWarning:p.resolutionWarning,resolutionPending:p.resolutionPending,removedFromVariants:!!p.removedFromVariants});
+  for(const p of studioProjects.values())records.set(p.id,{...records.get(p.id),id:p.id,groupId:p.groupId||p.id,kind:p.kind,status:p.status,prompt:p.prompt,quality:p.quality,ratio:p.ratio,duration:p.duration,resultUrl:p.resultUrl,error:p.error,created:p.created,order:p.order,hasSource:!!p.sourceFile||!!p.hasSource,hasIdentity:!!p.identityFile||!!p.hasIdentity,outputWidth:p.outputWidth,outputHeight:p.outputHeight,resolutionWarning:p.resolutionWarning,resolutionPending:p.resolutionPending,removedFromVariants:!!p.removedFromVariants,consumeDraft:!!p.consumeDraft,submittedSourceStamp:p.submittedSourceStamp,submittedIdentityStamp:p.submittedIdentityStamp});
   const next=JSON.stringify([...records.values()]);if(previous&&previous!==next&&records.size)try{localStorage.setItem(key+':backup',previous);}catch{}
   localStorage.setItem(key,next);
  }catch{}

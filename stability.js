@@ -62,7 +62,8 @@
  persistStudioProjects=function(){if(state.restoring)return;metadataPersist();clearTimeout(persistTimer);persistTimer=setTimeout(()=>void saveDurable(),180);};
  const draftIds=['messageInput','imagePrompt','videoPrompt','projectAgentIdea','imageQuality','videoQuality','imageRatio','videoRatio','duration'];
  const studioPromptEditedAt={...(read('drafts',null)?.promptEditedAt||{})};
- function saveDrafts(){const values={};for(const id of draftIds)if($(id))values[id]=id==='messageInput'&&anonymous?'':$(id).value;write('drafts',{values,view:currentView,promptEditedAt:{...studioPromptEditedAt}});}
+ const studioSourceEditedAt={...(read('drafts',null)?.sourceEditedAt||{})};
+ function saveDrafts(){const values={};for(const id of draftIds)if($(id))values[id]=id==='messageInput'&&anonymous?'':$(id).value;write('drafts',{values,view:currentView,promptEditedAt:{...studioPromptEditedAt},sourceEditedAt:{...studioSourceEditedAt}});}
  function consumeStudioDraft(snapshot){
   if(!snapshot.consumeDraft)return;
   const image=snapshot.kind==='image',prompt=$(snapshot.kind+'Prompt'),source=image?studioImageFile:studioVideoFile;
@@ -76,9 +77,9 @@
   let changed=false;
   for(const kind of ['image','video']){
    const field=$(kind+'Prompt'),source=kind==='image'?studioImageFile:studioVideoFile;
-   if(source||!field.value.trim())continue;
-   const sent=[...studioProjects.values()].some(p=>p.kind===kind&&p.consumeDraft&&p.prompt?.trim()===field.value.trim()&&(p.created||0)>=(studioPromptEditedAt[kind]||0));
-   if(sent){field.value='';changed=true;}
+   if(!field.value.trim()&&!source)continue;
+   const sent=[...studioProjects.values()].some(p=>p.kind===kind&&p.consumeDraft&&(!field.value.trim()||p.prompt?.trim()===field.value.trim())&&(p.created||0)>=(studioPromptEditedAt[kind]||0)&&(p.created||0)>=(studioSourceEditedAt[kind]||0)&&(!source||fileStamp(source)===(p.submittedSourceStamp||fileStamp(p.regionOriginalFile||p.sourceFile)))&&(kind!=='video'||!studioVideoIdentityFile||fileStamp(studioVideoIdentityFile)===(p.submittedIdentityStamp||fileStamp(p.identityFile))));
+   if(sent){field.value='';if(kind==='image')clearStudioPhoto(true);else{clearStudioVideo(true);clearVideoIdentity();}changed=true;}
   }
   if(changed)saveDrafts();
  }
@@ -111,7 +112,7 @@
  for(const name of ['setStudioPhoto','setStudioVideo','setVideoIdentity','clearVideoIdentity','clearStudioPhoto','clearStudioVideo']){
   // Named declarations in the original classic script are window functions.
   const original=window[name];if(typeof original!=='function')continue;
-  window[name]=function(...args){const result=original(...args);if(name==='setStudioPhoto'||name==='clearStudioPhoto'){state.region=null;updateRegionButton();if(name==='setStudioPhoto'&&result!==false&&studioImageFile)void prepareStudioImage(studioImageFile);}if(name==='setStudioPhoto'&&result!==false&&state.regionAfterUpload){state.regionAfterUpload=false;queueMicrotask(()=>void openRegion());}if(!state.restoring)void saveFileDrafts().catch(storageWarning);return result;};
+  window[name]=function(...args){const result=original(...args);if(result!==false&&!state.restoring&&!state.fileDraftsLoading&&['setStudioPhoto','setStudioVideo','setVideoIdentity'].includes(name)){const kind=name==='setStudioPhoto'?'image':'video';studioSourceEditedAt[kind]=Date.now();saveDrafts();}if(name==='setStudioPhoto'||name==='clearStudioPhoto'){state.region=null;updateRegionButton();if(name==='setStudioPhoto'&&result!==false&&studioImageFile)void prepareStudioImage(studioImageFile);}if(name==='setStudioPhoto'&&result!==false&&state.regionAfterUpload){state.regionAfterUpload=false;queueMicrotask(()=>void openRegion());}if(!state.restoring)void saveFileDrafts().catch(storageWarning);return result;};
  }
  window.addEventListener('pagehide',()=>{saveDrafts();persistStudioProjects();void saveDurable();void saveFileDrafts().catch(()=>{});});
  document.addEventListener('visibilitychange',()=>{if(document.hidden){saveDrafts();void saveDurable();}else void resumeMediaProjects();});
@@ -121,6 +122,7 @@
  const fileStamp=f=>f?[f.name,f.size,f.lastModified].join(':'):'';
  function fingerprint(s){return JSON.stringify([s.groupId,s.kind,s.prompt.trim(),s.quality,s.ratio,s.duration,fileStamp(s.regionOriginalFile||s.sourceFile),fileStamp(s.identityFile),s.region?.points]);}
  createStudioVariant=async function(snapshot){
+  if(snapshot.consumeDraft)snapshot={...snapshot,submittedSourceStamp:fileStamp(snapshot.regionOriginalFile||snapshot.sourceFile),submittedIdentityStamp:fileStamp(snapshot.identityFile)};
   const stamp=fingerprint(snapshot),now=Date.now();
   if(creationLock||lastCreation.fingerprint===stamp&&now-lastCreation.time<2500){if(lastCreation.id)openProjectRoom(lastCreation.id);return;}
   creationLock=true;lastCreation={fingerprint:stamp,time:now,id:null};
