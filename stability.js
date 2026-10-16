@@ -363,7 +363,9 @@
    const source=previewSource(display);if(display.status==='completed'&&source&&(display.previewDataUrl||display.posterDataUrl))preview.append(previewElement(source));else if(!PROJECT_TERMINAL.includes(display.status))addWorkingPreview(preview,display,true);else preview.append(el('i',{className:'studio-ready-placeholder','aria-hidden':'true'},first.kind==='video'?'▷':'✦'));
    const copy=el('span',{className:'studio-ready-copy'});copy.append(el('small',{},(first.kind==='video'?'Видео':'Фото')+' · '+projectStatusLabel(last)+(family.length>1?' · '+variantsText(family.length):'')),el('strong',{},(first.prompt||'Мой проект').slice(0,110)));preview.append(copy,el('b',{'aria-hidden':'true'},first.kind==='video'?'▷':'↗'));card.append(preview);
    if(display.status==='completed'&&source)card.append(window.anisProjectActions.createControls(display));
-   else if(PROJECT_TERMINAL.includes(display.status))card.append(window.anisProjectActions.createControls(display,{deleteOnly:true}));
+   else if(PROJECT_TERMINAL.includes(display.status)){
+    const actions=window.anisProjectActions.createControls(display,{deleteOnly:true});actions.classList.add('ready-project-corner-actions');card.append(actions);
+   }
    next.push(card);
   }
   if(state.restoring||state.historyLoading){const note=el('p',{className:'note ready-history-status',role:'status'},'Загружаем твои работы…');next.unshift(note);}
