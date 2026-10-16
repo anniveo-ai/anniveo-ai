@@ -200,7 +200,7 @@
   // Recover thumbnails in the Ready gallery without regenerating projects.
   const galleryLoads=new Set();
   function repairReadyGallery(){
-    const grid=document.querySelector('.studio-ready-grid, #readyProjects, #readyGrid');
+    const grid=document.querySelector('#studioReadyList');
     const cards=grid?grid.querySelectorAll('[data-project-id]'):document.querySelectorAll('.studio-ready-project[data-project-id]');
     for(const card of cards){
       const id=card.dataset.projectId,project=studioProjects.get(id);
@@ -229,7 +229,7 @@
     }
   }
   document.addEventListener('DOMContentLoaded',()=>{
-    const grid=document.querySelector('#readyGrid, #readyProjects, .studio-ready-grid');
+    const grid=document.querySelector('#studioReadyList');
     if(grid){new MutationObserver(()=>repairReadyGallery()).observe(grid,{childList:true,subtree:false});repairReadyGallery();}
   });
   window.anisProjectActions={createControls,normalizeBlob,saveMedia,showMedia,getMedia};
