@@ -11,6 +11,26 @@
   };
   function control(text,fn,className=''){const b=node('button',{type:'button',className},text);b.onclick=fn;return b;}
   function download(item){const link=node('a',{href:item.url,download:item.file.name});document.body.append(link);link.click();link.remove();}
+  async function retryResult(project){
+    project=studioProjects.get(project.id)||project;
+    if(project.loading){await loadStudioProjectResult(project);if(!project.media?.file)throw Error(project.error||'Файл пока не удалось загрузить. Можно повторить.');return project.media;}
+    if(project.media?.url?.startsWith('blob:'))URL.revokeObjectURL(project.media.url);
+    project.media=null;project.mediaBlob=null;project.previewDataUrl=null;project.error=null;
+    await loadStudioProjectResult(project);
+    if(!project.media?.file)throw Error(project.error||'Файл пока не удалось загрузить. Можно повторить.');
+    return project.media;
+  }
+  function showLoadError(project){
+    if(selectedStudioProject!==project.id)return;
+    const stage=document.getElementById('mediaResultPreview');if(!stage)return;
+    const retry=control('Повторить загрузку',async()=>{
+      retry.disabled=true;retry.textContent='Загружаем…';
+      try{await retryResult(project);workroomRenderKey='';renderProjectRoom();}
+      catch(error){project.error=error.message;showLoadError(project);}
+      finally{retry.disabled=false;}
+    },'project-load-result');
+    stage.replaceChildren(node('p',{className:'note'},project.error||'Не удалось открыть готовый файл.'),retry);
+  }
   const exportsInProgress=new WeakMap();
   async function getMedia(project){
     if(project.loading||!project.media&&project.resultUrl){await loadStudioProjectResult(project);if(!project.media&&project.loadingPromise)await project.loadingPromise;}
@@ -54,14 +74,7 @@
     }
     media.addEventListener('error',()=>{
       if(!media.isConnected)return;
-      const host=media.parentElement;
-      const retry=control('Файл не открылся · повторить',async()=>{
-        retry.disabled=true;
-        if(project.media?.url?.startsWith('blob:'))URL.revokeObjectURL(project.media.url);
-        project.media=null;project.mediaBlob=null;project.previewDataUrl=null;
-        await loadStudioProjectResult(project);retry.remove();
-      },'project-load-result');
-      if(!host.querySelector('.project-load-result'))host.append(retry);
+      project.error='Готовый файл не открылся. Повтори загрузку — новый заказ не создаётся.';showLoadError(project);
     },{once:true});
     return media;
   }
@@ -89,6 +102,9 @@
     const media=node(kind==='video'?'video':'img',{src:item.url});
     if(kind==='video'){media.controls=true;media.playsInline=false;media.preload='metadata';}else media.alt='Готовое фото ANIS AI';
     viewerStage.append(media);
+    if(kind==='image'){
+      const reader=new FileReader();reader.onload=()=>{if(media.isConnected)media.src=String(reader.result);};reader.readAsDataURL(item.file);
+    }
     viewerNote.textContent=kind==='video'?'Нажми воспроизведение, чтобы посмотреть видео. Сохранение в «Фото» — через системное меню «Поделиться».':'Удерживай фото, чтобы открыть меню сохранения. Также можно сохранить его через «Поделиться».';
     if(item.width&&item.height)viewerNote.textContent=item.width+'×'+item.height+' пикс. · '+(item.warning||viewerNote.textContent);
     if(navigator.share&&navigator.canShare?.({files:[item.file]}))viewerActions.append(control('Сохранить в Фото',()=>void saveMedia(item,kind),'anis-button primary'));
@@ -98,9 +114,22 @@
   async function saveMedia(item,kind){
     if(navigator.share&&navigator.canShare?.({files:[item.file]})){
       try{await navigator.share({files:[item.file],title:kind==='video'?'Видео ANIS AI':'Фото ANIS AI'});return;}
-      catch(error){if(error.name==='AbortError')return;}
+      catch(error){if(error.name==='AbortError')return;showMedia(item,kind);viewerNote.textContent='Файл готов. Нажми «Сохранить в Фото» ещё раз, чтобы открыть системное меню. Для фото также доступно сохранение долгим нажатием.';return;}
     }
+    const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
+    if(!mobile){download(item);return;}
     showMedia(item,kind);
+  }
+  function saveProject(project){
+    // Call native Share inside the original click, before any asynchronous download.
+    if(project.media?.file&&!project.loading&&!project.resolutionPending)return window.anisProjectActions.saveMedia(project.media,project.kind);
+    viewerTitle.textContent=project.kind==='video'?'Подготавливаем видео':'Подготавливаем фото';viewerStage.replaceChildren();viewerActions.replaceChildren();viewerNote.textContent='Загружаем готовый файл. Новый заказ не создаётся.';if(!viewer.open)viewer.showModal();
+    return getMedia(project).then(item=>showMedia(item,project.kind)).catch(error=>{
+      viewerNote.textContent=error.message;viewerActions.replaceChildren(control('Повторить загрузку',()=>{
+        viewerActions.replaceChildren();viewerNote.textContent='Загружаем…';
+        void retryResult(project).then(()=>saveProject(project)).catch(next=>{viewerNote.textContent=next.message;viewerActions.replaceChildren(control('Повторить',()=>void saveProject(project),'anis-button'));});
+      },'anis-button primary'));
+    });
   }
   function selectValue(id,value){const select=$(id);if(id.endsWith('Quality')&&![...select.options].some(o=>o.value===String(value)))value={fast:'fhd',high:id==='imageQuality'?'qhd':'fhd',max:'uhd'}[value]||value;if([...select.options].some(o=>o.value===String(value)&&!o.disabled))select.value=String(value);select.dispatchEvent(new Event('change',{bubbles:true}));}
   function prepareAction(project,item,action){
@@ -122,13 +151,13 @@
     for(const [action,label]of [['download','Скачать'],['edit','Изменить'],['enhance','Улучшить'],['crop','Обрезать'],['similar','Создать похожее']]){
       const b=control('',async()=>{
         b.disabled=true;b.setAttribute('aria-busy','true');
-        try{const item=await getMedia(project);if(action==='download')await saveMedia(item,project.kind);else if(action==='crop')await openCrop(project,item);else prepareAction(project,item,action);}
+        try{if(action==='download'){await saveProject(project);return;}const item=await getMedia(project);if(action==='crop')await openCrop(project,item);else prepareAction(project,item,action);}
         catch(error){if(error.name!=='AbortError')toast(error.message||'Не удалось открыть действие.');}
         finally{b.disabled=false;b.removeAttribute('aria-busy');}
       },'ready-project-action ready-action-'+action);
       b.dataset.action=action;b.setAttribute('aria-label',label+(project.kind==='video'?' видео':' фото'));b.title=label;
       b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+icons[action]+'</svg>';
-      b.append(node('span',{},label));b.disabled=!!project.loading;rail.append(b);
+      b.append(node('span',{},label));rail.append(b);
     }
     return rail;
   }
@@ -211,7 +240,7 @@
     const result=originalRoomRender.apply(this,args),project=studioProjects.get(selectedStudioProject);
     if(!document.getElementById('mediaResultDialog')?.open||!project||project.status!=='completed'||project.media||!project.resultUrl||pendingRooms.has(project)||roomAttempts.has(project))return result;
     pendingRooms.add(project);roomAttempts.add(project);
-    Promise.resolve().then(()=>loadStudioProjectResult(project)).finally(()=>{pendingRooms.delete(project);if(!project.media){const stage=document.getElementById('mediaResultPreview');if(selectedStudioProject===project.id){stage.replaceChildren(node('p',{className:'note'},project.error||'Файл не загрузился.'),control('Повторить загрузку',()=>{roomAttempts.delete(project);window.renderProjectRoom();},'project-load-result'));}}});
+    Promise.resolve().then(()=>loadStudioProjectResult(project)).finally(()=>{pendingRooms.delete(project);if(!project.media)showLoadError(project);});
     return result;
   };
   // Visible results load through our API and are retained as local blobs. Rendering
@@ -250,6 +279,6 @@
   document.getElementById('app')?.addEventListener('scroll',scheduleGallery,{passive:true});window.addEventListener('resize',scheduleGallery);document.getElementById('mediaResultDialog')?.addEventListener('close',scheduleGallery);
   function observeGallery(){const grid=document.getElementById('studioReadyList');if(grid){new MutationObserver(repairReadyGallery).observe(grid,{childList:true});repairReadyGallery();}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observeGallery,{once:true});else observeGallery();
-  window.anisProjectActions={createControls,normalizeBlob,saveMedia,showMedia,getMedia,ensureImagePreview,resultPreview,refreshGallery:scheduleGallery};
+  window.anisProjectActions={createControls,normalizeBlob,saveMedia,saveProject,showMedia,getMedia,retryResult,showLoadError,ensureImagePreview,resultPreview,refreshGallery:scheduleGallery};
 })();
 

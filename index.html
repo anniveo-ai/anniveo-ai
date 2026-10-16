@@ -4878,7 +4878,7 @@ function showGeneratedMedia(kind,blob){
  const p={id:crypto.randomUUID(),kind,status:'completed',media:mediaFromBlob(kind,blob),created:Date.now(),order:++projectCounter,prompt:''};studioProjects.set(p.id,p);generatedMedia[kind]=p.media;openProjectRoom(p.id);
 }
 function selectedProjectMedia(){const p=studioProjects.get(selectedStudioProject);return p?.media||generatedMedia[activeGeneratedKind];}
-async function saveGeneratedMedia(){const project=studioProjects.get(selectedStudioProject);if(!project)return;try{const item=await window.anisProjectActions.getMedia(project);return await window.anisProjectActions.saveMedia(item,project.kind);}catch(error){toast(error.message);}}
+function saveGeneratedMedia(){const project=studioProjects.get(selectedStudioProject);if(!project)return;return window.anisProjectActions.saveProject(project);}
 function shareGeneratedMedia(){return saveGeneratedMedia();}
 async function editGeneratedMedia(){const project=studioProjects.get(selectedStudioProject);if(!project)return;try{const item=await window.anisProjectActions.getMedia(project);closeGeneratedMedia();openView('studio');setStudioPhoto(item.file);$('imagePrompt').focus({preventScroll:true});}catch(error){toast(error.message);}}
 async function mediaJSON(payload,timeoutMs=60000){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);try{const response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,initData}),signal:controller.signal});const data=await response.json();if(!response.ok){const error=Error(data.error||'Сервис временно недоступен.');error.status=response.status;throw error;}return data;}finally{clearTimeout(timer);}}
