@@ -2059,6 +2059,8 @@ const app = $("app");
 
 tg?.ready();
 tg?.expand();
+// Let Telegram confirm its own Close button with the native system dialog.
+try{tg?.enableClosingConfirmation?.();}catch(error){console.warn('Closing confirmation:',error);}
 
 try{
   if(typeof tg?.requestFullscreen === "function"){

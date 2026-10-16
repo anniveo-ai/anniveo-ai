@@ -1,0 +1,10 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('index.html','utf8');
+const setup=source.slice(source.indexOf('tg?.ready();'),source.indexOf('const initData ='));
+let confirmations=0;
+vm.runInNewContext(setup,{tg:{ready(){},expand(){},enableClosingConfirmation(){confirmations++;}},console});
+assert.equal(confirmations,1,'native closing confirmation must be enabled on every launch');
+vm.runInNewContext(setup,{tg:undefined,console});
+vm.runInNewContext(setup,{tg:{ready(){},expand(){}},console});
+assert.ok(!/disableClosingConfirmation/.test(source),'navigation must not disable the native Close confirmation');
+console.log('PASS: native Telegram Close confirmation enabled on launch; browser and older clients remain safe.');
