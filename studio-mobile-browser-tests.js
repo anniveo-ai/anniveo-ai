@@ -33,7 +33,13 @@
   check(shared[0].files[0]===photo.media.file,'Save uses export file rather than preview');
   closeGeneratedMedia();openView('ready');
   const rail=window.anisProjectActions.createControls(photo);document.body.append(rail);rail.querySelector('[data-action="enhance"]').click();await wait(350);
-  check(selectedStudioProject===photo.id&&document.getElementById('mediaResultDialog').open&&document.activeElement===document.getElementById('projectAgentIdea'),'Enhance opens the selected result agent');rail.remove();closeGeneratedMedia();
+  check(selectedStudioProject===photo.id&&document.getElementById('mediaResultDialog').open&&document.activeElement===document.getElementById('projectAgentIdea'),'Enhance opens the selected result agent');
+  Object.defineProperty(window,'visualViewport',{configurable:true,value:fakeViewport});fakeViewport.height=420;window.dispatchEvent(new Event('resize'));await wait(650);
+  const agent=document.getElementById('projectAgentIdea').closest('.project-agent'),agentRect=agent.getBoundingClientRect(),done=document.querySelector('#studioKeyboardBar button');
+  check(agent.classList.contains('studio-prompt-pinned')&&Math.abs(agentRect.bottom-412)<3,'Agent sits immediately above keyboard',{top:agentRect.top,bottom:agentRect.bottom});
+  const doneRect=done.getBoundingClientRect();check(document.elementFromPoint(doneRect.left+doneRect.width/2,doneRect.top+doneRect.height/2)===done,'Agent keyboard checkmark is reachable inside modal');
+  done.click();fakeViewport.height=844;window.dispatchEvent(new Event('resize'));await wait(750);check(!agent.classList.contains('studio-prompt-pinned')&&document.activeElement!==document.getElementById('projectAgentIdea'),'Agent restores after closing keyboard');
+  Object.defineProperty(window,'visualViewport',{configurable:true,value:actualViewport});rail.remove();closeGeneratedMedia();
   const source=new File([blob],'reference.png',{type:'image/png'});
   for(const [view,setter,stageId,replaceId,fileId]of [['studio',setStudioPhoto,'studioUploadStage','studioReplacePhoto','imageFile'],['video',setStudioVideo,'videoUploadStage','studioReplaceVideo','videoFile']]){
    openView(view);setter(source);await wait(100);const stage=document.getElementById(stageId),rect=stage.getBoundingClientRect(),preview=stage.querySelector('img.studio-photo-preview:not([hidden])'),replace=document.getElementById(replaceId);

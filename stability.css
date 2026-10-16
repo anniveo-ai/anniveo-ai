@@ -236,6 +236,8 @@ html[data-theme=light] .studio-job-progress{background:linear-gradient(115deg,#f
 @media(prefers-reduced-motion:reduce){.studio-nav-job-track i,.studio-job-progress-track i{transition:none}}
 .studio-prompt-pinned{position:fixed!important;z-index:2190;margin:0!important;box-sizing:border-box;overflow:auto;box-shadow:0 -6px 32px #0008;background:#17121ff7!important;border-color:#be88e777!important;scroll-behavior:auto;transform:none!important}
 .studio-prompt-pinned textarea{resize:none!important;max-height:max(60px,min(180px,calc(var(--studio-visible-height,100dvh) - 220px)))!important}
+#mediaResultDialog .project-agent.studio-prompt-pinned{padding:12px;border-radius:18px;flex:none}
+@media(max-width:760px){#projectAgentIdea{font-size:16px!important}}
 .studio-prompt-placeholder{pointer-events:none;flex:none}
 @media(max-width:760px){#imagePrompt,#videoPrompt{font-size:16px!important}}
 html[data-theme=light] .studio-prompt-pinned{background:#fffafefc!important}
