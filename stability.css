@@ -393,7 +393,7 @@ html[data-theme=light] #welcome .idea .symbol{color:#76508f}
 html[data-theme=light] .enhancement-return{background:#eee1f6;color:#613c78;border-color:#c8addb}
 html[data-theme=light] .enhancement-return.is-changed{background:#e1c9ef;color:#4e2b65;border-color:#ac82c8}
 .studio-job-progress.is-viewed .studio-job-progress-status,.studio-job-progress.is-viewed .studio-job-progress-copy small,.studio-job-progress.is-viewed .studio-job-progress-arrow,.studio-job-progress.is-viewed .studio-job-progress-track{display:none}
-.studio-job-progress.is-viewed{min-height:44px;padding:9px 12px;gap:9px;margin-bottom:12px;border-radius:14px}
+.studio-job-progress.is-viewed{width:fit-content;max-width:100%;min-height:44px;padding:9px 12px;gap:9px;margin-bottom:12px;border-radius:14px}
 .studio-job-progress.is-viewed .studio-job-progress-icon{flex-basis:24px;width:24px;height:24px;font-size:14px}
 .studio-job-progress.is-viewed .studio-job-progress-copy{gap:0}
 .studio-job-progress.is-viewed .studio-job-progress-copy strong{font-size:12px;line-height:1.3}
