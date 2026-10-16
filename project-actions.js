@@ -135,6 +135,7 @@
     queueMicrotask(()=>{void playbackSource(project).then(source=>{if(!media.isConnected||recovering||recovered)return;if(source){media.src=source;media.load();}}).catch(()=>{if(media.isConnected&&!recovering&&!recovered){media.src=project.media?.url||project.resultUrl;media.load();}});});
   }
   function resultPreview(project){
+    warmOriginalLink(project);
     const media=node(project.kind==='video'?'video':'img');media.className='project-result-media';
     media.dataset.projectId=project.id;
     const ready=()=>{media.dataset.ready='true';media.parentElement?.querySelector('.project-load-result')?.remove();};
@@ -208,6 +209,30 @@
     const ext=/\.(png|jpe?g|webp|mp4|webm|mov)$/i.exec(url.pathname)?.[1]?.toLowerCase()||(project.kind==='video'?'mp4':'jpg');
     return {url:url.href,filename:'anis-'+(project.kind==='video'?'video':'photo')+'.'+ext};
   }
+  const originalDownloadLinks=new Map();
+  function prepareOriginalLink(project){
+    const key=project.id+':'+project.resultUrl,cached=originalDownloadLinks.get(key);
+    if(cached&&cached.expires>Date.now()+60000)return cached;
+    const entry={expires:Date.now()+25*60*1000,data:null,promise:null};
+    entry.promise=mediaJSON({action:'media-download-link',jobId:project.id},10000).then(async data=>{
+      if(data.needsUpload){
+        const item=await getMedia(project);
+        const form=new FormData();form.append('action','media-export');form.append('original','1');form.append('initData',initData);form.append('jobId',project.id);form.append('file',item.file,item.file.name);
+        const response=await fetch(API_URL,{method:'POST',body:form,signal:AbortSignal.timeout(45000)});data=await response.json();if(!response.ok)throw Error(data.error||'Не удалось подготовить скачивание.');
+      }
+      if(new URL(data.url).origin!==new URL(API_URL).origin)throw Error('Некорректная ссылка скачивания.');
+      entry.data=data;entry.expires=data.expires;return data;
+    }).catch(error=>{entry.expires=Date.now()+90000;throw error;});
+    originalDownloadLinks.set(key,entry);return entry;
+  }
+  const downloadWarmQueue=[],downloadWarmKeys=new Set();let downloadWarmActive=0;
+  function pumpDownloadWarm(){
+    while(downloadWarmActive<2&&downloadWarmQueue.length){const project=downloadWarmQueue.shift();downloadWarmActive++;void prepareOriginalLink(project).promise.catch(()=>{}).finally(()=>{downloadWarmActive--;downloadWarmKeys.delete(project.id);pumpDownloadWarm();});}
+  }
+  function warmOriginalLink(project){
+    if(!initData||!telegramDownloads()||!project.resultUrl||project.status!=='completed'||project.exportJobId&&project.exportJobId!==project.id)return;
+    if(downloadWarmKeys.has(project.id))return;downloadWarmKeys.add(project.id);downloadWarmQueue.push(project);pumpDownloadWarm();
+  }
   function nativeFileDownload(data){
     return new Promise((resolve,reject)=>{
       // The native popup can finish after a slow connection; do not report the
@@ -258,7 +283,11 @@
           // Use cached bytes for system Save; otherwise send the URL straight
           // to Telegram from this very click, without waiting for getMedia.
           if(project.media?.file?.size&&shareable(project.media))return saveReadyMedia(project.media,project.kind,data);
-          if(telegramDownloads())return nativeFileDownload(data);
+          if(telegramDownloads()){
+            const link=prepareOriginalLink(project);
+            if(link.data)return nativeFileDownload(link.data);
+            return link.promise.then(nativeFileDownload,()=>nativeFileDownload(data));
+          }
           if(inTelegram())throw Error('Сохранение файлов недоступно в этой версии Telegram. Обнови Telegram и повтори.');
           download({url:data.url,file:{name:data.filename}});return {state:'opened'};
         }
@@ -508,6 +537,7 @@
     for(const card of grid.querySelectorAll('.studio-ready-project[data-project-id]')){
       const project=studioProjects.get(card.dataset.projectId),preview=card.querySelector('.studio-ready-preview');
       if(!project||project.status!=='completed'||!preview)continue;
+      if(nearViewport(card))warmOriginalLink(project);
       const thumbnail=project.kind==='video'?project.posterDataUrl:project.previewDataUrl;
       if(thumbnail){
         const url=thumbnail;

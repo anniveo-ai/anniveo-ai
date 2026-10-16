@@ -209,6 +209,7 @@ async function readMediaPreviews(env,userId,ids){
  return {items:(rows.results||[]).map(row=>{const bytes=row.data instanceof ArrayBuffer?new Uint8Array(row.data):Uint8Array.from(row.data);let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));return {jobId:row.job_id,dataUrl:'data:'+row.mime+';base64,'+btoa(binary)};})};
 }
 async function cleanupMediaExports(env){
+ try{await env.DB.prepare('DELETE FROM media_original_exports WHERE export_id NOT IN (SELECT id FROM media_exports WHERE expires>?)').bind(Date.now()).run();}catch{}
  try{await env.DB.prepare('DELETE FROM media_playback_links WHERE expires<=?').bind(Date.now()).run();}catch{}
  try{await env.DB.batch([env.DB.prepare('DELETE FROM media_playback_chunks WHERE job_id IN (SELECT job_id FROM media_playback_cache WHERE expires<=?)').bind(Date.now()),env.DB.prepare('DELETE FROM media_playback_cache WHERE expires<=?').bind(Date.now())]);}catch{}
  if(!env.DB)return;
@@ -228,8 +229,8 @@ async function prepareMediaExport(env,userId,jobId,file){
   env.DB.prepare('CREATE TABLE IF NOT EXISTS media_export_chunks(export_id TEXT NOT NULL,part INTEGER NOT NULL,data BLOB NOT NULL,PRIMARY KEY(export_id,part))')
  ]);
  await env.DB.batch([env.DB.prepare('DELETE FROM media_export_chunks WHERE export_id IN (SELECT id FROM media_exports WHERE expires<=?)').bind(Date.now()),env.DB.prepare('DELETE FROM media_exports WHERE expires<=?').bind(Date.now())]);
- const count=await env.DB.prepare('SELECT COUNT(*) AS total FROM media_exports WHERE user_id=?').bind(String(userId)).first();
- if(count.total>=6)throw Error('Скачивание уже подготовлено. Повтори через несколько минут.');
+ const count=await env.DB.prepare('SELECT COUNT(*) AS total,COALESCE(SUM(size),0) AS bytes FROM media_exports WHERE user_id=?').bind(String(userId)).first();
+ if(count.total>=32||count.bytes+file.size>200*1024*1024)throw Error('Скачивание уже подготовлено. Повтори через несколько минут.');
  const id=crypto.randomUUID().replaceAll('-',''),expires=Date.now()+MEDIA_EXPORT_TTL,filename='anis-'+(owned.kind==='video'?'video':'photo')+'.'+ext;
  await env.DB.prepare('INSERT INTO media_exports(id,user_id,mime,filename,size,expires) VALUES(?,?,?,?,?,?)').bind(id,String(userId),mime,filename,file.size,expires).run();
  try{
@@ -255,6 +256,24 @@ async function downloadMediaExport(request,env){
  let part=Math.floor(start/MEDIA_EXPORT_CHUNK);
  const body=new ReadableStream({async pull(controller){try{const chunk=await env.DB.prepare('SELECT data FROM media_export_chunks WHERE export_id=? AND part=?').bind(id,part).first();if(!chunk)throw Error('Файл недоступен');const bytes=chunk.data instanceof ArrayBuffer?new Uint8Array(chunk.data):Uint8Array.from(chunk.data),offset=part*MEDIA_EXPORT_CHUNK;controller.enqueue(bytes.slice(Math.max(0,start-offset),Math.min(bytes.length,end-offset+1)));part++;if(part*MEDIA_EXPORT_CHUNK>end)controller.close();}catch(error){controller.error(error);}}});
  return new Response(body,{status,headers});
+}
+// Reuse an owner-uploaded original so Telegram probes and downloads never
+// depend on the provider's slow or datacenter-blocked storage connection.
+async function prepareOriginalDownload(env,userId,jobId,origin){
+ const row=await env.DB.prepare('SELECT kind,status,result_url FROM media_jobs WHERE id=? AND user_id=?').bind(String(jobId||''),String(userId)).first();
+ if(!row||row.status!=='completed'||!row.result_url){const error=Error('Готовая работа не найдена.');error.status=404;throw error;}
+ const source=new URL(row.result_url);if(source.origin!=='https://s3.polza.ai'||source.username||source.password)throw Error('Адрес файла не поддерживается.');
+ await env.DB.prepare('CREATE TABLE IF NOT EXISTS media_original_exports(job_id TEXT NOT NULL,user_id TEXT NOT NULL,source TEXT NOT NULL,export_id TEXT NOT NULL,PRIMARY KEY(job_id,user_id))').run();
+ let link;try{link=await env.DB.prepare('SELECT e.id,e.filename,e.expires FROM media_original_exports o JOIN media_exports e ON e.id=o.export_id WHERE o.job_id=? AND o.user_id=? AND o.source=? AND e.ready=1 AND e.expires>?').bind(String(jobId),String(userId),source.href,Date.now()+60000).first();}catch(error){if(!/no such table/i.test(error.message))throw error;}
+ return link?{url:new URL('/media-download/'+link.id,origin).href,filename:link.filename,expires:link.expires}:{needsUpload:true};
+}
+async function storeOriginalDownload(env,userId,jobId,file,origin){
+ const cached=await prepareOriginalDownload(env,userId,jobId,origin);if(!cached.needsUpload)return cached;
+ const exported=await prepareMediaExport(env,userId,jobId,file);
+ const owned=await env.DB.prepare('SELECT result_url FROM media_jobs WHERE id=? AND user_id=? AND status=?').bind(String(jobId),String(userId),'completed').first();
+ if(!owned)throw Error('Готовая работа не найдена.');
+ await env.DB.prepare('INSERT OR REPLACE INTO media_original_exports(job_id,user_id,source,export_id) VALUES(?,?,?,?)').bind(String(jobId),String(userId),owned.result_url,exported.id).run();
+ return {url:new URL('/media-download/'+exported.id,origin).href,filename:exported.filename,expires:exported.expires};
 }
 // Short-lived, owner-issued playback links support Safari's byte-range requests.
 async function prepareMediaPlayback(env,userId,jobId,origin){
@@ -1518,7 +1537,7 @@ export default {
           try{return json(await storeMediaPreview(env,voiceUser,form.get('jobId'),form.get('file')),200,headers);}catch(error){return json({error:error.message},error.status||400,headers);}
         }
         if(multipartAction==='media-export'){
-          try{const exported=await prepareMediaExport(env,voiceUser,form.get('jobId'),form.get('file'));return json({...exported,url:new URL('/media-download/'+exported.id,request.url).href},200,headers);}
+          try{if(form.get('original')==='1')return json(await storeOriginalDownload(env,voiceUser,form.get('jobId'),form.get('file'),request.url),200,headers);const exported=await prepareMediaExport(env,voiceUser,form.get('jobId'),form.get('file'));return json({...exported,url:new URL('/media-download/'+exported.id,request.url).href},200,headers);}
           catch(error){return json({error:error.message},error.status||400,headers);}
         }
         if(multipartAction==="media-create"){
@@ -1608,6 +1627,9 @@ export default {
       }
       if(action==='media-quote'){
         try{return json(mediaPrice(env,body),200,headers);}catch(error){return json({error:error.message},400,headers);}
+      }
+      if(action==='media-download-link'){
+        try{return json(await prepareOriginalDownload(env,userId,body.jobId,request.url),200,headers);}catch(error){return json({error:error.message},error.status||502,headers);}
       }
       if(action==='media-playback'){
         try{return json(await prepareMediaPlayback(env,userId,body.jobId,request.url),200,headers);}catch(error){return json({error:error.message},error.status||502,headers);}
