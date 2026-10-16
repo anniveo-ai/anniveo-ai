@@ -4233,7 +4233,7 @@ function startVoiceMeter(){
       $("planetResponse").style.setProperty("--voice-level",level.toFixed(3));
       $("send").style.setProperty("--voice-level",level.toFixed(3));
       if(orbVoiceActive&&rms>.018){voiceHeard=true;lastSpeech=now;}
-      if(orbVoiceActive&&((voiceHeard&&now-lastSpeech>1800)||(!voiceHeard&&now-began>12000))){
+      if(orbVoiceActive&&((voiceHeard&&now-lastSpeech>1200)||(!voiceHeard&&now-began>12000))){
         if(recorder?.state==="recording") recorder.stop();
         return;
       }
@@ -4247,7 +4247,7 @@ function startVoiceMeter(){
 }
 function continueVoiceAfterReply(session){
   stopBargeInMonitor();if(session!==voiceSessionVersion)return;
-  if(orbVoiceActive){setVoiceChatStatus("Твой ход — слушаю","listening");setTimeout(()=>{if(session===voiceSessionVersion&&orbVoiceActive&&!busy&&!transcribing&&!recording&&!openingMic)void handleMic();},280);}
+  if(orbVoiceActive){setVoiceChatStatus("Твой ход — слушаю","listening");setTimeout(()=>{if(session===voiceSessionVersion&&orbVoiceActive&&!busy&&!transcribing&&!recording&&!openingMic)void handleMic();},120);}
   else setVoiceChatStatus("Нажми на шар и скажи, что нужно","idle");
 }
 function speakWithDeviceVoice(plain,session){
@@ -4680,7 +4680,13 @@ function readableMediaError(error){
   if(error instanceof TypeError||/load failed|failed to fetch|networkerror/i.test(error?.message||''))return 'Соединение прервалось. Фото и описание сохранены — попробуй ещё раз. Если используешь VPN, проверь его соединение.';
   return error?.message||'Не удалось обработать запрос. Попробуй ещё раз.';
 }
+const preparedStudioImageCache=new WeakMap();
 async function prepareStudioImage(file){
+  if(!file||file.type==='image/png'||file.size<=2*1024*1024)return file;
+  if(!preparedStudioImageCache.has(file))preparedStudioImageCache.set(file,prepareStudioImageUncached(file));
+  return preparedStudioImageCache.get(file);
+}
+async function prepareStudioImageUncached(file){
   if(!file||file.type==='image/png'||file.size<=2*1024*1024)return file;
   // Resize large uploads locally; avoid waiting for a multi-megabyte transfer on mobile.
   const url=URL.createObjectURL(file),image=new Image();
@@ -4864,16 +4870,26 @@ async function loadStudioProjectResult(p){
  catch(error){p.error=readableMediaError(error);if($('mediaResultDialog').open)toast(p.error);}
  finally{p.loading=false;}
 }
+function studioPollDelay(kind,elapsed=0,background=false){
+ return background?(kind==='image'?5000:10000):elapsed>120000?(kind==='image'?5000:8000):(kind==='image'?3000:5000);
+}
+function waitForMediaPoll(ms){
+ return new Promise(resolve=>{
+  const finish=()=>{clearTimeout(timer);document.removeEventListener?.('visibilitychange',visible);resolve();};
+  const visible=()=>{if(!document.hidden)finish();};
+  const timer=setTimeout(finish,ms);document.addEventListener?.('visibilitychange',visible);
+ });
+}
 async function watchMediaJob(kind,jobId,initial){
  let p=studioProjects.get(jobId);if(!p){p={id:jobId,kind,status:'processing',created:Date.now(),order:++projectCounter,prompt:''};studioProjects.set(jobId,p);}
- if(projectWatchers.has(jobId))return;projectWatchers.add(jobId);let data=initial,attempts=0;
+ if(projectWatchers.has(jobId))return;projectWatchers.add(jobId);let data=initial,attempts=0;const watchStarted=Date.now();
  try{
   for(;;){
    if(!data){try{data=await mediaJSON({action:'media-status',jobId});attempts=0;}catch(e){if(e.status===404||++attempts>=4)throw e;await new Promise(r=>setTimeout(r,5000));continue;}}
    p.status=data.status;p.error=data.error;renderProjectRoom();void pumpStudioQueue();
    if(data.status==='failed'||data.status==='cancelled'){p.status='failed';break;}
    if(data.status==='completed'){p.resultUrl=data.url;await loadStudioProjectResult(p);if(!$('mediaResultDialog').open)toast(projectLabel(p)+' готово');break;}
-   await new Promise(r=>setTimeout(r,kind==='image'?3500:6500));data=null;
+   await waitForMediaPoll(studioPollDelay(kind,Date.now()-watchStarted,document.hidden));data=null;
   }
  }catch(error){p.status='unknown';p.error=readableMediaError(error);}
  finally{projectWatchers.delete(jobId);renderProjectRoom();void pumpStudioQueue();}
