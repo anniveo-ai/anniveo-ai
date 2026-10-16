@@ -209,6 +209,7 @@ async function readMediaPreviews(env,userId,ids){
  return {items:(rows.results||[]).map(row=>{const bytes=row.data instanceof ArrayBuffer?new Uint8Array(row.data):Uint8Array.from(row.data);let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));return {jobId:row.job_id,dataUrl:'data:'+row.mime+';base64,'+btoa(binary)};})};
 }
 async function cleanupMediaExports(env){
+ try{await env.DB.prepare('DELETE FROM media_download_preparations WHERE updated<?').bind(Date.now()-86400000).run();}catch{}
  try{await env.DB.prepare('DELETE FROM media_original_exports WHERE export_id NOT IN (SELECT id FROM media_exports WHERE expires>?)').bind(Date.now()).run();}catch{}
  try{await env.DB.prepare('DELETE FROM media_playback_links WHERE expires<=?').bind(Date.now()).run();}catch{}
  try{await env.DB.batch([env.DB.prepare('DELETE FROM media_playback_chunks WHERE job_id IN (SELECT job_id FROM media_playback_cache WHERE expires<=?)').bind(Date.now()),env.DB.prepare('DELETE FROM media_playback_cache WHERE expires<=?').bind(Date.now())]);}catch{}
@@ -280,18 +281,43 @@ async function prepareOriginalDownload(env,userId,jobId,origin){
  const owned=await env.DB.prepare('SELECT result_url FROM media_jobs WHERE id=? AND user_id=? AND status=?').bind(String(jobId),String(userId),'completed').first();
  const source=new URL(owned.result_url);if(source.origin!=='https://s3.polza.ai'||source.username||source.password)throw Error('Адрес файла не поддерживается.');
  try{
-  const response=await fetch(source.href,{redirect:'error',signal:AbortSignal.timeout(8000)});
-  if(!response.ok||Number(response.headers.get('Content-Length'))>25*1024*1024){await response.body?.cancel();return {needsUpload:true};}
-  const size=Number(response.headers.get('Content-Length'));
-  if(!Number.isSafeInteger(size)||size<=0){await response.body?.cancel();return {needsUpload:true};}
-  const bytes=await response.arrayBuffer();if(bytes.byteLength!==size||bytes.byteLength>25*1024*1024)return {needsUpload:true};
-  const file=new File([bytes],'original',{type:response.headers.get('Content-Type')||''});
-  return await storeOriginalDownload(env,userId,jobId,file,origin);
- }catch{return {needsUpload:true};}
+  // Limit idle time per range rather than aborting a healthy whole-file transfer.
+  const head=await fetch(source.href,{method:'HEAD',redirect:'manual',signal:AbortSignal.timeout(12000)});
+  const size=Number(head.headers.get('Content-Length')),type=head.headers.get('Content-Type')||'';
+  if(!head.ok||!Number.isSafeInteger(size)||size<=0||size>25*1024*1024)throw Error('Не удалось получить оригинал файла.');
+  const chunkSize=Math.max(256*1024,Math.ceil(size/20)),parts=new Array(Math.ceil(size/chunkSize));
+  for(let offset=0;offset<parts.length;offset+=4){
+   await Promise.all(parts.slice(offset,offset+4).fill(null).map(async(_,index)=>{
+    const part=offset+index,start=part*chunkSize,end=Math.min(size-1,start+chunkSize-1);let lastError;
+    for(let attempt=0;attempt<2;attempt++)try{
+     const response=await fetch(source.href,{headers:{Range:'bytes='+start+'-'+end},redirect:'manual',signal:AbortSignal.timeout(15000)});
+     if(response.status!==206||response.headers.get('Content-Range')!=='bytes '+start+'-'+end+'/'+size){await response.body?.cancel();throw Error('Хранилище не отдало нужную часть файла.');}
+     const bytes=await response.arrayBuffer();if(bytes.byteLength!==end-start+1)throw Error('Часть файла загрузилась не целиком.');parts[part]=bytes;return;
+    }catch(error){lastError=error;}
+    throw lastError;
+   }));
+  }
+  return await storeOriginalDownload(env,userId,jobId,new File(parts,'original',{type}),origin);
+ }catch(error){const failure=Error('Оригинал временно недоступен. Повтори скачивание.');failure.cause=error;throw failure;}
 }
-async function warmRecentDownloads(env,userId,origin){
+async function requestOriginalDownload(env,userId,jobId,origin,ctx,retry=false){
+ const cached=await findOriginalDownload(env,userId,jobId,origin);if(!cached.needsUpload)return cached;
+ await env.DB.prepare('CREATE TABLE IF NOT EXISTS media_download_preparations(job_id TEXT NOT NULL,user_id TEXT NOT NULL,state TEXT NOT NULL,updated INTEGER NOT NULL,error TEXT,PRIMARY KEY(job_id,user_id))').run();
+ const previous=await env.DB.prepare('SELECT state,updated,error FROM media_download_preparations WHERE job_id=? AND user_id=?').bind(String(jobId),String(userId)).first();
+ if(previous?.state==='failed'&&!retry&&previous.updated>Date.now()-30000)throw Error(previous.error||'Не удалось загрузить оригинал.');
+ const lease=await env.DB.prepare("INSERT INTO media_download_preparations(job_id,user_id,state,updated,error) VALUES(?,?,'loading',?,NULL) ON CONFLICT(job_id,user_id) DO UPDATE SET state='loading',updated=excluded.updated,error=NULL WHERE media_download_preparations.state!='loading' OR media_download_preparations.updated<?").bind(String(jobId),String(userId),Date.now(),Date.now()-90000).run();
+ if(lease.meta?.changes){
+  ctx.waitUntil((async()=>{
+   try{await prepareOriginalDownload(env,userId,jobId,origin);await env.DB.prepare("UPDATE media_download_preparations SET state='ready',updated=? WHERE job_id=? AND user_id=?").bind(Date.now(),String(jobId),String(userId)).run();}
+   catch(error){await env.DB.prepare("UPDATE media_download_preparations SET state='failed',updated=?,error=? WHERE job_id=? AND user_id=?").bind(Date.now(),error.message,String(jobId),String(userId)).run();}
+  })());
+ }
+ return {pending:true};
+}
+
+async function warmRecentDownloads(env,userId,origin,ctx){
  try{const rows=await env.DB.prepare("SELECT id FROM media_jobs WHERE user_id=? AND status='completed' AND result_url IS NOT NULL ORDER BY created_at DESC LIMIT 4").bind(String(userId)).all();
-  for(let i=0;i<rows.results.length;i+=2)await Promise.allSettled(rows.results.slice(i,i+2).map(row=>prepareOriginalDownload(env,userId,row.id,origin)));
+  for(const row of rows.results)await requestOriginalDownload(env,userId,row.id,origin,ctx);
  }catch{}
 }
 // Short-lived, owner-issued playback links support Safari's byte-range requests.
@@ -1648,7 +1674,7 @@ export default {
         try{return json(mediaPrice(env,body),200,headers);}catch(error){return json({error:error.message},400,headers);}
       }
       if(action==='media-download-link'){
-        try{return json(await prepareOriginalDownload(env,userId,body.jobId,request.url),200,headers);}catch(error){return json({error:error.message},error.status||502,headers);}
+        try{return json(await requestOriginalDownload(env,userId,body.jobId,request.url,ctx,!!body.retry),200,headers);}catch(error){return json({error:error.message},error.status||502,headers);}
       }
       if(action==='media-playback'){
         try{return json(await prepareMediaPlayback(env,userId,body.jobId,request.url),200,headers);}catch(error){return json({error:error.message},error.status||502,headers);}
@@ -1663,7 +1689,7 @@ export default {
       }
       if(action==="media-history"){
         if(!env.DB)return json({error:'История временно недоступна'},503,headers);
-        try{ctx.waitUntil?.(warmRecentDownloads(env,userId,request.url));return json(await getMediaHistory(env.DB,userId,body.kind),200,headers);}catch(error){return json({error:error.message},400,headers);}
+        try{ctx.waitUntil?.(warmRecentDownloads(env,userId,request.url,ctx));return json(await getMediaHistory(env.DB,userId,body.kind),200,headers);}catch(error){return json({error:error.message},400,headers);}
       }
       if(action==="media-config")return json({premium:!!env.POLZA_API_KEY},200,headers);
       if(action==="media-status"||action==="media-create"){

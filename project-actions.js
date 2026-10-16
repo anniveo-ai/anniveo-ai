@@ -52,6 +52,9 @@
   function mediaDeadline(promise,ms,message){return new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error(message)),ms);Promise.resolve(promise).then(value=>{clearTimeout(timer);resolve(value)},error=>{clearTimeout(timer);reject(error)});});}
   async function downloadMediaBlob(project){
     const proxy={url:API_URL,options:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'media-file',jobId:project.id,initData})}},direct={url:project.resultUrl},routes=initData?[direct,proxy,direct]:[direct,direct];
+    if(initData&&(!project.exportJobId||project.exportJobId===project.id)){
+      const ready=await prepareOriginalLink(project).promise;routes.splice(0,routes.length,{url:ready.url},{url:ready.url});
+    }
     let lastError;
     for(const route of routes){
       const controller=new AbortController();let idle,total,reader;
@@ -214,12 +217,16 @@
     const key=project.id+':'+project.resultUrl,cached=originalDownloadLinks.get(key);
     if(cached&&cached.expires>Date.now()+60000&&(!cached.error||!retry))return cached;
     const entry={expires:Date.now()+25*60*1000,data:null,promise:null};
-    entry.promise=mediaJSON({action:'media-download-link',jobId:project.id},10000).then(async data=>{
-      if(data.needsUpload){
-        const item=await getMedia(project);
-        const form=new FormData();form.append('action','media-export');form.append('original','1');form.append('initData',initData);form.append('jobId',project.id);form.append('file',item.file,item.file.name);
-        const response=await fetch(API_URL,{method:'POST',body:form,signal:AbortSignal.timeout(45000)});data=await response.json();if(!response.ok)throw Error(data.error||'Не удалось подготовить скачивание.');
+    entry.promise=(async()=>{
+      let data=await mediaJSON({action:'media-download-link',jobId:project.id,retry},10000);
+      const started=Date.now();
+      while(data.pending){
+        if(Date.now()-started>120000)throw Error('Хранилище долго отдаёт оригинал. Повтори скачивание чуть позже.');
+        await new Promise(resolve=>setTimeout(resolve,1000));
+        data=await mediaJSON({action:'media-download-link',jobId:project.id},10000);
       }
+      return data;
+    })().then(async data=>{
       if(new URL(data.url).origin!==new URL(API_URL).origin)throw Error('Некорректная ссылка скачивания.');
       entry.data=data;entry.expires=data.expires;return data;
     }).catch(error=>{entry.error=true;entry.expires=Date.now()+90000;throw error;});
@@ -301,7 +308,7 @@
           if(telegramDownloads()){
             const link=prepareOriginalLink(project,{retry:true});
             if(link.data)return nativeFileDownload(link.data);
-            return mediaDeadline(link.promise,15000,'Файл ещё загружается. Повтори скачивание через несколько секунд.').then(nativeFileDownload);
+            return link.promise.then(nativeFileDownload);
           }
           if(inTelegram())throw Error('Сохранение файлов недоступно в этой версии Telegram. Обнови Telegram и повтори.');
           download({url:data.url,file:{name:data.filename}});return {state:'opened'};
