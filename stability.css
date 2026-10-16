@@ -347,3 +347,22 @@ html[data-theme=light] #view-ready .studio-ready-status-card .studio-ready-copy{
 .ready-prompt-bubble header button{display:grid;place-items:center;flex:none;width:28px;height:28px;min-height:0;padding:0;border:1px solid #ba91d444;border-radius:50%;background:#b277ce18;color:#ebd6f8;font-family:inherit;font-size:20px;line-height:1;cursor:pointer}
 .ready-prompt-bubble p{margin:0;font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;-webkit-user-select:text}
 @media(prefers-reduced-motion:reduce){.ready-prompt-bubble{transition:none;transform:none}}
+
+/* Crop editor uses the available screen and bounds both media and controls. */
+#readyCropDialog.ready-crop-dialog{position:fixed;inset:0;margin:0;box-sizing:border-box;width:100%;max-width:none;height:100dvh;max-height:100dvh;min-width:0;padding:max(12px,env(safe-area-inset-top,0px)) 12px max(12px,env(safe-area-inset-bottom,0px));border:0;border-radius:0;overflow:hidden;background:#100d1a}
+#readyCropDialog[open]{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(100px,1fr) auto auto auto;gap:10px}
+#readyCropDialog>header{margin:0;padding:0;min-width:0;gap:12px}
+#readyCropDialog>header h2{font-size:19px;line-height:1.3;min-width:0}
+#readyCropDialog>header button{flex:none;width:40px;height:40px;min-height:40px;padding:0;border:1px solid #aa79c655;border-radius:50%;background:#a16ac41a;color:#ecd8fa;font-size:26px}
+#readyCropDialog .ready-crop-stage{width:100%;height:100%;min-width:0;min-height:0;overflow:hidden;position:relative;border:1px solid #b183ce55;background:#08060e}
+#readyCropDialog .ready-crop-stage canvas,#readyCropDialog .ready-crop-stage video{display:block;box-sizing:border-box;width:auto;height:auto;min-width:0;min-height:0;max-width:100%;max-height:100%;object-fit:contain}
+#readyCropDialog .ready-crop-stage canvas{touch-action:none;cursor:grab}
+#readyCropDialog .ready-crop-stage canvas:active{cursor:grabbing}
+#readyCropDialog .ready-crop-fields{box-sizing:border-box;min-width:0;max-height:32dvh;margin:0;padding:0 2px;gap:8px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
+#readyCropDialog .ready-crop-fields label{min-width:0;margin:0;gap:2px;font-size:11px}
+#readyCropDialog .ready-crop-fields input[type=range]{display:block;box-sizing:border-box;width:100%;min-width:0;min-height:28px;height:28px;padding:0;margin:0;border:0;background:transparent}
+#readyCropDialog .ready-crop-formats{gap:6px;min-width:0}
+#readyCropDialog .ready-crop-formats button{min-width:0;min-height:36px;padding:5px;font-size:12px}
+#readyCropDialog>.note{margin:0;font-size:11px;line-height:1.4}
+#readyCropDialog>button{min-width:0;margin:0;min-height:44px}
+html[data-theme=light] #readyCropDialog{background:#fffaff;color:#3b284b}
