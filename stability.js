@@ -198,7 +198,7 @@
   const panel=button('',()=>{
    const project=studioProjects.get(panel.dataset.projectId);if(!project)return;
    openProjectRoom(project.id);
-   if(project.status==='completed'&&!project.media&&project.resultUrl)void loadStudioProjectResult(project);
+   if(project.kind==='image'&&project.status==='completed'&&!project.media&&project.resultUrl)void loadStudioProjectResult(project);
   });
   panel.id=kind+'CreationProgress';panel.className='studio-job-progress';panel.hidden=true;
   const icon=el('span',{className:'studio-job-progress-icon','aria-hidden':'true'}),copy=el('span',{className:'studio-job-progress-copy'}),title=el('strong'),status=el('span',{className:'studio-job-progress-status',role:'status','aria-live':'polite'}),prompt=el('small'),arrow=el('span',{className:'studio-job-progress-arrow','aria-hidden':'true'},'↗'),track=el('span',{className:'studio-job-progress-track','aria-hidden':'true'});
@@ -296,6 +296,7 @@
   (room.open?room:document.body).append(notice);setTimeout(()=>notice.remove(),3000);
  }
  function previewSource(p){
+  if(p.kind==='video'&&p.posterDataUrl)return {url:p.posterDataUrl,type:'img'};
   if(p.kind==='image'&&p.previewDataUrl)return {url:p.previewDataUrl,type:'img'};
   if(p.media?.url)return {url:p.media.url,type:p.kind==='video'?'video':'img'};
   if(p.status==='completed')return p.resultUrl&&!p.region?{url:p.resultUrl,type:p.kind==='video'?'video':'img'}:null;
@@ -312,15 +313,17 @@
   renderRoomOriginal();const p=studioProjects.get(selectedStudioProject);if(!p)return;
   room.dataset.status=p.status;
   const family=projectFamily(p),stage=$('mediaResultPreview');
+  if(!p.loading)stage.querySelectorAll('.project-file-progress').forEach(note=>note.remove());
+  else if(stage.querySelector('img,video')&&!stage.querySelector('.project-file-progress')){const note=el('span',{className:'project-file-progress','data-project-id':p.id},'Загружаем оригинал…');stage.append(note);}
   $('projectVariantCount').textContent=variantsText(family.length);
   if(!PROJECT_TERMINAL.includes(p.status)){
    const revealKey=p.id+':'+p.status;if(stage.dataset.revealKey!==revealKey){stage.replaceChildren();stage.classList.remove('project-abstract-preview');addWorkingPreview(stage,p);stage.dataset.revealKey=revealKey;}
   }else{stage.classList.remove('project-reveal-loading','project-abstract-preview');delete stage.dataset.revealKey;}
   const cards=$('projectVariantCards');cards.replaceChildren();
   for(const item of family){
-   const card=button('',()=>{openProjectRoom(item.id);if(item.status==='completed'&&!item.media&&item.resultUrl)void loadStudioProjectResult(item);});card.className='project-variant-card';card.classList.toggle('selected',item.id===p.id);card.setAttribute('aria-label',projectLabel(item)+' · '+projectStatusLabel(item));
+   const card=button('',()=>{openProjectRoom(item.id);if(item.kind==='image'&&item.status==='completed'&&!item.media&&item.resultUrl)void loadStudioProjectResult(item);});card.className='project-variant-card';card.classList.toggle('selected',item.id===p.id);card.setAttribute('aria-label',projectLabel(item)+' · '+projectStatusLabel(item));
    const visual=el('div',{className:'project-variant-visual'}),source=previewSource(item);
-   if(item.status==='completed'&&source)visual.append(previewElement(source));else if(!PROJECT_TERMINAL.includes(item.status))addWorkingPreview(visual,item,true);else visual.append(el('span',{},item.status==='completed'?'✓':'!'));
+   if(item.status==='completed'&&source&&(item.kind!=='video'||item.posterDataUrl))visual.append(previewElement(source));else if(!PROJECT_TERMINAL.includes(item.status))addWorkingPreview(visual,item,true);else visual.append(el('span',{},item.kind==='video'?'▷':item.status==='completed'?'✓':'!'));
    if(item.kind==='video')visual.append(el('b',{className:'project-video-tag'},'▷'));card.append(visual,el('small',{},projectLabel(item)));
    const tile=el('div',{className:'project-variant-item','data-variant-id':item.id}),remove=button('',event=>{event.stopPropagation();requestVariantDeletion(item);});
    remove.className='variant-remove';remove.title='Удалить вариант';remove.setAttribute('aria-label','Удалить '+projectLabel(item));
@@ -345,49 +348,47 @@
  state.openReadyProjects=()=>openView('ready');
  let readyRenderKey='';
  function renderReadyProjects(){
-  const projects=[...studioProjects.values()].filter(p=>!p.removedFromVariants).sort((a,b)=>(a.created||0)-(b.created||0)||(a.order||0)-(b.order||0)),key=[state.restoring,state.historyLoading,state.historyLoaded,state.historyError,...projects.map(p=>[p.id,p.groupId,p.status,p.loading,p.error,p.previewDataUrl?'preview':previewSource(p)?.url,p.prompt].join(':'))].join('|');if(readyGrid.childElementCount&&key===readyRenderKey)return;readyRenderKey=key;readyGrid.replaceChildren();
+  const projects=[...studioProjects.values()].filter(p=>!p.removedFromVariants).sort((a,b)=>(a.created||0)-(b.created||0)||(a.order||0)-(b.order||0)),key=[state.restoring,state.historyLoading,state.historyLoaded,state.historyError,...projects.map(p=>[p.id,p.groupId,p.status,p.loading,p.error,p.previewDataUrl?'preview':p.posterDataUrl?'poster':previewSource(p)?.url,p.prompt].join(':'))].join('|');if(readyGrid.childElementCount&&key===readyRenderKey)return;readyRenderKey=key;
+  const existing=new Map([...readyGrid.querySelectorAll('.studio-ready-project')].map(card=>[card.dataset.projectId,card])),next=[];
   const groups=new Map();for(const p of projects){const id=p.groupId||p.id;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(p);}
   for(const family of [...groups.values()].reverse()){
    const first=family[0],last=family.at(-1),display=[...family].reverse().find(p=>p.status==='completed'&&(p.media||p.resultUrl))||last;
+   const cardKey=[display.id,display.status,last.status,!!last.loading,first.prompt,family.length,display.previewDataUrl||display.posterDataUrl||''].join('|'),old=existing.get(display.id);
+   if(old?.dataset.renderKey===cardKey){next.push(old);continue;}
    const card=el('article',{className:'studio-template-card studio-ready-card studio-ready-project','data-project-id':display.id});
-   const preview=button('',()=>{openProjectRoom(display.id);if(display.status==='completed'&&!display.media&&display.resultUrl)void loadStudioProjectResult(display);});preview.className='studio-ready-preview';preview.setAttribute('aria-label','Открыть '+(display.kind==='video'?'видео':'фото')+' · '+(first.prompt||'Мой проект').slice(0,110));
-   const source=previewSource(display);if(display.status==='completed'&&source&&(display.media||display.previewDataUrl))preview.append(previewElement(source));else if(!PROJECT_TERMINAL.includes(display.status))addWorkingPreview(preview,display,true);else preview.append(el('i',{className:'studio-ready-placeholder','aria-hidden':'true'},first.kind==='video'?'▷':'✦'));
+   card.dataset.renderKey=cardKey;
+   const preview=button('',()=>{openProjectRoom(display.id);if(display.kind==='image'&&display.status==='completed'&&!display.media&&display.resultUrl)void loadStudioProjectResult(display);});preview.className='studio-ready-preview';preview.setAttribute('aria-label','Открыть '+(display.kind==='video'?'видео':'фото')+' · '+(first.prompt||'Мой проект').slice(0,110));
+   const source=previewSource(display);if(display.status==='completed'&&source&&(display.previewDataUrl||display.posterDataUrl))preview.append(previewElement(source));else if(!PROJECT_TERMINAL.includes(display.status))addWorkingPreview(preview,display,true);else preview.append(el('i',{className:'studio-ready-placeholder','aria-hidden':'true'},first.kind==='video'?'▷':'✦'));
    const copy=el('span',{className:'studio-ready-copy'});copy.append(el('small',{},(first.kind==='video'?'Видео':'Фото')+' · '+projectStatusLabel(last)+(family.length>1?' · '+variantsText(family.length):'')),el('strong',{},(first.prompt||'Мой проект').slice(0,110)));preview.append(copy,el('b',{'aria-hidden':'true'},first.kind==='video'?'▷':'↗'));card.append(preview);
    if(display.status==='completed'&&source)card.append(window.anisProjectActions.createControls(display));
-   readyGrid.append(card);
+   next.push(card);
   }
-  if(state.restoring||state.historyLoading){const note=el('p',{className:'note ready-history-status',role:'status'},'Загружаем твои работы…');readyGrid.prepend(note);}
-  else if(state.historyError){const note=el('div',{className:'studio-ready-empty ready-history-status',role:'status'});note.append(el('p',{},state.historyError),button('Загрузить работы',()=>void resumeMediaProjects()));readyGrid.prepend(note);}
-  else if(!groups.size){const empty=el('div',{className:'studio-ready-empty'});empty.append(el('strong',{},'Здесь будут твои фото и видео'),el('p',{},'Создай первую работу — она появится здесь.'),button('Создать фото',()=>openView('studio'),true));readyGrid.append(empty);}
+  if(state.restoring||state.historyLoading){const note=el('p',{className:'note ready-history-status',role:'status'},'Загружаем твои работы…');next.unshift(note);}
+  else if(state.historyError){const note=el('div',{className:'studio-ready-empty ready-history-status',role:'status'});note.append(el('p',{},state.historyError),button('Загрузить работы',()=>void resumeMediaProjects()));next.unshift(note);}
+  else if(!groups.size){const empty=el('div',{className:'studio-ready-empty'});empty.append(el('strong',{},'Здесь будут твои фото и видео'),el('p',{},'Создай первую работу — она появится здесь.'),button('Создать фото',()=>openView('studio'),true));next.push(empty);}
+  for(const child of [...readyGrid.children])if(!next.includes(child))child.remove();for(const [index,child]of next.entries())if(readyGrid.children[index]!==child)readyGrid.insertBefore(child,readyGrid.children[index]||null);
  }
  const resultLoads=new WeakMap();
  loadStudioProjectResult=function(p){
   if(resultLoads.has(p))return resultLoads.get(p);
-  if(p.media?.file)return Promise.resolve(p.media);
+  if(p.media?.file?.size)return Promise.resolve(p.media);
   // Register before rendering: room and gallery renders can request this same file.
   const task=Promise.resolve().then(async()=>{
-   p.loading=true;renderProjectRoom();
+   p.loading=true;if(selectedStudioProject===p.id&&room.open)renderProjectRoom();else updateProjectDock();
    try{
-    let downloaded;
-    const routes=initData?[{url:API_URL,options:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'media-file',jobId:p.id,initData})}},{url:p.resultUrl}]:[{url:p.resultUrl}];
-    for(let i=0;i<routes.length;i++){
-     try{const route=routes[i],response=await fetch(route.url,{...route.options,signal:AbortSignal.timeout(90000)});if(!response.ok){await response.body?.cancel();throw Error('Не удалось загрузить результат.');}downloaded=await window.anisProjectActions.normalizeBlob(p.kind,await response.blob());break;}
-     catch(error){if(i===routes.length-1)throw error;}
-    }
+    const downloaded=await window.anisProjectActions.downloadMediaBlob(p);
     let blob=downloaded;
     if(p.region){if(!p.regionOriginalFile)throw Error('Чтобы собрать результат без изменения остального фото, нужен оригинал с этого устройства. Не создавай заказ заново.');blob=await compositeRegion(p,blob);}
     // Publish the decoded file immediately; saving to storage must not hold up previews.
     p.media=mediaFromBlob(p.kind,blob);p.mediaBlob=blob;p.error=null;generatedMedia[p.kind]=p.media;
-    workroomRenderKey='';renderProjectRoom();
-    const previewTask=window.anisProjectActions.ensureImagePreview(p).catch(()=>null).then(()=>{if(selectedStudioProject===p.id){workroomRenderKey='';renderProjectRoom();}else updateProjectDock();});
-    const prepared=await window.anisMediaQuality.prepare(p,blob);
-    p.outputWidth=prepared.width;p.outputHeight=prepared.height;p.resolutionWarning=prepared.warning||null;p.resolutionPending=!!prepared.pending;
-    if(prepared.blob!==blob){const old=p.media.url;p.media=mediaFromBlob(p.kind,prepared.blob);p.mediaBlob=prepared.blob;URL.revokeObjectURL(old);}
-    Object.assign(p.media,{width:p.outputWidth,height:p.outputHeight,warning:p.resolutionWarning});generatedMedia[p.kind]=p.media;invalidateUsageStats();persistStudioProjects();void previewTask.then(()=>persistStudioProjects());
+    p.resolutionPending=!!window.anisMediaQuality?.presets?.[p.quality];
+    if(selectedStudioProject===p.id&&room.open)renderProjectRoom();else updateProjectDock();
+    void window.anisProjectActions.ensureProjectPreview(p).then(()=>{updateProjectDock();persistStudioProjects();}).catch(error=>{p.previewError=error.message;updateProjectDock();});
+    generatedMedia[p.kind]=p.media;invalidateUsageStats();persistStudioProjects();
     if(selectedStudioProject===p.id)room.querySelector('.anis-inline-error')?.remove();
     return p.media;
    }catch(error){p.error=p.region?readableMediaError(error):(p.kind==='image'?'Фото':'Видео')+' готово, но файл не загрузился. Повтори загрузку — новый заказ не создаётся.';}
-   finally{p.loading=false;resultLoads.delete(p);workroomRenderKey='';renderProjectRoom();if(!p.media&&selectedStudioProject===p.id&&room.open)queueMicrotask(()=>window.anisProjectActions.showLoadError(p));}
+   finally{p.loading=false;resultLoads.delete(p);if(selectedStudioProject===p.id&&room.open)renderProjectRoom();else updateProjectDock();if(!p.media&&selectedStudioProject===p.id&&room.open)queueMicrotask(()=>window.anisProjectActions.showLoadError(p));}
   });resultLoads.set(p,task);return task;
  };
  async function recoverProject(p){
@@ -415,10 +416,10 @@
      Object.assign(p,{groupId:row.groupId||p.groupId||p.id,status:p.media?'completed':row.status,resultUrl:row.url||p.resultUrl,expiresAt:row.expiresAt||p.expiresAt,error:row.error,region:p.region||row.region});
     }
    }
-   state.historyLoading=false;state.historyLoaded=!failure;
+   try{await window.anisProjectActions.restorePreviews([...studioProjects.values()]);}catch{}state.historyLoading=false;state.historyLoaded=!failure;
    if(failure)state.historyError=failure.status===401?'Не удалось подтвердить вход. Закрой приложение и открой его через бота ANIS AI.':'Не удалось загрузить все работы. Проверь соединение и попробуй ещё раз.';
    for(const p of studioProjects.values())if(['submitting','creating','pending','processing','unknown'].includes(p.status))void recoverProject(p);
-   void pumpStudioQueue();updateProjectDock();persistStudioProjects();
+   void pumpStudioQueue();updateProjectDock();window.anisProjectActions.refreshGallery();persistStudioProjects();
   })().finally(()=>resumePromise=null);
  };
 

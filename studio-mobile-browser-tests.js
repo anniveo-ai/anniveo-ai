@@ -23,11 +23,11 @@
   Object.defineProperty(window,'visualViewport',{configurable:true,value:actualViewport});
   const canvas=document.createElement('canvas');canvas.width=64;canvas.height=64;canvas.getContext('2d').fillRect(0,0,64,64);const blob=await new Promise(r=>canvas.toBlob(r,'image/png'));
   const originalFetch=window.fetch;let downloads=0;
-  window.fetch=(url,options)=>{if(String(url)==='https://example.test/qa-result.png'){downloads++;return Promise.resolve(downloads===1?new Response('',{status:503}):new Response(blob,{status:200,headers:{'Content-Type':'image/png'}}));}return originalFetch(url,options);};
+  window.fetch=(url,options)=>{if(String(url)==='https://example.test/qa-result.png'){downloads++;return Promise.resolve(downloads<=2?new Response('',{status:503}):new Response(blob,{status:200,headers:{'Content-Type':'image/png'}}));}return originalFetch(url,options);};
   photo.status='completed';photo.resultUrl='https://example.test/qa-result.png';openProjectRoom(photo.id);await loadStudioProjectResult(photo);await wait(100);
   const retry=document.querySelector('#mediaResultPreview .project-load-result');check(!!retry&&!photo.media,'Failed file exposes retry button');retry.click();
   for(let n=0;n<200&&!photo.media?.file;n++)await wait(50);await wait(150);
-  check(downloads===2&&!!photo.media?.file&&studioProjects.get(photo.id)===photo,'Retry reloads the file without another generation',{downloads});
+  check(downloads===3&&!!photo.media?.file&&studioProjects.get(photo.id)===photo,'Retry reloads the file without another generation',{downloads});
   const shown=document.querySelector('#mediaResultPreview img');check(!!shown&&getComputedStyle(shown).objectFit==='contain','Whole photo fits the preview frame');
   const shared=[];Object.defineProperty(navigator,'share',{configurable:true,value:data=>{shared.push(data);return Promise.resolve();}});Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});
   const saving=saveGeneratedMedia();check(shared.length===1,'Native save is called synchronously inside original gesture');await saving;

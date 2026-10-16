@@ -161,13 +161,27 @@ async function serveMediaFile(env,userId,jobId,headers){
  if(!response.ok){await response.body?.cancel();const error=Error('Не удалось загрузить готовый файл. Попробуй ещё раз.');error.status=502;throw error;}
  const type=response.headers.get('Content-Type')||'application/octet-stream';
  if(!/^(image|video)\//i.test(type)&&!/^application\/octet-stream/i.test(type)){await response.body?.cancel();throw Error('Сервис вернул некорректный файл.');}
- return new Response(response.body,{headers:{...headers,'Content-Type':type,'X-Content-Type-Options':'nosniff'}});
+ const fileHeaders={...headers,'Content-Type':type,'X-Content-Type-Options':'nosniff','Access-Control-Expose-Headers':'Content-Length, Content-Type'};if(response.headers.get('Content-Length')&&!response.headers.get('Content-Encoding'))fileHeaders['Content-Length']=response.headers.get('Content-Length');
+ return new Response(response.body,{headers:fileHeaders});
 }
 
 const MEDIA_EXPORT_CHUNK=1024*1024,MEDIA_EXPORT_TTL=30*60*1000;
+async function storeMediaPreview(env,userId,jobId,file){
+ if(!env.DB||!file||typeof file==='string'||!file.size||file.size>256*1024||!['image/webp','image/jpeg','image/png'].includes(file.type))throw Error('Некорректное превью.');
+ const owned=await env.DB.prepare('SELECT id FROM media_jobs WHERE id=? AND user_id=? AND status=?').bind(String(jobId||''),userId,'completed').first();if(!owned){const error=Error('Работа не найдена.');error.status=404;throw error;}
+ await env.DB.prepare('CREATE TABLE IF NOT EXISTS media_previews(job_id TEXT PRIMARY KEY,user_id TEXT NOT NULL,mime TEXT NOT NULL,data BLOB NOT NULL,created_at INTEGER NOT NULL)').run();
+ await env.DB.prepare('INSERT OR REPLACE INTO media_previews(job_id,user_id,mime,data,created_at) VALUES(?,?,?,?,?)').bind(String(jobId),String(userId),file.type,await file.arrayBuffer(),Date.now()).run();return {ok:true};
+}
+async function readMediaPreviews(env,userId,ids){
+ if(!env.DB||!Array.isArray(ids)||ids.length>24)throw Error('Некорректный список работ.');
+ if(!ids.length)return {items:[]};
+ let rows;try{rows=await env.DB.prepare('SELECT p.job_id,p.mime,p.data FROM media_previews p JOIN media_jobs j ON j.id=p.job_id AND j.user_id=p.user_id WHERE p.user_id=? AND p.job_id IN ('+ids.map(()=>'?').join(',')+')').bind(String(userId),...ids.map(String)).all();}catch(error){if(/no such table/i.test(error.message))return {items:[]};throw error;}
+ return {items:(rows.results||[]).map(row=>{const bytes=row.data instanceof ArrayBuffer?new Uint8Array(row.data):Uint8Array.from(row.data);let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));return {jobId:row.job_id,dataUrl:'data:'+row.mime+';base64,'+btoa(binary)};})};
+}
 async function cleanupMediaExports(env){
  if(!env.DB)return;
  try{await env.DB.batch([env.DB.prepare('DELETE FROM media_export_chunks WHERE export_id IN (SELECT id FROM media_exports WHERE expires<=?)').bind(Date.now()),env.DB.prepare('DELETE FROM media_exports WHERE expires<=?').bind(Date.now())]);}catch{}
+ try{await env.DB.prepare('DELETE FROM media_previews WHERE created_at<?').bind(Date.now()-8*86400000).run();}catch{}
 }
 async function prepareMediaExport(env,userId,jobId,file){
  if(!env.DB||!file||typeof file==='string'||!file.size||file.size>25*1024*1024)throw Error('Для скачивания нужен файл до 25 МБ.');
@@ -1437,6 +1451,9 @@ export default {
         const voiceUser=await verifyTelegram(String(form.get("initData")||""),env.TELEGRAM_BOT_TOKEN);
         if(!voiceUser) return json({error:"Открой ANIS AI через Telegram"},401,headers);
         const multipartAction=String(form.get("action")||"");
+        if(multipartAction==='media-preview'){
+          try{return json(await storeMediaPreview(env,voiceUser,form.get('jobId'),form.get('file')),200,headers);}catch(error){return json({error:error.message},error.status||400,headers);}
+        }
         if(multipartAction==='media-export'){
           try{const exported=await prepareMediaExport(env,voiceUser,form.get('jobId'),form.get('file'));return json({...exported,url:new URL('/media-download/'+exported.id,request.url).href},200,headers);}
           catch(error){return json({error:error.message},error.status||400,headers);}
@@ -1530,6 +1547,9 @@ export default {
         if(!env.DB)return json({error:'Файлы временно недоступны'},503,headers);
         try{return await serveMediaFile(env,userId,body.jobId,headers);}
         catch(error){return json({error:error.message},error.status||502,headers);}
+      }
+      if(action==='media-previews'){
+        try{return json(await readMediaPreviews(env,userId,body.ids),200,headers);}catch(error){return json({error:error.message},error.status||400,headers);}
       }
       if(action==="media-history"){
         if(!env.DB)return json({error:'История временно недоступна'},503,headers);

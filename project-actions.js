@@ -32,15 +32,15 @@
     stage.replaceChildren(node('p',{className:'note'},project.error||'Не удалось открыть готовый файл.'),retry);
   }
   const exportsInProgress=new WeakMap();
-  async function getMedia(project){
+  async function getMedia(project,{forExport=false}={}){
     if(project.loading||!project.media&&project.resultUrl){await loadStudioProjectResult(project);if(!project.media&&project.loadingPromise)await project.loadingPromise;}
     if(!project.media?.file)throw Error(project.error||'Не удалось открыть результат. Попробуй ещё раз.');
-    if(project.resolutionPending&&window.anisMediaQuality){
+    if(forExport&&project.resolutionPending&&window.anisMediaQuality){
       let exporting=exportsInProgress.get(project);
       if(!exporting){exporting=(async()=>{
         const result=await window.anisMediaQuality.prepare(project,project.media.blob,{convertVideo:true});
-        project.resolutionWarning=result.warning;project.resolutionPending=!!result.pending;
-        if(result.pending){showMedia(project.media,project.kind);throw Error(result.warning);}
+        project.resolutionWarning=result.warning;project.resolutionPending=false;
+        if(result.pending){Object.assign(project.media,{warning:result.warning,width:result.width,height:result.height});return;}
         const old=project.media.url;project.media=mediaFromBlob(project.kind,result.blob);project.mediaBlob=result.blob;project.outputWidth=result.width;project.outputHeight=result.height;Object.assign(project.media,{width:result.width,height:result.height,warning:result.warning});if(old?.startsWith('blob:'))URL.revokeObjectURL(old);persistStudioProjects();updateProjectDock();
       })();exportsInProgress.set(project,exporting);}
       try{await exporting;}finally{exportsInProgress.delete(project);}
@@ -48,6 +48,40 @@
     project.media.exportJobId=project.exportJobId||project.id;return project.media;
   }
   const imagePreviews=new WeakMap();
+  function mediaDeadline(promise,ms,message){return new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error(message)),ms);Promise.resolve(promise).then(value=>{clearTimeout(timer);resolve(value)},error=>{clearTimeout(timer);reject(error)});});}
+  async function downloadMediaBlob(project){
+    const proxy={url:API_URL,options:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'media-file',jobId:project.id,initData})}},direct={url:project.resultUrl},routes=initData?[proxy,direct,proxy]:[direct,direct];
+    let lastError;
+    for(const route of routes){
+      const controller=new AbortController();let idle,total,reader;
+      const touch=()=>{clearTimeout(idle);idle=setTimeout(()=>controller.abort(),20000);};
+      try{
+        touch();total=setTimeout(()=>controller.abort(),120000);
+        const response=await fetch(route.url,{...route.options,signal:controller.signal});if(!response.ok){await response.body?.cancel();const error=Error('Файл временно недоступен (HTTP '+response.status+').');error.status=response.status;throw error;}
+        const expected=Number(response.headers.get('Content-Length'))||0;let loaded=0;const chunks=[];reader=response.body?.getReader();
+        if(!reader)return await normalizeBlob(project.kind,await response.blob());
+        for(;;){touch();const {done,value}=await mediaDeadline(reader.read(),22000,'Загрузка остановилась.');if(done)break;chunks.push(value);loaded+=value.byteLength;project.downloadedBytes=loaded;project.downloadTotalBytes=expected;const progress=document.querySelector('.project-file-progress[data-project-id="'+CSS.escape(project.id)+'"]');if(progress)progress.textContent=expected?'Загружаем файл · '+Math.min(99,Math.round(loaded/expected*100))+'%':'Загружаем файл · '+(loaded/1048576).toFixed(1)+' МБ';}
+        if(expected&&!response.headers.get('Content-Encoding')&&loaded!==expected)throw Error('Файл загрузился не целиком. Повторяем загрузку.');
+        return await normalizeBlob(project.kind,new Blob(chunks,{type:response.headers.get('Content-Type')||''}));
+      }catch(error){lastError=error;if([401,403].includes(error.status)&&route===direct)break;}
+      finally{clearTimeout(idle);clearTimeout(total);controller.abort();try{void reader?.cancel().catch(()=>{});}catch{}}
+    }
+    throw lastError||Error('Не удалось загрузить файл.');
+  }
+  async function restorePreviews(projects){
+    if(!initData)return;
+    const pending=projects.filter(p=>p.status==='completed'&&!(p.kind==='video'?p.posterDataUrl:p.previewDataUrl));
+    for(let i=0;i<pending.length;i+=24){
+      const batch=pending.slice(i,i+24),data=await mediaJSON({action:'media-previews',ids:batch.map(p=>p.id)},20000);
+      for(const row of data.items||[]){const project=studioProjects.get(row.jobId);if(project&&/^data:image\/(webp|jpeg|png);base64,/.test(row.dataUrl))project[project.kind==='video'?'posterDataUrl':'previewDataUrl']=row.dataUrl;}
+    }
+  }
+  const uploadedPreviews=new WeakSet();
+  async function storePreview(project,dataUrl){
+    if(!initData||uploadedPreviews.has(project)||project.exportJobId)return;
+    uploadedPreviews.add(project);
+    try{const file=await (await fetch(dataUrl)).blob();if(file.size>256*1024)return;const form=new FormData();form.append('action','media-preview');form.append('initData',initData);form.append('jobId',project.id);form.append('file',file,'preview.webp');const response=await fetch(API_URL,{method:'POST',body:form,signal:AbortSignal.timeout(15000)});if(!response.ok)uploadedPreviews.delete(project);}catch{uploadedPreviews.delete(project);}
+  }
   function ensureImagePreview(project){
     if(project.kind!=='image'||project.previewDataUrl)return Promise.resolve(project.previewDataUrl);
     if(imagePreviews.has(project))return imagePreviews.get(project);
@@ -58,24 +92,39 @@
       const reader=new FileReader(),timer=setTimeout(()=>{reader.abort();reject(Error('Не удалось прочитать фото.'));},10000);reader.onload=()=>{clearTimeout(timer);resolve(String(reader.result));};reader.onerror=()=>{clearTimeout(timer);reject(reader.error||Error('Не удалось прочитать фото.'));};reader.readAsDataURL(blob);
     }).then(async url=>{
       // Only the screen preview is reduced; the export keeps its original pixels.
-      try{const image=new Image();image.src=url;await image.decode();const scale=Math.min(1,1280/Math.max(image.naturalWidth,image.naturalHeight));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);url=canvas.toDataURL('image/webp',.9);}catch{}
-      project.previewDataUrl=url;return url;
+      const image=new Image();image.src=url;await mediaDeadline(image.decode(),10000,'Фото не удалось открыть.');const scale=Math.min(1,640/Math.max(image.naturalWidth,image.naturalHeight));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);url=canvas.toDataURL('image/webp',.78);canvas.width=canvas.height=1;image.src='';
+      project.previewDataUrl=url;void storePreview(project,url);return url;
     }).finally(()=>imagePreviews.delete(project));
     imagePreviews.set(project,task);return task;
   }
+  const videoPreviews=new WeakMap();
+  function ensureVideoPoster(project){
+    if(project.posterDataUrl)return Promise.resolve(project.posterDataUrl);if(videoPreviews.has(project))return videoPreviews.get(project);
+    const blob=project.media?.blob||project.mediaBlob;if(!blob&&!project.resultUrl)return Promise.resolve(null);
+    const task=(async()=>{const video=node('video',{muted:true,playsInline:true,preload:'auto'}),url=blob?URL.createObjectURL(blob):project.resultUrl;video.crossOrigin='anonymous';video.style.cssText='position:fixed;width:2px;height:2px;opacity:.01;pointer-events:none';
+      try{document.body.append(video);const ready=new Promise((resolve,reject)=>{video.addEventListener('loadeddata',resolve,{once:true});video.addEventListener('error',()=>reject(Error('Кадр видео пока не загрузился.')),{once:true});});video.src=url;video.load();void video.play().catch(()=>{});await mediaDeadline(ready,18000,'Кадр видео загружается дольше обычного.');const scale=Math.min(1,720/Math.max(video.videoWidth,video.videoHeight)),canvas=node('canvas');canvas.width=Math.max(1,Math.round(video.videoWidth*scale));canvas.height=Math.max(1,Math.round(video.videoHeight*scale));canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);const preview=canvas.toDataURL('image/webp',.8);canvas.width=canvas.height=1;project.posterDataUrl=preview;void storePreview(project,preview);return preview;}
+      finally{video.pause();video.removeAttribute('src');video.load();video.remove();if(blob)URL.revokeObjectURL(url);}
+    })().finally(()=>videoPreviews.delete(project));videoPreviews.set(project,task);return task;
+  }
+  const ensureProjectPreview=project=>project.kind==='video'?ensureVideoPoster(project):ensureImagePreview(project);
   function resultPreview(project){
     const media=node(project.kind==='video'?'video':'img');media.className='project-result-media';
-    media.addEventListener(project.kind==='video'?'loadeddata':'load',()=>{media.dataset.ready='true';media.parentElement?.querySelector('.project-load-result')?.remove();},{once:true});
-    if(project.kind==='video'){media.controls=true;media.playsInline=true;media.preload='metadata';}
+    media.dataset.projectId=project.id;
+    const ready=()=>{media.dataset.ready='true';media.parentElement?.querySelector('.project-load-result')?.remove();};
+    media.addEventListener(project.kind==='video'?'loadeddata':'load',ready,{once:true});
+    if(project.kind==='video'){media.controls=true;media.playsInline=true;media.preload='auto';if(project.posterDataUrl){media.poster=project.posterDataUrl;media.dataset.ready='true';}media.addEventListener('loadedmetadata',ready,{once:true});}
     else{media.alt='Готовое фото';media.decoding='async';}
-    media.src=project.previewDataUrl||project.media?.url||project.resultUrl;
+    const source=project.media?.url||(project.kind==='image'?project.previewDataUrl:null)||(project.kind==='video'?project.resultUrl:null);if(source)media.src=source;
+    if(project.loading)queueMicrotask(()=>{if(!media.isConnected||!project.loading)return;const note=node('span',{className:'project-file-progress'},'Загружаем оригинал…');note.dataset.projectId=project.id;media.parentElement?.append(note);});
     if(project.kind==='image'&&!project.previewDataUrl&&project.media?.blob){
       void ensureImagePreview(project).then(url=>{if(url&&media.isConnected)media.src=url;}).catch(()=>{});
     }
+    let repaired=false;
     media.addEventListener('error',()=>{
       if(!media.isConnected)return;
+      if(!repaired&&project.media?.file){repaired=true;if(project.kind==='image'){void ensureImagePreview(project).then(url=>{if(media.isConnected&&url)media.src=url;}).catch(()=>showLoadError(project));return;}project.media.url=URL.createObjectURL(project.media.file);media.src=project.media.url;media.load();return;}
       project.error='Готовый файл не открылся. Повтори загрузку — новый заказ не создаётся.';showLoadError(project);
-    },{once:true});
+    });
     return media;
   }
   async function normalizeBlob(kind,blob){
@@ -144,7 +193,7 @@
     // Call native Share inside the original click, before any asynchronous download.
     if(project.media?.file&&!project.loading&&!project.resolutionPending){project.media.exportJobId=project.exportJobId||project.id;return window.anisProjectActions.saveMedia(project.media,project.kind);}
     viewerTitle.textContent=project.kind==='video'?'Подготавливаем видео':'Подготавливаем фото';viewerStage.replaceChildren();viewerActions.replaceChildren();viewerNote.textContent='Загружаем готовый файл. Новый заказ не создаётся.';if(!viewer.open)viewer.showModal();
-    return getMedia(project).then(item=>telegramDownloads()?saveMedia(item,project.kind):showMedia(item,project.kind)).catch(error=>{
+    return getMedia(project,{forExport:true}).then(item=>telegramDownloads()?saveMedia(item,project.kind):showMedia(item,project.kind)).catch(error=>{
       viewerNote.textContent=error.message;viewerActions.replaceChildren(control('Повторить загрузку',()=>{
         viewerActions.replaceChildren();viewerNote.textContent='Загружаем…';
         void retryResult(project).then(()=>saveProject(project)).catch(next=>{viewerNote.textContent=next.message;viewerActions.replaceChildren(control('Повторить',()=>void saveProject(project),'anis-button'));});
@@ -265,7 +314,7 @@
   const originalRoomRender=window.renderProjectRoom,pendingRooms=new WeakSet(),roomAttempts=new WeakSet();
   if(typeof originalRoomRender==='function')window.renderProjectRoom=function(...args){
     const result=originalRoomRender.apply(this,args),project=studioProjects.get(selectedStudioProject);
-    if(!document.getElementById('mediaResultDialog')?.open||!project||project.status!=='completed'||project.media||!project.resultUrl||pendingRooms.has(project)||roomAttempts.has(project))return result;
+    if(!document.getElementById('mediaResultDialog')?.open||!project||project.kind==='video'||project.status!=='completed'||project.media||!project.resultUrl||pendingRooms.has(project)||roomAttempts.has(project))return result;
     pendingRooms.add(project);roomAttempts.add(project);
     Promise.resolve().then(()=>loadStudioProjectResult(project)).finally(()=>{pendingRooms.delete(project);if(!project.media)showLoadError(project);});
     return result;
@@ -274,11 +323,11 @@
   // must not restart all the full-size downloads or create an infinite retry loop.
   const galleryLoads=new Set(),galleryAttempts=new Map(),galleryQueue=[];
   function pumpGallery(){
-    while(currentView==='ready'&&!document.getElementById('mediaResultDialog')?.open&&galleryLoads.size<1&&galleryQueue.length){
-      const project=galleryQueue.shift();if(project.media||galleryLoads.has(project.id))continue;
+    while(currentView==='ready'&&!window.anisStability?.historyLoading&&!document.getElementById('mediaResultDialog')?.open&&galleryLoads.size<2&&galleryQueue.length){
+      const project=galleryQueue.shift();if((project.kind==='video'?project.posterDataUrl:project.previewDataUrl)||galleryLoads.has(project.id))continue;
       const card=document.querySelector('.studio-ready-project[data-project-id=\"'+CSS.escape(project.id)+'\"]');if(!card||!nearViewport(card)){galleryAttempts.delete(project.id);continue;}
       galleryLoads.add(project.id);
-      Promise.resolve().then(()=>loadStudioProjectResult(project)).finally(()=>{galleryLoads.delete(project.id);repairReadyGallery();pumpGallery();});
+      Promise.resolve().then(async()=>{if(project.kind==='image'&&!project.media)await loadStudioProjectResult(project);await ensureProjectPreview(project);}).catch(error=>{project.previewError=error.message;}).finally(()=>{galleryLoads.delete(project.id);const attempt=galleryAttempts.get(project.id);if(attempt&&attempt.count<3){attempt.next=Date.now()+attempt.count*3000;setTimeout(scheduleGallery,attempt.count*3000+50);}repairReadyGallery();pumpGallery();});
     }
   }
   function nearViewport(card){const rect=card.getBoundingClientRect();return rect.bottom>=-250&&rect.top<=window.innerHeight+250;}
@@ -287,25 +336,28 @@
     for(const card of grid.querySelectorAll('.studio-ready-project[data-project-id]')){
       const project=studioProjects.get(card.dataset.projectId),preview=card.querySelector('.studio-ready-preview');
       if(!project||project.status!=='completed'||!preview)continue;
-      if(project.previewDataUrl||project.media?.url){
-        const url=project.previewDataUrl||project.media.url;
+      const thumbnail=project.kind==='video'?project.posterDataUrl:project.previewDataUrl;
+      if(thumbnail){
+        const url=thumbnail;
         const media=preview.querySelector('img,video');
-        if(media?.getAttribute('src')!==url){const next=node(project.kind==='video'?'video':'img',{src:url});if(project.kind==='video'){next.muted=true;next.playsInline=true;next.preload='metadata';}else next.alt='Готовое фото';if(media)media.replaceWith(next);else preview.prepend(next);}
+        if(media?.getAttribute('src')!==url){const next=node('img',{src:url,loading:'lazy',decoding:'async',alt:project.kind==='video'?'Кадр готового видео':'Готовое фото'});if(media)media.replaceWith(next);else preview.prepend(next);}
         preview.querySelector('.ready-preview-status')?.remove();continue;
       }
-      if(!project.resultUrl)continue;
+      if(!project.resultUrl&&!project.media?.file)continue;
       let status=preview.querySelector('.ready-preview-status');
       if(!status){status=node('span',{className:'ready-preview-status',role:'status'});preview.prepend(status);}
-      status.textContent=project.error&&!project.loading?'Нажми, чтобы загрузить':'Загружаем '+(project.kind==='video'?'видео…':'фото…');
-      if(nearViewport(card)&&!galleryLoads.has(project.id)&&galleryAttempts.get(project.id)!==project.resultUrl){galleryAttempts.set(project.id,project.resultUrl);galleryQueue.push(project);}
+      status.textContent=(project.error||project.previewError)&&!project.loading?'Нажми, чтобы открыть':'Открываем '+(project.kind==='video'?'кадр видео…':'фото…');
+      const old=galleryAttempts.get(project.id),attempt=old?.url===project.resultUrl?old:{url:project.resultUrl,count:0,next:0};
+      if(nearViewport(card)&&!galleryLoads.has(project.id)&&attempt.count<3&&Date.now()>=attempt.next&&!galleryQueue.includes(project)){attempt.count++;galleryAttempts.set(project.id,attempt);galleryQueue.push(project);}
     }
     pumpGallery();
   }
   let galleryFrame=0;
   function scheduleGallery(){cancelAnimationFrame(galleryFrame);galleryFrame=requestAnimationFrame(repairReadyGallery);}
   document.getElementById('app')?.addEventListener('scroll',scheduleGallery,{passive:true});window.addEventListener('resize',scheduleGallery);document.getElementById('mediaResultDialog')?.addEventListener('close',scheduleGallery);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){galleryAttempts.clear();scheduleGallery();}});window.addEventListener('online',()=>{galleryAttempts.clear();scheduleGallery();});
   function observeGallery(){const grid=document.getElementById('studioReadyList');if(grid){new MutationObserver(repairReadyGallery).observe(grid,{childList:true});repairReadyGallery();}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observeGallery,{once:true});else observeGallery();
-  window.anisProjectActions={createControls,normalizeBlob,saveMedia,saveProject,showMedia,getMedia,prepareDownload,retryResult,showLoadError,ensureImagePreview,resultPreview,refreshGallery:scheduleGallery};
+  window.anisProjectActions={createControls,normalizeBlob,saveMedia,saveProject,showMedia,getMedia,prepareDownload,retryResult,showLoadError,ensureImagePreview,ensureProjectPreview,downloadMediaBlob,restorePreviews,resultPreview,refreshGallery:scheduleGallery};
 })();
 

@@ -1,0 +1,16 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('project-actions.js','utf8'),bytes=new Uint8Array([137,80,78,71,13,10,26,10]);
+const context=vm.createContext({Promise,WeakMap,WeakSet,AbortController,Blob,Array,Error,Math,Number,Date,initData:'test',API_URL:'https://api.test/',CSS:{escape:x=>x},document:{querySelector:()=>null},setTimeout,clearTimeout,normalizeBlob:async(kind,blob)=>{if(blob.size!==bytes.length)throw Error('invalid file');return blob;}});
+vm.runInContext(source.slice(source.indexOf('  function mediaDeadline('),source.indexOf('  async function restorePreviews(')),context);
+(async()=>{
+ let requests=[];context.project={id:'owned',kind:'image',resultUrl:'https://s3.polza.ai/result.png'};
+ context.fetch=async(url,options)=>{requests.push(url);return new Response(bytes,{headers:{'Content-Type':'image/png','Content-Length':String(requests.length===1?99:bytes.length)}});};
+ const loaded=await vm.runInContext('downloadMediaBlob(project)',context);assert.equal(loaded.size,bytes.length);assert.equal(requests.length,2,'truncated response must trigger another route rather than caching a broken image');assert.equal(context.project.downloadedBytes,bytes.length);
+ requests=[];context.fetch=async url=>{requests.push(url);if(url==='https://api.test/')throw TypeError('network failed');return new Response(bytes,{headers:{'Content-Type':'image/png'}});};assert.equal((await vm.runInContext('downloadMediaBlob(project)',context)).size,bytes.length);assert.deepEqual(requests,['https://api.test/','https://s3.polza.ai/result.png']);
+ let calls=0,cancelled=0;context.fetch=async()=>({ok:true,headers:new Headers(),body:{getReader:()=>({read:()=>new Promise(()=>{}),cancel:async()=>cancelled++})}});vm.runInContext("mediaDeadline=(promise,ms,message)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(Error(message)),1))])",context);await assert.rejects(vm.runInContext('downloadMediaBlob(project)',context),/остановилась/);assert.equal(cancelled,3,'stalled readers must be released on every bounded attempt');
+ const original={file:new File([bytes],'video.mp4',{type:'video/mp4'}),blob:new Blob([bytes],{type:'video/mp4'}),url:'blob:original'};
+ const exportContext=vm.createContext({WeakMap,Promise,Error,window:{anisMediaQuality:{prepare:async()=>{calls++;return {pending:true,width:3840,height:2160,warning:'Исходный файл сохранён'};}}},project:{id:'video',kind:'video',media:original,resolutionPending:true}});
+ vm.runInContext(source.slice(source.indexOf('  const exportsInProgress='),source.indexOf('  const imagePreviews=')),exportContext);
+ assert.equal((await vm.runInContext('getMedia(project)',exportContext)).file,original.file);assert.equal(calls,0,'viewing and cropping must not wait for a video transcode');assert.equal((await vm.runInContext('getMedia(project,{forExport:true})',exportContext)).file,original.file);assert.equal(exportContext.project.resolutionPending,false,'unsupported resizing must not prevent saving the valid original');
+ console.log('PASS: truncated file recovery, route fallback, stalled reader cleanup, actual byte progress and usable originals when video conversion is unavailable.');
+})().catch(error=>{console.error(error);process.exitCode=1});
