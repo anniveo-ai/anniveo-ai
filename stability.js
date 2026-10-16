@@ -62,6 +62,15 @@
  persistStudioProjects=function(){if(state.restoring)return;metadataPersist();clearTimeout(persistTimer);persistTimer=setTimeout(()=>void saveDurable(),180);};
  const draftIds=['messageInput','imagePrompt','videoPrompt','projectAgentIdea','imageQuality','videoQuality','imageRatio','videoRatio','duration'];
  function saveDrafts(){const values={};for(const id of draftIds)if($(id))values[id]=id==='messageInput'&&anonymous?'':$(id).value;write('drafts',{values,view:currentView});}
+ function consumeStudioDraft(snapshot){
+  if(!snapshot.consumeDraft)return;
+  const image=snapshot.kind==='image',prompt=$(snapshot.kind+'Prompt'),source=image?studioImageFile:studioVideoFile;
+  // A user may already have started another idea while the project was being saved.
+  if(prompt.value.trim()!==snapshot.prompt.trim()||source!==(snapshot.regionOriginalFile||snapshot.sourceFile||null)||!image&&studioVideoIdentityFile!==(snapshot.identityFile||null))return;
+  prompt.value='';
+  if(image)clearStudioPhoto(true);else{clearStudioVideo(true);clearVideoIdentity();}
+  saveDrafts();void saveFileDrafts().catch(storageWarning);
+ }
  const draftFileBytes=new WeakMap();let fileDraftSaveQueue=Promise.resolve();
  function packDraftFile(file){
   if(!file)return Promise.resolve(null);
@@ -107,9 +116,9 @@
   try{
    if(snapshot.kind==='video'&&['qhd','uhd'].includes(snapshot.quality)&&snapshot.sourceFile?.type.startsWith('video/')){const source=await window.anisMediaQuality.inspectVideo(snapshot.sourceFile);if(source.duration>10.1){toast('Для 2K и 4K добавь видео до 10 секунд. Можно сначала обрезать ролик.');return;}}
    // Original creator adds the ID synchronously. Pump is held until the snapshot is committed.
-   const held=projectPumpBusy;projectPumpBusy=true;
-   try{await createOriginal(snapshot);lastCreation.id=selectedStudioProject;}finally{projectPumpBusy=held;}
-   if(lastCreation.id){await saveDurable();void pumpStudioQueue();}
+   const held=projectPumpBusy,existing=new Set(studioProjects.keys());projectPumpBusy=true;
+   try{await createOriginal(snapshot);if(!existing.has(selectedStudioProject)&&studioProjects.has(selectedStudioProject))lastCreation.id=selectedStudioProject;}finally{projectPumpBusy=held;}
+   if(lastCreation.id){await saveDurable();consumeStudioDraft(snapshot);void pumpStudioQueue();}
   }finally{creationLock=false;}
  };
  const launchOriginal=launchStudioProject;
@@ -498,7 +507,7 @@
   if(kind!=='image'||!state.region)return generateOriginal(kind);
   if(mediaVoiceTask)return toast('Сначала заверши голосовой ввод.');
   const original=studioImageFile,region=structuredClone(state.region),prompt=$('imagePrompt').value.trim();if(prompt.length<3)return toast('Напиши, что изменить в выделенной области.');
-  try{const crop=await cropRegion(original,region);return createStudioVariant({kind:'image',prompt,providerPrompt:prompt.length<1100?'Измени только этот фрагмент по описанию. Сохрани композицию и положение объектов: '+prompt:prompt,sourceFile:crop,regionOriginalFile:original,region,quality:$('imageQuality').value,ratio:$('imageRatio').value});}catch(error){explain(error);}
+  try{const crop=await cropRegion(original,region);return createStudioVariant({kind:'image',consumeDraft:true,prompt,providerPrompt:prompt.length<1100?'Измени только этот фрагмент по описанию. Сохрани композицию и положение объектов: '+prompt:prompt,sourceFile:crop,regionOriginalFile:original,region,quality:$('imageQuality').value,ratio:$('imageRatio').value});}catch(error){explain(error);}
  };
 
  // A reachable action bar follows the actual visual viewport above the phone keyboard.

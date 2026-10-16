@@ -1,0 +1,22 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('stability.js','utf8'),nodes=new Map(),projects=new Map(),writes=[];
+const $=id=>{if(!nodes.has(id))nodes.set(id,{value:''});return nodes.get(id);};let count=0,pumps=0,saved=null;
+const context=vm.createContext({console,Set,Date,JSON,window:{},state:{region:null},studioProjects:projects,selectedStudioProject:null,projectPumpBusy:false,studioImageFile:null,studioVideoFile:null,studioVideoIdentityFile:null,$,anonymous:false,currentView:'studio',draftIds:['imagePrompt','videoPrompt','imageQuality'],write:(key,value)=>writes.push({key,value}),storageWarning(){throw Error('Unexpected storage error');},openProjectRoom(){},toast(){},saveDurable:async()=>{saved=[...projects.values()];return true;},pumpStudioQueue(){pumps++;},saveFileDrafts:async()=>writes.push({files:[context.studioImageFile,context.studioVideoFile,context.studioVideoIdentityFile]}),clearStudioPhoto:force=>{assert.equal(force,true);context.studioImageFile=null;context.state.region=null;},clearStudioVideo:force=>{assert.equal(force,true);context.studioVideoFile=null;},clearVideoIdentity:()=>{context.studioVideoIdentityFile=null;},createStudioVariant:async snapshot=>{if(snapshot.prompt.trim().length<3)return;const p={...snapshot,id:'job-'+(++count),status:'queued'};projects.set(p.id,p);context.selectedStudioProject=p.id;}});
+vm.runInContext(source.slice(source.indexOf(' function saveDrafts('),source.indexOf(' const draftFileBytes=')),context);
+vm.runInContext(source.slice(source.indexOf(' const createOriginal=createStudioVariant;'),source.indexOf(' const launchOriginal=launchStudioProject;')),context);
+const run=snapshot=>{context.snapshot=snapshot;return vm.runInContext('createStudioVariant(snapshot)',context);};
+(async()=>{
+ const file={name:'photo.png',size:100,lastModified:1},identity={name:'face.jpg',size:10,lastModified:2};
+ context.studioImageFile=file;$('imagePrompt').value='Белый фон';$('imageQuality').value='qhd';
+ await run({kind:'image',consumeDraft:true,prompt:'Белый фон',sourceFile:file,quality:'qhd'});
+ assert.equal($('imagePrompt').value,'');assert.equal(context.studioImageFile,null);assert.equal(saved[0].sourceFile,file);assert.equal(saved[0].prompt,'Белый фон');assert.equal($('imageQuality').value,'qhd');assert.equal(writes.at(-2).value.values.imagePrompt,'');assert.deepEqual(writes.at(-1).files,[null,null,null]);assert.equal(pumps,1);
+ context.studioVideoFile=file;context.studioVideoIdentityFile=identity;$('videoPrompt').value='Плавный пролёт';
+ await run({kind:'video',consumeDraft:true,prompt:'Плавный пролёт',sourceFile:file,identityFile:identity});
+ assert.equal($('videoPrompt').value,'');assert.equal(context.studioVideoFile,null);assert.equal(context.studioVideoIdentityFile,null);assert.equal(saved[1].identityFile,identity);
+ context.studioImageFile=file;$('imagePrompt').value='x';const before=pumps;
+ await run({kind:'image',consumeDraft:true,prompt:'x',sourceFile:file});assert.equal($('imagePrompt').value,'x');assert.equal(context.studioImageFile,file);assert.equal(pumps,before,'rejected submission must not reuse a previously selected project');
+ $('imagePrompt').value='Другая новая идея';await run({kind:'image',consumeDraft:true,prompt:'Уже отправленная идея',sourceFile:file});assert.equal($('imagePrompt').value,'Другая новая идея');assert.equal(context.studioImageFile,file,'preserve a newer unsubmitted draft');
+ await run({kind:'image',prompt:'Вариант агента',sourceFile:file});assert.equal($('imagePrompt').value,'Другая новая идея','agent variants do not clear studio drafts');
+ const crop={name:'crop.png',size:20,lastModified:3};$('imagePrompt').value='Измени область';context.state.region={points:[]};await run({kind:'image',consumeDraft:true,prompt:'Измени область',sourceFile:crop,regionOriginalFile:file});assert.equal(context.studioImageFile,null);assert.equal(context.state.region,null);assert.equal(saved.at(-1).regionOriginalFile,file);assert.equal(saved.at(-1).sourceFile,crop);
+ console.log('PASS: submitted photo/video/region drafts clear persistently; project originals survive; settings, rejected requests, agent variants and newer drafts remain safe.');
+})().catch(error=>{console.error(error);process.exitCode=1;});
