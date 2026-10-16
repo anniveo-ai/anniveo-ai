@@ -202,10 +202,6 @@
     if(!viewer.open)viewer.showModal();
   }
   const saveButtonStates=new WeakMap();
-  function iosSaving(){
-    const bridge=window.Telegram?.WebApp||(typeof tg!=='undefined'?tg:null);
-    return bridge?.platform==='ios'||/iPhone|iPad|iPod/i.test(navigator.userAgent||'')||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-  }
   function originalDownloadLink(project){
     const url=new URL(project.resultUrl);
     if(url.origin!=='https://s3.polza.ai'||url.username||url.password)throw Error('Адрес файла не поддерживается.');
@@ -214,28 +210,24 @@
   }
   function nativeFileDownload(data){
     return new Promise((resolve,reject)=>{
-      const timer=setTimeout(()=>{const error=Error('Telegram не подтвердил скачивание. Нажми ещё раз.');error.code='DOWNLOAD_TIMEOUT';reject(error);},20000);
+      // The native popup can finish after a slow connection; do not report the
+      // previous false 20-second failure while Telegram is still working.
+      const timer=setTimeout(()=>reject(Error('Загрузка в Telegram занимает дольше обычного. Проверь загрузки Telegram.')),120000);
       try{telegramDownloads().downloadFile({url:data.url,file_name:data.filename},accepted=>{clearTimeout(timer);resolve({state:accepted?'queued':'cancelled'});});}
       catch(error){clearTimeout(timer);reject(error);}
     });
   }
-  function openDownloadLink(data){
-    const bridge=window.Telegram?.WebApp||(typeof tg!=='undefined'?tg:null);
-    if(bridge?.openLink)bridge.openLink(data.url);else download({url:data.url,file:{name:data.filename}});
-    return {state:'opened'};
-  }
+  function inTelegram(){return !!(window.Telegram?.WebApp?.initData||(typeof tg!=='undefined'&&tg?.initData)||initData);}
   async function saveReadyMedia(item,kind,original=null){
     if(shareable(item)){
       try{await navigator.share({files:[item.file],title:kind==='video'?'Видео ANIS AI':'Фото ANIS AI'});return {state:'shared'};}
       catch(error){if(error.name==='AbortError')return {state:'cancelled'};}
     }
-    // Telegram iOS can delay downloadFile confirmation beyond the UI timeout.
-    // Use the OS share sheet or open the actual original instead of waiting for it.
-    if(iosSaving()){if(original)return openDownloadLink(original);download(item);return {state:'opened'};}
-    if(telegramDownloads()&&item.exportJobId){
-      const data=await mediaDeadline(window.anisProjectActions.prepareDownload(item),45000,'Не удалось скачать файл. Повтори попытку.');
-      try{return await nativeFileDownload(data);}catch(error){if(error.code==='DOWNLOAD_TIMEOUT')throw error;return openDownloadLink(data);}
+    if(telegramDownloads()){
+      if(original)return nativeFileDownload(original);
+      if(item.exportJobId){const data=await mediaDeadline(window.anisProjectActions.prepareDownload(item),45000,'Не удалось скачать файл. Повтори попытку.');return nativeFileDownload(data);}
     }
+    if(inTelegram())throw Error('Сохранение файлов недоступно в этой версии Telegram. Обнови Telegram и повтори.');
     download(item);return {state:'opened'};
   }
   async function withSaveFeedback(button,operation){
@@ -256,22 +248,25 @@
     finally{if(button){button.disabled=false;button.removeAttribute('aria-busy');}}
   }
   function saveMedia(item,kind,button=null){return withSaveFeedback(button,()=>saveReadyMedia(item,kind));}
+  const projectSaveTasks=new WeakMap();
   function saveProject(project,button=null){
     return withSaveFeedback(button,()=>{
-      // Telegram downloads the remote original directly, without blocking on previews
-      // or converting/re-uploading an already generated file in the WebView.
-      if(project.resultUrl&&(!project.exportJobId||project.exportJobId===project.id)){
-        const data=originalDownloadLink(project);
-        if(iosSaving()){
-          if(project.media?.file?.size)return saveReadyMedia(project.media,project.kind,data);
-          return mediaDeadline(getMedia(project),5000,'').then(item=>saveReadyMedia(item,project.kind,data)).catch(()=>openDownloadLink(data));
+      if(projectSaveTasks.has(project))return projectSaveTasks.get(project);
+      const start=()=>{
+        if(project.resultUrl&&(!project.exportJobId||project.exportJobId===project.id)){
+          const data=originalDownloadLink(project);
+          // Use cached bytes for system Save; otherwise send the URL straight
+          // to Telegram from this very click, without waiting for getMedia.
+          if(project.media?.file?.size&&shareable(project.media))return saveReadyMedia(project.media,project.kind,data);
+          if(telegramDownloads())return nativeFileDownload(data);
+          if(inTelegram())throw Error('Сохранение файлов недоступно в этой версии Telegram. Обнови Telegram и повтори.');
+          download({url:data.url,file:{name:data.filename}});return {state:'opened'};
         }
-        if(telegramDownloads())return nativeFileDownload(data).catch(error=>{if(error.code==='DOWNLOAD_TIMEOUT')throw error;return openDownloadLink(data);});
-        if(project.media?.file?.size&&shareable(project.media))return saveReadyMedia(project.media,project.kind);
-        return openDownloadLink(data);
-      }
-      if(project.media?.file?.size){project.media.exportJobId=project.exportJobId||project.id;return saveReadyMedia(project.media,project.kind);}
-      return mediaDeadline(getMedia(project),20000,'Файл не загрузился. Повтори скачивание.').then(item=>saveReadyMedia(item,project.kind));
+        if(project.media?.file?.size){project.media.exportJobId=project.exportJobId||project.id;return saveReadyMedia(project.media,project.kind);}
+        return mediaDeadline(getMedia(project),20000,'Файл не загрузился. Повтори скачивание.').then(item=>saveReadyMedia(item,project.kind));
+      };
+      // Invoke before Promise.resolve, keeping native/system Save in the click.
+      const task=Promise.resolve(start()).finally(()=>projectSaveTasks.delete(project));projectSaveTasks.set(project,task);return task;
     });
   }
   function selectValue(id,value){const select=$(id);if(id.endsWith('Quality')&&![...select.options].some(o=>o.value===String(value)))value={fast:'fhd',high:id==='imageQuality'?'qhd':'fhd',max:'uhd'}[value]||value;if([...select.options].some(o=>o.value===String(value)&&!o.disabled))select.value=String(value);select.dispatchEvent(new Event('change',{bubbles:true}));}
