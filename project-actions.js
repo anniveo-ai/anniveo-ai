@@ -167,7 +167,8 @@
     }catch(error){if(error.name!=='AbortError'){if(s.project.kind==='video')cropDialog.close();toast(error.message);}}
     finally{if(cropState===s){s.exporting=false;cropSave.disabled=false;for(const input of cropFields.querySelectorAll('input,button'))input.disabled=false;}}
   }
-  const openResult=control('Открыть фото',()=>{const item=selectedProjectMedia();if(item)showMedia(item,studioProjects.get(selectedStudioProject)?.kind||activeGeneratedKind);},'media-open-result');openResult.id='mediaResultOpen';
+  const openResult=control('Открыть фото',async()=>{const project=studioProjects.get(selectedStudioProject);if(!project)return;try{const item=await getMedia(project);showMedia(item,project.kind);}catch(error){toast(error.message);}},'media-open-result');openResult.id='mediaResultOpen';
   $('mediaResultDialog').querySelector('.media-result-actions').prepend(openResult);
-  window.anisProjectActions={createControls,normalizeBlob,saveMedia,showMedia};
+  window.anisProjectActions={createControls,normalizeBlob,saveMedia,showMedia,getMedia};
 })();
+

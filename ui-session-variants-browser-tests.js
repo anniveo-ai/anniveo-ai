@@ -71,6 +71,27 @@ async function runAnisUIRegression(appHTML){
    check(kind+' final-variant undo preserves original file',d.getElementById('mediaResultDialog').open&&w.eval(`studioProjects.get(${JSON.stringify(a)}).sourceFile.size`)===4);
    w.closeGeneratedMedia();
   }
+  const resultId=prefix+'-result',resultURL='https://example.invalid/qa-result.png';
+  const canvas=d.createElement('canvas');canvas.width=16;canvas.height=16;canvas.getContext('2d').fillRect(0,0,16,16);const imageBlob=await new Promise(resolve=>canvas.toBlob(resolve));
+  const realFetch=w.fetch,realSave=w.anisProjectActions.saveMedia;let downloads=0,releaseDownload;
+  const downloadGate=new Promise(resolve=>releaseDownload=resolve);
+  w.fetch=async(url,...args)=>{if(url!==resultURL)return realFetch(url,...args);downloads++;if(downloads===1)throw new w.TypeError('Network interrupted');await downloadGate;return new w.Response(imageBlob,{headers:{'Content-Type':'image/png'}});};
+  w.eval(`studioProjects.set(${JSON.stringify(resultId)},{id:${JSON.stringify(resultId)},kind:'image',status:'completed',quality:'fhd',prompt:'Готовое фото',resultUrl:${JSON.stringify(resultURL)},created:Date.now()});`);
+  w.openProjectRoom(resultId);await wait(30);
+  const resultStage=d.getElementById('mediaResultPreview');
+  check('Completed photo previews immediately before download',resultStage.querySelector('img')?.src===resultURL&&!resultStage.querySelector('.project-load-result'));
+  check('Save action is available with photo preview',!d.getElementById('projectReadyActions').hidden);
+  check('Workroom has only the right minimize button',!d.querySelector('#mediaResultDialog>header>.room-close')&&!!d.querySelector('#mediaResultDialog>header>.project-minimize'));
+  check('Minimize header stays reachable on scroll',w.getComputedStyle(d.querySelector('#mediaResultDialog>header')).position==='sticky');
+  const resultProject=w.eval(`studioProjects.get(${JSON.stringify(resultId)})`),firstLoad=w.loadStudioProjectResult(resultProject),sharedLoad=w.loadStudioProjectResult(resultProject);
+  check('Concurrent result downloads share one promise',firstLoad===sharedLoad);
+  let savedFile;w.anisProjectActions.saveMedia=async item=>{savedFile=item.file;};const saving=w.saveGeneratedMedia();
+  await wait(750);check('Interrupted download retries existing result',downloads===2&&!savedFile);
+  releaseDownload();await firstLoad;await saving;await wait(100);
+  check('Save waits for the original project photo',savedFile?.type==='image/png'&&savedFile.size>0);
+  check('Downloaded photo replaces remote preview',resultStage.querySelector('img')?.src.startsWith('blob:')&&!!resultProject.media);
+  check('Successful result clears obsolete errors',!resultProject.error&&!d.querySelector('#mediaResultDialog .anis-inline-error'));
+  w.fetch=realFetch;w.anisProjectActions.saveMedia=realSave;w.closeGeneratedMedia();
   w.eval(`for(const p of studioProjects.values())p.status='failed';studioProjects.set(${JSON.stringify(prefix+'-queued')},{id:${JSON.stringify(prefix+'-queued')},kind:'image',status:'queued',removedFromVariants:true});window.qaLaunchCount=0;window.qaOriginalLaunch=launchStudioProject;launchStudioProject=async()=>{window.qaLaunchCount++;}`);
   await w.pumpStudioQueue();check('Removed unsubmitted variants never incur a new generation',w.qaLaunchCount===0);w.launchStudioProject=w.qaOriginalLaunch;
   w.openView('video');w.dispatchEvent(new w.PageTransitionEvent('pageshow',{persisted:true}));await wait(30);

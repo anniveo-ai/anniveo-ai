@@ -129,10 +129,16 @@
  }
  $('videoRatio').addEventListener('change',syncQualityFormats);$('videoQuality').addEventListener('change',syncQualityFormats);syncQualityFormats();
  const formatHelpOriginal=applyFormatHelp;applyFormatHelp=function(...args){const result=formatHelpOriginal(...args);settingCardSync.forEach(sync=>sync());saveDrafts();return result;};
- const room=$('mediaResultDialog'),roomHeader=room.querySelector('header'),roomTitle=$('mediaResultTitle'),roomClose=button('×',()=>closeGeneratedMedia());roomClose.className='room-close';roomClose.setAttribute('aria-label','Свернуть окно проекта');roomHeader.prepend(roomClose);roomHeader.after(roomTitle);
+ const room=$('mediaResultDialog'),roomHeader=room.querySelector('header'),roomTitle=$('mediaResultTitle');roomHeader.after(roomTitle);
+ function syncRoomSafeTop(){
+  const contentTop=Number(tg?.contentSafeAreaInset?.top)||0,safeTop=Number(tg?.safeAreaInset?.top)||0;
+  const viewportTop=window.visualViewport?.offsetTop||0;
+  room.style.setProperty('--room-safe-top',Math.max(0,viewportTop+contentTop+safeTop+8)+'px');
+ }
+ window.visualViewport?.addEventListener('scroll',syncRoomSafeTop);window.visualViewport?.addEventListener('resize',syncRoomSafeTop);tg?.onEvent?.('contentSafeAreaChanged',syncRoomSafeTop);tg?.onEvent?.('safeAreaChanged',syncRoomSafeTop);syncRoomSafeTop();
  const openRoomOriginal=openProjectRoom;
  openProjectRoom=function(...args){
-  const wasOpen=room.open;if(!wasOpen)room.classList.remove('room-edge-sheet');
+  const wasOpen=room.open;syncRoomSafeTop();if(!wasOpen)room.classList.remove('room-edge-sheet');
   const result=openRoomOriginal(...args);
   if(!wasOpen&&room.open&&window.matchMedia('(max-width:760px)').matches){
    room.style.setProperty('--room-sheet-top',Math.max(0,room.getBoundingClientRect().top)+'px');room.classList.add('room-edge-sheet');
@@ -236,17 +242,25 @@
   else if(state.historyError){const note=el('div',{className:'studio-ready-empty ready-history-status',role:'status'});note.append(el('p',{},state.historyError),button('Загрузить работы',()=>void resumeMediaProjects()));readyGrid.prepend(note);}
   else if(!groups.size){const empty=el('div',{className:'studio-ready-empty'});empty.append(el('strong',{},'Здесь будут твои фото и видео'),el('p',{},'Создай первую работу — она появится здесь.'),button('Создать фото',()=>openView('studio'),true));readyGrid.append(empty);}
  }
- loadStudioProjectResult=async function(p){
-  if(p.loading)return;p.loading=true;renderProjectRoom();
+ const resultLoads=new WeakMap();
+ loadStudioProjectResult=function(p){
+  if(resultLoads.has(p))return resultLoads.get(p);
+  const task=(async()=>{p.loading=true;renderProjectRoom();
   try{
-   const response=await fetch(p.resultUrl,{signal:AbortSignal.timeout(90000)});if(!response.ok)throw Error('Готовый файл пока недоступен. Нажми «Открыть готовый файл» ещё раз.');
-   let blob=await window.anisProjectActions.normalizeBlob(p.kind,await response.blob());
+   let downloaded;
+   for(let attempt=0;attempt<3;attempt++){
+    try{const response=await fetch(p.resultUrl,{signal:AbortSignal.timeout(30000)});if(!response.ok){const error=Error('Не удалось загрузить результат.');error.status=response.status;throw error;}downloaded=await response.blob();break;}
+    catch(error){if(attempt===2||error.status&&error.status<500&&![408,429].includes(error.status))throw error;await new Promise(resolve=>setTimeout(resolve,600*(attempt+1)));}
+   }
+   let blob=await window.anisProjectActions.normalizeBlob(p.kind,downloaded);
    if(p.region){if(!p.regionOriginalFile)throw Error('Чтобы собрать результат без изменения остального фото, нужен оригинал с этого устройства. Не создавай заказ заново.');blob=await compositeRegion(p,blob);}
    const prepared=await window.anisMediaQuality.prepare(p,blob);blob=prepared.blob;
    p.outputWidth=prepared.width;p.outputHeight=prepared.height;p.resolutionWarning=prepared.warning||null;p.resolutionPending=!!prepared.pending;
-   p.media=mediaFromBlob(p.kind,blob);Object.assign(p.media,{width:p.outputWidth,height:p.outputHeight,warning:p.resolutionWarning});p.mediaBlob=blob;generatedMedia[p.kind]=p.media;invalidateUsageStats();await saveDurable();
-  }catch(error){p.error=readableMediaError(error);if(selectedStudioProject===p.id&&$('mediaResultDialog').open)explain(error,()=>loadStudioProjectResult(p),'Открыть готовый файл');}
-  finally{p.loading=false;workroomRenderKey='';renderProjectRoom();}
+   p.media=mediaFromBlob(p.kind,blob);Object.assign(p.media,{width:p.outputWidth,height:p.outputHeight,warning:p.resolutionWarning});p.mediaBlob=blob;p.error=null;generatedMedia[p.kind]=p.media;invalidateUsageStats();await saveDurable();
+   if(selectedStudioProject===p.id)room.querySelector('.anis-inline-error')?.remove();
+  }catch(error){p.error=p.region?readableMediaError(error):(p.kind==='image'?'Фото':'Видео')+' готово, но не удалось загрузить его на устройство. Повтори загрузку — новая генерация не нужна.';if(selectedStudioProject===p.id&&room.open)explain(Error(p.error),()=>loadStudioProjectResult(p),'Повторить загрузку');}
+  finally{p.loading=false;resultLoads.delete(p);workroomRenderKey='';renderProjectRoom();}
+  })();resultLoads.set(p,task);return task;
  };
  async function recoverProject(p){
   if(projectWatchers.has(p.id))return;
@@ -402,7 +416,7 @@
   if(!reveal&&!resized)return;
   const box=field.closest('.studio-prompt-box,.project-agent')||field,rect=box.getBoundingClientRect(),fieldRect=field.getBoundingClientRect();
   if(inset<80)return;
-  const upper=top+16,lower=bottom-16,available=Math.max(80,lower-upper),target=rect.height<=available?rect:fieldRect;
+  const upper=field.id==='projectAgentIdea'?Math.max(top+16,room.getBoundingClientRect().top+roomHeader.getBoundingClientRect().height+16):top+16,lower=bottom-16,available=Math.max(80,lower-upper),target=rect.height<=available?rect:fieldRect;
   // An already visible prompt stays exactly where the user placed it.
   let delta=0;
   if(target.top<upper)delta=target.top-upper;
