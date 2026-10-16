@@ -217,3 +217,9 @@ body.studio-typing .studio-prompt-box textarea{max-height:max(80px,calc(var(--st
 
 
 #view-ready .ready-preview-status{position:absolute;z-index:1;inset:25% 10px auto;text-align:center;color:#d6b9ec;font-size:11px;line-height:1.5}
+
+/* Bound the media itself, rather than its intrinsic grid dimensions. */
+#mediaResultDialog[data-status=completed] #mediaResultPreview{display:block;overflow:hidden;height:clamp(260px,60dvh,680px);max-height:680px;min-width:0;min-height:0}
+#mediaResultDialog[data-status=completed] #mediaResultPreview>img,#mediaResultDialog[data-status=completed] #mediaResultPreview>video{position:absolute;inset:0;display:block;width:100%;height:100%;min-width:0;min-height:0;max-width:100%;max-height:100%;object-fit:contain;object-position:center;margin:0;border:0;border-radius:inherit}
+#mediaResultDialog #mediaResultPreview>.project-load-result{position:absolute;z-index:2;left:12px;right:12px;bottom:12px}
+#mediaResultDialog #mediaResultPreview:has(.project-result-media:not([data-ready]))::after{content:'Открываем готовый файл…';position:absolute;inset:0;display:grid;place-items:center;padding:18px;color:#c9aedc;font-size:12px;text-align:center;pointer-events:none}

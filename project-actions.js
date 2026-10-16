@@ -27,6 +27,40 @@
     }
     return project.media;
   }
+  const imagePreviews=new WeakMap();
+  function ensureImagePreview(project){
+    if(project.kind!=='image'||project.previewDataUrl)return Promise.resolve(project.previewDataUrl);
+    if(imagePreviews.has(project))return imagePreviews.get(project);
+    const blob=project.media?.blob||project.mediaBlob;
+    if(!blob?.size)return Promise.resolve(null);
+    // A byte-backed image also survives WKWebView object-URL invalidation.
+    const task=new Promise((resolve,reject)=>{
+      const reader=new FileReader(),timer=setTimeout(()=>{reader.abort();reject(Error('Не удалось прочитать фото.'));},10000);reader.onload=()=>{clearTimeout(timer);resolve(String(reader.result));};reader.onerror=()=>{clearTimeout(timer);reject(reader.error||Error('Не удалось прочитать фото.'));};reader.readAsDataURL(blob);
+    }).then(url=>{project.previewDataUrl=url;return url;}).finally(()=>imagePreviews.delete(project));
+    imagePreviews.set(project,task);return task;
+  }
+  function resultPreview(project){
+    const media=node(project.kind==='video'?'video':'img');media.className='project-result-media';
+    media.addEventListener(project.kind==='video'?'loadeddata':'load',()=>{media.dataset.ready='true';},{once:true});
+    if(project.kind==='video'){media.controls=true;media.playsInline=true;media.preload='metadata';}
+    else{media.alt='Готовое фото';media.decoding='async';}
+    media.src=project.previewDataUrl||project.media?.url||project.resultUrl;
+    if(project.kind==='image'&&!project.previewDataUrl&&project.media?.blob){
+      void ensureImagePreview(project).then(url=>{if(url&&media.isConnected)media.src=url;}).catch(()=>{});
+    }
+    media.addEventListener('error',()=>{
+      if(!media.isConnected)return;
+      const host=media.parentElement;
+      const retry=control('Фото не загрузилось · повторить',async()=>{
+        retry.disabled=true;
+        if(project.media?.url?.startsWith('blob:'))URL.revokeObjectURL(project.media.url);
+        project.media=null;project.mediaBlob=null;project.previewDataUrl=null;
+        await loadStudioProjectResult(project);retry.remove();
+      },'project-load-result');
+      if(!host.querySelector('.project-load-result'))host.append(retry);
+    },{once:true});
+    return media;
+  }
   async function normalizeBlob(kind,blob){
     if(!blob.size)throw Error('Готовый файл пока пуст. Проверь позже.');
     const bytes=new Uint8Array(await blob.slice(0,32).arrayBuffer()),ascii=(a,b)=>String.fromCharCode(...bytes.slice(a,b));
@@ -191,9 +225,10 @@
     for(const card of grid.querySelectorAll('.studio-ready-project[data-project-id]')){
       const project=studioProjects.get(card.dataset.projectId),preview=card.querySelector('.studio-ready-preview');
       if(!project||project.status!=='completed'||!preview)continue;
-      if(project.media?.url){
+      if(project.previewDataUrl||project.media?.url){
+        const url=project.previewDataUrl||project.media.url;
         const media=preview.querySelector('img,video');
-        if(media?.getAttribute('src')!==project.media.url){const next=node(project.kind==='video'?'video':'img',{src:project.media.url});if(project.kind==='video'){next.muted=true;next.playsInline=true;next.preload='metadata';}else next.alt='Готовое фото';if(media)media.replaceWith(next);else preview.prepend(next);}
+        if(media?.getAttribute('src')!==url){const next=node(project.kind==='video'?'video':'img',{src:url});if(project.kind==='video'){next.muted=true;next.playsInline=true;next.preload='metadata';}else next.alt='Готовое фото';if(media)media.replaceWith(next);else preview.prepend(next);}
         preview.querySelector('.ready-preview-status')?.remove();continue;
       }
       if(!project.resultUrl)continue;
@@ -206,6 +241,6 @@
   }
   function observeGallery(){const grid=document.getElementById('studioReadyList');if(grid){new MutationObserver(repairReadyGallery).observe(grid,{childList:true});repairReadyGallery();}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observeGallery,{once:true});else observeGallery();
-  window.anisProjectActions={createControls,normalizeBlob,saveMedia,showMedia,getMedia};
+  window.anisProjectActions={createControls,normalizeBlob,saveMedia,showMedia,getMedia,ensureImagePreview,resultPreview};
 })();
 

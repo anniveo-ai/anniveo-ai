@@ -199,6 +199,7 @@
   (room.open?room:document.body).append(notice);setTimeout(()=>notice.remove(),3000);
  }
  function previewSource(p){
+  if(p.kind==='image'&&p.previewDataUrl)return {url:p.previewDataUrl,type:'img'};
   if(p.media?.url)return {url:p.media.url,type:p.kind==='video'?'video':'img'};
   if(p.status==='completed')return p.resultUrl&&!p.region?{url:p.resultUrl,type:p.kind==='video'?'video':'img'}:null;
   const blob=p.previewBlob||p.sourceFile;if(!blob||!/^image\/|^video\//.test(blob.type))return null;
@@ -249,7 +250,7 @@
  state.openReadyProjects=()=>openView('ready');
  let readyRenderKey='';
  function renderReadyProjects(){
-  const projects=[...studioProjects.values()].filter(p=>!p.removedFromVariants).sort((a,b)=>(a.created||0)-(b.created||0)||(a.order||0)-(b.order||0)),key=[state.restoring,state.historyLoading,state.historyLoaded,state.historyError,...projects.map(p=>[p.id,p.groupId,p.status,p.loading,p.error,previewSource(p)?.url,p.prompt].join(':'))].join('|');if(readyGrid.childElementCount&&key===readyRenderKey)return;readyRenderKey=key;readyGrid.replaceChildren();
+  const projects=[...studioProjects.values()].filter(p=>!p.removedFromVariants).sort((a,b)=>(a.created||0)-(b.created||0)||(a.order||0)-(b.order||0)),key=[state.restoring,state.historyLoading,state.historyLoaded,state.historyError,...projects.map(p=>[p.id,p.groupId,p.status,p.loading,p.error,p.previewDataUrl?'preview':previewSource(p)?.url,p.prompt].join(':'))].join('|');if(readyGrid.childElementCount&&key===readyRenderKey)return;readyRenderKey=key;readyGrid.replaceChildren();
   const groups=new Map();for(const p of projects){const id=p.groupId||p.id;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(p);}
   for(const family of [...groups.values()].reverse()){
    const first=family[0],last=family.at(-1),display=[...family].reverse().find(p=>p.status==='completed'&&(p.media||p.resultUrl))||last;
@@ -281,7 +282,9 @@
     let blob=downloaded;
     if(p.region){if(!p.regionOriginalFile)throw Error('Чтобы собрать результат без изменения остального фото, нужен оригинал с этого устройства. Не создавай заказ заново.');blob=await compositeRegion(p,blob);}
     // Publish the decoded file immediately; saving to storage must not hold up previews.
-    p.media=mediaFromBlob(p.kind,blob);p.mediaBlob=blob;p.error=null;generatedMedia[p.kind]=p.media;updateProjectDock();
+    p.media=mediaFromBlob(p.kind,blob);p.mediaBlob=blob;p.error=null;generatedMedia[p.kind]=p.media;
+    workroomRenderKey='';renderProjectRoom();
+    await window.anisProjectActions.ensureImagePreview(p).catch(()=>null);workroomRenderKey='';renderProjectRoom();
     const prepared=await window.anisMediaQuality.prepare(p,blob);
     p.outputWidth=prepared.width;p.outputHeight=prepared.height;p.resolutionWarning=prepared.warning||null;p.resolutionPending=!!prepared.pending;
     if(prepared.blob!==blob){const old=p.media.url;p.media=mediaFromBlob(p.kind,prepared.blob);p.mediaBlob=prepared.blob;URL.revokeObjectURL(old);}

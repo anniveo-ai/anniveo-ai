@@ -4831,6 +4831,11 @@ function openProjectRoom(id){
  if(!selectedStudioProject)return;
  workroomRenderKey='';renderProjectRoom();if(!$('mediaResultDialog').open)$('mediaResultDialog').showModal();
 }
+function studioResultPreview(project){
+ const media=document.createElement(project.kind==='video'?'video':'img');
+ if(project.kind==='video'){media.controls=true;media.playsInline=true;media.preload='metadata';}else{media.alt='Готовое фото';media.decoding='async';}
+ media.src=project.previewDataUrl||project.media?.url||project.resultUrl;return media;
+}
 function renderProjectRoom(){
  updateProjectDock();persistStudioProjects();const p=studioProjects.get(selectedStudioProject);if(!p)return;
  $('mediaResultDialog').dataset.kind=p.kind;$('mediaResultTitle').textContent=p.status==='completed'?projectLabel(p)+' готово':projectLabel(p)+' · в работе';
@@ -4838,9 +4843,9 @@ function renderProjectRoom(){
  const ready=p.status==='completed'&&p.media;const key=p.id+':'+p.status+':'+(p.media?.url||p.resultUrl||'');
  if(key!==workroomRenderKey){
   workroomRenderKey=key;const stage=$('mediaResultPreview');stage.querySelector('video')?.pause();stage.replaceChildren();
-  if(ready){const preview=document.createElement(p.kind==='video'?'video':'img');preview.src=p.media.url;if(p.kind==='video'){preview.controls=true;preview.playsInline=true;}else preview.alt='Готовый результат';stage.append(preview);generatedMedia[p.kind]=p.media;activeGeneratedKind=p.kind;}
+  if(ready){stage.append((window.anisProjectActions?.resultPreview||studioResultPreview)(p));generatedMedia[p.kind]=p.media;activeGeneratedKind=p.kind;}
   else if(p.status==='completed'&&p.resultUrl){
-   if(!p.region){const preview=document.createElement(p.kind==='video'?'video':'img');preview.src=p.resultUrl;if(p.kind==='video'){preview.controls=true;preview.playsInline=true;preview.preload='metadata';}else{preview.alt='Готовое фото';preview.decoding='async';}stage.append(preview);}
+   if(!p.region)stage.append((window.anisProjectActions?.resultPreview||studioResultPreview)(p));
    else{const button=document.createElement('button');button.className='project-load-result';button.textContent=p.kind==='image'?'Загрузить фото':'Загрузить видео';button.onclick=()=>void loadStudioProjectResult(p);stage.append(button);}
   }
   else if(p.status==='failed'||p.status==='unknown'){const note=document.createElement('div');note.className='project-error';note.textContent=p.error||'Проверь готовность проекта.';const retry=document.createElement('button');retry.className='profile-dialog-action';retry.textContent='Проверить проект';retry.onclick=()=>void watchMediaJob(p.kind,p.id);note.append(retry);stage.append(note);}
