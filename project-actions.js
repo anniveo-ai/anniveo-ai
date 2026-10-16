@@ -13,7 +13,7 @@
   function download(item){const link=node('a',{href:item.url,download:item.file.name});document.body.append(link);link.click();link.remove();}
   const exportsInProgress=new WeakMap();
   async function getMedia(project){
-    if(!project.media&&project.resultUrl)await loadStudioProjectResult(project);
+    if(!project.media&&project.resultUrl){await loadStudioProjectResult(project);if(!project.media&&project.loadingPromise)await project.loadingPromise;}
     if(!project.media?.file)throw Error(project.error||'Не удалось открыть результат. Попробуй ещё раз.');
     if(project.resolutionPending&&window.anisMediaQuality){
       let exporting=exportsInProgress.get(project);
