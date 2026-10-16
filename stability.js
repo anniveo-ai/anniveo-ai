@@ -404,13 +404,62 @@
  keyboardBar.addEventListener('pointerdown',e=>e.preventDefault());
 
  // Version checks are cheap and never reload while a user is composing or uploading.
- let nextVersion=null,updating=false;
- function safeToUpdate(){return !state.restoring&&!state.historyLoading&&![...studioProjects.values()].some(p=>['submitting','creating'].includes(p.status))&&!busy&&!recording&&!openingMic&&!transcribing&&!mediaVoiceTask&&!stagedMediaAttachment&&!document.querySelector('dialog[open]')&&!['TEXTAREA','INPUT','SELECT'].includes(document.activeElement?.tagName);}
- async function applyRelease(){if(updating||!nextVersion||!safeToUpdate())return;updating=true;saveDrafts();try{if(studioImageFile||studioVideoFile||studioVideoIdentityFile)await saveFileDrafts();await saveDurable();const url=new URL(location.href);url.searchParams.set('v',nextVersion);location.replace(url.href);}catch{updating=false;storageWarning();}}
- async function checkRelease(){try{const response=await fetch('/release.json?t='+Date.now(),{cache:'no-store'});if(!response.ok)return;const data=await response.json(),current=document.querySelector('meta[name="anis-build"]')?.content;if(/^[a-f0-9]{12,64}$/.test(data.version)&&data.version!==current){nextVersion=data.version;if(safeToUpdate())void applyRelease();}}catch{}}
- window.addEventListener('focus',()=>void checkRelease());document.addEventListener('visibilitychange',()=>{if(!document.hidden)void checkRelease();});setInterval(()=>void checkRelease(),60000);
+ let nextVersion=null,updating=false,releaseCheckPromise=null,releaseApplyTimer=0,releaseBackoffUntil=0;
+ const updateHandoffKey=key('update-handoff');
+ function safeToUpdate(){
+  const focused=document.activeElement,tag=focused?.tagName;
+  const editing=focused?.isContentEditable||tag==='TEXTAREA'||tag==='SELECT'||tag==='INPUT'&&!['button','submit','checkbox','radio','range','file','hidden'].includes(focused.type);
+  return !document.hidden&&navigator.onLine!==false&&!state.restoring&&!state.fileDraftsLoading&&!state.historyLoading&&!historyLoading&&!creationLock&&
+   ![...studioProjects.values()].some(p=>['submitting','creating'].includes(p.status)||p.loading)&&
+   !busy&&!recording&&!openingMic&&!transcribing&&!orbVoiceActive&&!mediaVoiceTask&&!stagedMediaAttachment&&
+   !(anonymous&&(anonymousHistory.length||$('messageInput').value.trim()))&&
+   !document.querySelector('dialog[open],.ready-project-action[aria-busy="true"]')&&!editing;
+ }
+ function takeUpdateHandoff(){
+  try{const raw=sessionStorage.getItem(updateHandoffKey);sessionStorage.removeItem(updateHandoffKey);const data=JSON.parse(raw||'null');
+   return data&&data.version===document.querySelector('meta[name="anis-build"]')?.content&&data.expiresAt>Date.now()&&data.expiresAt<Date.now()+120000?data:null;
+  }catch{return null;}
+ }
+ async function applyRelease(){
+  if(updating||!nextVersion||Date.now()<releaseBackoffUntil||!safeToUpdate())return;
+  updating=true;
+  try{
+   saveDrafts();
+   const saved=read('drafts',null),expected={};for(const id of draftIds)if($(id))expected[id]=id==='messageInput'&&anonymous?'':$(id).value;
+   if(!saved||JSON.stringify(saved.values)!==JSON.stringify(expected))throw Error('Черновик ещё не сохранён');
+   const hasFiles=!!(studioImageFile||studioVideoFile||studioVideoIdentityFile);
+   try{await saveFileDrafts();}catch(error){if(hasFiles)throw error;}
+   const durable=await saveDurable();
+   if(!durable&&[...studioProjects.values()].some(p=>p.sourceFile||p.identityFile||p.regionOriginalFile||p.media?.blob||p.mediaBlob))throw Error('Файлы ещё не сохранены');
+   // The user may start a new action while IndexedDB commits the snapshot.
+   if(!safeToUpdate()){updating=false;return;}
+   const handoff={version:nextVersion,expiresAt:Date.now()+60000,view:currentView,showWelcome,newestFirstChat,returnToChatAvailable,chatOpenedThisSession,anonymous,scrollTop:$('app').scrollTop};
+   const serialized=JSON.stringify(handoff);sessionStorage.setItem(updateHandoffKey,serialized);
+   if(sessionStorage.getItem(updateHandoffKey)!==serialized)throw Error('Не удалось сохранить состояние');
+   const url=new URL(location.href);url.searchParams.set('v',nextVersion);location.replace(url.href);
+  }catch{updating=false;releaseBackoffUntil=Date.now()+15000;storageWarning();}
+ }
+ function scheduleReleaseApply(){if(!nextVersion||updating)return;clearTimeout(releaseApplyTimer);releaseApplyTimer=setTimeout(()=>void applyRelease(),150);}
+ function checkRelease(){
+  if(document.hidden||navigator.onLine===false)return Promise.resolve();
+  return releaseCheckPromise??=(async()=>{
+   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
+   try{const response=await fetch('/release.json?t='+Date.now(),{cache:'no-store',signal:controller.signal});if(!response.ok)return;
+    const data=await response.json(),current=document.querySelector('meta[name="anis-build"]')?.content;
+    if(/^[a-f0-9]{12,64}$/.test(data.version)){nextVersion=data.version===current?null:data.version;scheduleReleaseApply();}
+   }catch{}finally{clearTimeout(timer);}
+  })().finally(()=>releaseCheckPromise=null);
+ }
+ const controlsUpdateBeforeRelease=updateControls;
+ updateControls=function(...args){const result=controlsUpdateBeforeRelease(...args);scheduleReleaseApply();return result;};
+ document.addEventListener('focusout',scheduleReleaseApply);document.addEventListener('close',scheduleReleaseApply,true);
+ window.addEventListener('focus',()=>{scheduleReleaseApply();void checkRelease();});window.addEventListener('online',()=>{scheduleReleaseApply();void checkRelease();});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden){scheduleReleaseApply();void checkRelease();}});
+ setInterval(()=>void checkRelease(),15000);
+ setInterval(()=>{if(nextVersion&&!updating)void applyRelease();},1000);
 
  async function start(){
+  const updateHandoff=takeUpdateHandoff();
   const drafts=read('drafts',null);if(drafts)for(const [id,value]of Object.entries(drafts.values||{}))if($(id))$(id).value=id.endsWith('Quality')?({fast:'fhd',high:id==='imageQuality'?'qhd':'fhd',max:'uhd'}[value]||value):value;
   syncQualityFormats();
   let rows=[];for(const name of [studioProjectKey()+':backup',studioProjectKey()])try{rows=mergeProjectRecords(rows,JSON.parse(localStorage.getItem(name)||'[]'));}catch{storageWarning();}
@@ -419,9 +468,17 @@
   try{rows=mergeProjectRecords(await dbRecord('projects'),rows);restoreRows(rows);}catch{storageWarning();}
   state.restoring=false;updateRegionButton();updateProjectDock();
   persistStudioProjects();
-  void dbRecord('files').then(files=>{if(!files)return;if(files.image&&!studioImageFile)setStudioPhoto(files.image);if(files.video&&!studioVideoFile)setStudioVideo(files.video);if(files.identity&&!studioVideoIdentityFile)setVideoIdentity(files.identity);state.region=state.region||files.region||null;updateRegionButton();}).catch(storageWarning);
+  state.fileDraftsLoading=true;
+  void dbRecord('files').then(files=>{if(!files)return;if(files.image&&!studioImageFile)setStudioPhoto(files.image);if(files.video&&!studioVideoFile)setStudioVideo(files.video);if(files.identity&&!studioVideoIdentityFile)setVideoIdentity(files.identity);state.region=state.region||files.region||null;updateRegionButton();}).catch(storageWarning).finally(()=>{state.fileDraftsLoading=false;scheduleReleaseApply();});
   state.threads=read('threads',[]);renderThreads();normalHistory=cleanHistory(read('chat:'+state.activeChatId,normalHistory));renderChat();
   // Restore draft contents, never the previously open screen.
+  if(updateHandoff){
+   // Only an automatic update resumes its screen; a normal launch still opens home.
+   anonymous=!!updateHandoff.anonymous;$('anonToggle').classList.toggle('on',anonymous);$('anonToggle').setAttribute('aria-checked',String(anonymous));$('modeText').textContent=anonymous?'История не сохраняется':'История сохраняется';
+   showWelcome=!!updateHandoff.showWelcome;newestFirstChat=!!updateHandoff.newestFirstChat;returnToChatAvailable=!!updateHandoff.returnToChatAvailable;chatOpenedThisSession=!!updateHandoff.chatOpenedThisSession;
+   if(['chat','studio','video','templates','ready','profile','history','statistics','balance'].includes(updateHandoff.view))openView(updateHandoff.view);
+   requestAnimationFrame(()=>{$('app').scrollTop=Math.max(0,Number(updateHandoff.scrollTop)||0);});
+  }
   void refreshThreads().catch(()=>{}).then(()=>loadHistory());
   if(initData&&user)void mediaJSON({action:'notification-get'}).then(data=>notifyToggle.checked=data.enabled).catch(()=>{});
   void resumeMediaProjects();void checkRelease();
