@@ -152,7 +152,8 @@
  };
  const previewUrls=new Map();
  function studioProjectProgress(project){
-  if(project.status==='completed')return project.media?.file&&!project.loading?1:.9;
+  // Creation is finished even when the ready file has not been opened on this device.
+  if(project.status==='completed')return 1;
   return {queued:.03,submitting:.12,creating:.22,pending:.32,processing:.62,unknown:.32,failed:0,cancelled:0}[project.status]||0;
  }
  const studioNavTracks=new Map(),studioNavTracked=new Map();

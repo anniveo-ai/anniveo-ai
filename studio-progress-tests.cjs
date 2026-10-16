@@ -16,9 +16,11 @@ for(const kind of ['image','video'])assert.equal(nodes.get(kind+'CreationProgres
 assert.equal(nav.classList.contains('studio-nav-dual-progress'),true);
 assert.equal(vm.runInContext("studioNavTracks.get('image').fill.style.width",context),'62%');assert.equal(vm.runInContext("studioNavTracks.get('video').fill.style.width",context),'32%');
 nodes.get('videoCreationProgress').onclick();assert.deepEqual(opened,['video'],'reopens same work, does not generate again');
-video.status='completed';video.loading=true;state.renderRoomProgress(video);render();assert.equal(vm.runInContext("studioNavTracks.get('video').fill.style.width",context),'90%');assert.notEqual(nodes.get('anisProjectSteps').children.at(-1).style['--segment-progress'],'100%','generation done is not file download done');
+state.renderRoomProgress(video);assert.notEqual(nodes.get('anisProjectSteps').children.at(-1).style['--segment-progress'],'100%','pending creation must not look finished');
+video.status='completed';render();assert.equal(nodes.get('videoCreationProgress').querySelector('i').style.width,'100%','restored ready work fills its bar without downloading it again');
+video.status='completed';video.loading=true;state.renderRoomProgress(video);render();assert.equal(vm.runInContext("studioNavTracks.get('video').fill.style.width",context),'100%');assert.equal(nodes.get('anisProjectSteps').children.at(-1).style['--segment-progress'],'100%','confirmed completion fills the bar while the ready file opens');
 video.loading=false;video.media={file:{}};render();assert.equal(vm.runInContext("studioNavTracks.get('video').fill.style.width",context),'100%');assert.equal(nav.classList.contains('studio-nav-dual-progress'),true,'completed video stays visible while photo works');
 image.status='completed';image.media={file:{}};render();assert.equal(nav.classList.contains('studio-nav-dual-progress'),false);assert.equal(vm.runInContext("studioNavTracks.get('video').track.hidden",context),true);assert.match(nodes.get('videoCreationProgress').attrs['aria-label'],/готово/);
 state.renderRoomProgress(video);assert.ok(nodes.get('anisProjectSteps').children.every(n=>n.style['--segment-progress']==='100%'));
 assert.deepEqual(opened,['video'],'background updates never force a modal open');
-console.log('PASS: persistent section cards, independent photo/video strips, reopen same job, no premature completion and no forced popups.');
+console.log('PASS: persistent section cards, independent photo/video strips, confirmed completion reaches 100% before and after opening the file, and no forced popups.');
