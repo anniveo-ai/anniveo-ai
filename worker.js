@@ -98,14 +98,112 @@ async function polzaMediaRequest(env,path,body){
   return await response.json();
  }finally{clearTimeout(timer);}
 }
-function mediaPrice(env,body){
- if(!env.MEDIA_PRICES_JSON)return {amount:0,currency:'ANI',enabled:false};
- let prices;try{prices=JSON.parse(env.MEDIA_PRICES_JSON);}catch{throw Error('Тарифы временно недоступны.');}
- const suffix=[body.kind,body.quality,body.kind==='video'?Number(body.duration??4):0].join(':');
- // A new explicit model cannot silently inherit another model's price.
- const explicit=body.model&&body.model!=='auto',nativePhoto=body.kind==='image'&&explicit&&PHOTO_MODEL_SETTINGS[body.model]&&(!PHOTO_MODEL_SETTINGS[body.model].legacy||String(body.quality).startsWith('img-'));
- const key=explicit&&(body.kind==='video'||nativePhoto)?[body.model,suffix].join(':'):suffix,amount=prices[key];
- if(!Number.isSafeInteger(amount)||amount<=0||amount>1000000)throw Error('Для этих настроек тариф пока не задан.');return {amount,currency:'ANI',enabled:true};
+// Approved price book: Polza mie, 2026-10-17. Only these fixed-price routes may generate media.
+const MEDIA_TARIFF_VERSION='ani-20261017-v1';
+const MEDIA_PRICE_BOOK=Object.freeze({
+ "google/gemini-3.1-flash-image-preview":{"tiers":[{"conditions":[],"cost_rub":"4.80000000"},{"conditions":["image_resolution=1K"],"cost_rub":"4.80000000"},{"conditions":["image_resolution=2K"],"cost_rub":"7.20000000"},{"conditions":["image_resolution=4K"],"cost_rub":"10.80000000"}],"currency":"RUB"},
+ "google/gemini-3-pro-image-preview":{"tiers":[{"conditions":[],"cost_rub":"13.50000000"},{"conditions":["image_resolution=1K"],"cost_rub":"13.50000000"},{"conditions":["image_resolution=2K"],"cost_rub":"13.50000000"},{"conditions":["image_resolution=4K"],"cost_rub":"18.00000000"}],"currency":"RUB"},
+ "bytedance/seedream-4.5":{"per_request":"5.00","currency":"RUB"},
+ "google/gemini-3.1-flash-lite-image":{"per_request":"2.90","currency":"RUB"},
+ "google/gemini-nano-banana-2.1":{"tiers":[{"conditions":[],"cost_rub":"6.75000000"},{"conditions":["image_resolution=1K"],"cost_rub":"3.00000000"},{"conditions":["image_resolution=2K"],"cost_rub":"4.50000000"},{"conditions":["image_resolution=4K"],"cost_rub":"6.75000000"}],"currency":"RUB"},
+ "google/gemini-2.5-flash-image":{"per_request":"2.90","currency":"RUB"},
+ "openai/gpt-image-2.5-flare":{"tiers":[{"conditions":[],"cost_rub":"11.00000000"},{"conditions":["image_resolution=1K"],"cost_rub":"4.00000000"},{"conditions":["image_resolution=2K"],"cost_rub":"7.00000000"},{"conditions":["image_resolution=4K"],"cost_rub":"11.00000000"}],"currency":"RUB"},
+ "openai/gpt-image-2.5-sunburst":{"tiers":[{"conditions":[],"cost_rub":"11.00000000"},{"conditions":["image_resolution=1K"],"cost_rub":"4.00000000"},{"conditions":["image_resolution=2K"],"cost_rub":"7.00000000"},{"conditions":["image_resolution=4K"],"cost_rub":"11.00000000"}],"currency":"RUB"},
+ "openai/gpt-5.4-image-2":{"tiers":[{"conditions":[],"cost_rub":"4.00000000"},{"conditions":["image_resolution=1K"],"cost_rub":"4.00000000"},{"conditions":["image_resolution=2K"],"cost_rub":"7.00000000"},{"conditions":["image_resolution=4K"],"cost_rub":"11.00000000"}],"currency":"RUB"},
+ "openai/gpt-image-1.5":{"tiers":[{"conditions":[],"cost_rub":"3.00000000"},{"conditions":["quality=medium"],"cost_rub":"3.00000000"},{"conditions":["quality=high"],"cost_rub":"16.50000000"}],"currency":"RUB"},
+ "bytedance/seedream-5-lite":{"per_request":"4.00","currency":"RUB"},
+ "seedream/5-pro-text-to-image":{"tiers":[{"conditions":[],"cost_rub":"5.00000000"},{"conditions":["quality=basic"],"cost_rub":"5.00000000"},{"conditions":["quality=high"],"cost_rub":"10.00000000"},{"conditions":["input_images_count=1"],"cost_rub":"5.00000000"},{"conditions":["quality=basic","input_images_count=1"],"cost_rub":"5.00000000"},{"conditions":["quality=high","input_images_count=1"],"cost_rub":"10.00000000"},{"conditions":["input_images_count=2"],"cost_rub":"5.30000000"},{"conditions":["quality=basic","input_images_count=2"],"cost_rub":"5.30000000"},{"conditions":["quality=high","input_images_count=2"],"cost_rub":"10.30000000"},{"conditions":["input_images_count=3"],"cost_rub":"5.60000000"},{"conditions":["quality=basic","input_images_count=3"],"cost_rub":"5.60000000"},{"conditions":["quality=high","input_images_count=3"],"cost_rub":"10.60000000"},{"conditions":["input_images_count=4"],"cost_rub":"5.90000000"},{"conditions":["quality=basic","input_images_count=4"],"cost_rub":"5.90000000"},{"conditions":["quality=high","input_images_count=4"],"cost_rub":"10.90000000"},{"conditions":["input_images_count=5"],"cost_rub":"6.20000000"},{"conditions":["quality=basic","input_images_count=5"],"cost_rub":"6.20000000"},{"conditions":["quality=high","input_images_count=5"],"cost_rub":"11.20000000"},{"conditions":["input_images_count=6"],"cost_rub":"6.50000000"},{"conditions":["quality=basic","input_images_count=6"],"cost_rub":"6.50000000"},{"conditions":["quality=high","input_images_count=6"],"cost_rub":"11.50000000"},{"conditions":["input_images_count=7"],"cost_rub":"6.80000000"},{"conditions":["quality=basic","input_images_count=7"],"cost_rub":"6.80000000"},{"conditions":["quality=high","input_images_count=7"],"cost_rub":"11.80000000"},{"conditions":["input_images_count=8"],"cost_rub":"7.10000000"},{"conditions":["quality=basic","input_images_count=8"],"cost_rub":"7.10000000"},{"conditions":["quality=high","input_images_count=8"],"cost_rub":"12.10000000"},{"conditions":["input_images_count=9"],"cost_rub":"7.40000000"},{"conditions":["quality=basic","input_images_count=9"],"cost_rub":"7.40000000"},{"conditions":["quality=high","input_images_count=9"],"cost_rub":"12.40000000"},{"conditions":["input_images_count=10"],"cost_rub":"7.70000000"},{"conditions":["quality=basic","input_images_count=10"],"cost_rub":"7.70000000"},{"conditions":["quality=high","input_images_count=10"],"cost_rub":"12.70000000"}],"currency":"RUB"},
+ "bytedance/seedream-4":{"per_request":"3.00","currency":"RUB"},
+ "black-forest-labs/flux.2-flex":{"tiers":[{"conditions":[],"cost_rub":"14.00000000"},{"conditions":["image_resolution=1K"],"cost_rub":"14.00000000"},{"conditions":["image_resolution=2K"],"cost_rub":"24.00000000"}],"currency":"RUB"},
+ "black-forest-labs/flux.2-pro":{"tiers":[{"conditions":[],"cost_rub":"5.00000000"},{"conditions":["image_resolution=1K"],"cost_rub":"5.00000000"},{"conditions":["image_resolution=2K"],"cost_rub":"7.00000000"}],"currency":"RUB"},
+ "bytedance/seedance-2-mini":{"tiers":[{"conditions":[],"cost_rub":"6.75000000"},{"conditions":["resolution=480p","has_video=false"],"cost_rub":"2.56500000"},{"conditions":["resolution=480p","has_video=true"],"cost_rub":"3.24000000"},{"conditions":["resolution=720p","has_video=false"],"cost_rub":"5.53500000"},{"conditions":["resolution=720p","has_video=true"],"cost_rub":"6.75000000"}],"unitParam":"duration","currency":"RUB"},
+ "bytedance/seedance-2-5":{"tiers":[{"conditions":[],"cost_rub":"51.30000000"},{"conditions":["resolution=480p","has_video=false"],"cost_rub":"18.90000000"},{"conditions":["resolution=480p","has_video=true"],"cost_rub":"22.95000000"},{"conditions":["resolution=720p","has_video=false"],"cost_rub":"42.52500000"},{"conditions":["resolution=720p","has_video=true"],"cost_rub":"51.30000000"}],"unitParam":"duration","currency":"RUB"},
+ "bytedance/seedance-2-fast":{"tiers":[{"conditions":[],"cost_rub":"22.27500000"},{"conditions":["resolution=480p"],"cost_rub":"10.46250000"},{"conditions":["resolution=720p"],"cost_rub":"22.27500000"}],"unitParam":"duration","currency":"RUB"},
+ "bytedance/seedance-2":{"tiers":[{"conditions":[],"cost_rub":"83.70000000"},{"conditions":["resolution=480p","has_video=false"],"cost_rub":"12.82500000"},{"conditions":["resolution=480p","has_video=true"],"cost_rub":"15.39000000"},{"conditions":["resolution=720p","has_video=false"],"cost_rub":"27.67500000"},{"conditions":["resolution=720p","has_video=true"],"cost_rub":"33.75000000"},{"conditions":["resolution=1080p","has_video=false"],"cost_rub":"68.85000000"},{"conditions":["resolution=1080p","has_video=true"],"cost_rub":"83.70000000"}],"unitParam":"duration","currency":"RUB"},
+ "bytedance/seedance-1.5-pro":{"tiers":[{"conditions":[],"cost_rub":"135.00000000"},{"conditions":["resolution=480p","duration=4","sound=false"],"cost_rub":"5.25000000"},{"conditions":["resolution=480p","duration=4","sound=true"],"cost_rub":"10.50000000"},{"conditions":["resolution=480p","duration=8","sound=false"],"cost_rub":"10.50000000"},{"conditions":["resolution=480p","duration=8","sound=true"],"cost_rub":"21.00000000"},{"conditions":["resolution=480p","duration=12","sound=false"],"cost_rub":"14.25000000"},{"conditions":["resolution=480p","duration=12","sound=true"],"cost_rub":"28.50000000"},{"conditions":["resolution=720p","duration=4","sound=false"],"cost_rub":"10.50000000"},{"conditions":["resolution=720p","duration=4","sound=true"],"cost_rub":"21.00000000"},{"conditions":["resolution=720p","duration=8","sound=false"],"cost_rub":"21.00000000"},{"conditions":["resolution=720p","duration=8","sound=true"],"cost_rub":"42.00000000"},{"conditions":["resolution=720p","duration=12","sound=false"],"cost_rub":"31.50000000"},{"conditions":["resolution=720p","duration=12","sound=true"],"cost_rub":"63.00000000"},{"conditions":["resolution=1080p","duration=4","sound=false"],"cost_rub":"22.50000000"},{"conditions":["resolution=1080p","duration=4","sound=true"],"cost_rub":"45.00000000"},{"conditions":["resolution=1080p","duration=8","sound=false"],"cost_rub":"45.00000000"},{"conditions":["resolution=1080p","duration=8","sound=true"],"cost_rub":"90.00000000"},{"conditions":["resolution=1080p","duration=12","sound=false"],"cost_rub":"67.50000000"},{"conditions":["resolution=1080p","duration=12","sound=true"],"cost_rub":"135.00000000"}],"currency":"RUB"},
+ "grok-imagine-video-1-5":{"tiers":[{"conditions":[],"cost_rub":"3.03750000"},{"conditions":["resolution=480p"],"cost_rub":"1.62000000"},{"conditions":["resolution=720p"],"cost_rub":"3.03750000"}],"unitParam":"duration","currency":"RUB"},
+ "kling/v2.6":{"tiers":[{"conditions":[],"cost_rub":"42.00000000"},{"conditions":["duration=5","sound=false"],"cost_rub":"42.00000000"},{"conditions":["duration=10","sound=false"],"cost_rub":"82.50000000"},{"conditions":["duration=5","sound=true"],"cost_rub":"82.50000000"},{"conditions":["duration=10","sound=true"],"cost_rub":"165.00000000"}],"currency":"RUB"},
+ "kling/v3":{"tiers":[{"conditions":[],"cost_rub":"45.00000000"},{"conditions":["mode=std","sound=false"],"cost_rub":"10.00000000"},{"conditions":["mode=std","sound=true"],"cost_rub":"14.00000000"},{"conditions":["mode=pro","sound=false"],"cost_rub":"12.00000000"},{"conditions":["mode=pro","sound=true"],"cost_rub":"18.00000000"},{"conditions":["mode=4K","sound=false"],"cost_rub":"45.00000000"},{"conditions":["mode=4K","sound=true"],"cost_rub":"45.00000000"}],"unitParam":"duration","currency":"RUB"},
+ "kling/v2.6-motion-control":{"tiers":[{"conditions":[],"cost_rub":"13.50000000"},{"conditions":["mode=720p"],"cost_rub":"8.25000000"},{"conditions":["mode=1080p"],"cost_rub":"13.50000000"}],"unitParam":"duration","currency":"RUB"},
+ "kling/v3-motion-control":{"tiers":[{"conditions":[],"cost_rub":"19.00000000"},{"conditions":["mode=720p"],"cost_rub":"14.00000000"},{"conditions":["mode=1080p"],"cost_rub":"19.00000000"}],"unitParam":"duration","currency":"RUB"},
+ "wan/2.5":{"tiers":[{"conditions":[],"cost_rub":"45.00000000"},{"conditions":["resolution=720p","duration=5"],"cost_rub":"45.00000000"},{"conditions":["resolution=720p","duration=10"],"cost_rub":"90.00000000"},{"conditions":["resolution=1080p","duration=5"],"cost_rub":"75.00000000"},{"conditions":["resolution=1080p","duration=10"],"cost_rub":"150.00000000"}],"currency":"RUB"},
+ "wan/2.6":{"tiers":[{"conditions":[],"cost_rub":"52.50000000"},{"conditions":["resolution=720p","duration=5"],"cost_rub":"52.50000000"},{"conditions":["resolution=720p","duration=10"],"cost_rub":"105.00000000"},{"conditions":["resolution=720p","duration=15"],"cost_rub":"157.13000000"},{"conditions":["resolution=1080p","duration=5"],"cost_rub":"78.38000000"},{"conditions":["resolution=1080p","duration=10"],"cost_rub":"157.13000000"},{"conditions":["resolution=1080p","duration=15"],"cost_rub":"236.25000000"}],"currency":"RUB"},
+ "gemini-omni-video":{"tiers":[{"conditions":[],"cost_rub":"35.00000000"},{"conditions":["duration=4","has_video=false"],"cost_rub":"35.00000000"},{"conditions":["duration=6","has_video=false"],"cost_rub":"45.00000000"},{"conditions":["duration=8","has_video=false"],"cost_rub":"50.00000000"},{"conditions":["duration=10","has_video=false"],"cost_rub":"60.00000000"},{"conditions":["resolution=4k","has_video=false"],"cost_rub":"70.00000000"},{"conditions":["resolution=2160p","has_video=false"],"cost_rub":"70.00000000"},{"conditions":["resolution=720p","duration=4","has_video=false"],"cost_rub":"35.00000000"},{"conditions":["resolution=720p","duration=6","has_video=false"],"cost_rub":"45.00000000"},{"conditions":["resolution=720p","duration=8","has_video=false"],"cost_rub":"50.00000000"},{"conditions":["resolution=720p","duration=10","has_video=false"],"cost_rub":"60.00000000"},{"conditions":["resolution=1080p","duration=4","has_video=false"],"cost_rub":"35.00000000"},{"conditions":["resolution=1080p","duration=6","has_video=false"],"cost_rub":"45.00000000"},{"conditions":["resolution=1080p","duration=8","has_video=false"],"cost_rub":"50.00000000"},{"conditions":["resolution=1080p","duration=10","has_video=false"],"cost_rub":"60.00000000"},{"conditions":["resolution=4k","duration=4","has_video=false"],"cost_rub":"70.00000000"},{"conditions":["resolution=4k","duration=6","has_video=false"],"cost_rub":"75.00000000"},{"conditions":["resolution=4k","duration=8","has_video=false"],"cost_rub":"82.00000000"},{"conditions":["resolution=4k","duration=10","has_video=false"],"cost_rub":"95.00000000"},{"conditions":["resolution=2160p","duration=4","has_video=false"],"cost_rub":"70.00000000"},{"conditions":["resolution=2160p","duration=6","has_video=false"],"cost_rub":"75.00000000"},{"conditions":["resolution=2160p","duration=8","has_video=false"],"cost_rub":"82.00000000"},{"conditions":["resolution=2160p","duration=10","has_video=false"],"cost_rub":"95.00000000"},{"conditions":["has_video=true"],"cost_rub":"94.95000000"},{"conditions":["has_video=true","resolution=720p"],"cost_rub":"94.95000000"},{"conditions":["has_video=true","resolution=1080p"],"cost_rub":"94.95000000"},{"conditions":["has_video=true","resolution=4k"],"cost_rub":"115.00000000"},{"conditions":["has_video=true","resolution=2160p"],"cost_rub":"115.00000000"}],"currency":"RUB"}
+});
+function premiumInputSettings(body,selection,file){
+ const model=selection.model,config=PREMIUM_MEDIA_MODELS[model],kind=body.kind,settings=selection.settings,photo=selection.photoSettings;
+ const input={prompt:String(body.prompt||'').trim(),aspect_ratio:String(body.ratio||'1:1')};
+ if(kind==='image'){
+  if(photo){if(photo.parameter)input[photo.parameter]=selection.photoValue;}
+  else if(model==='bytedance/seedream-4.5')input.quality=(selection.resolution||config.resolution)==='4K'?'high':'basic';
+  else input.image_resolution=selection.resolution||config.resolution;
+  if(photo?.outputFormat||!photo&&model!=='bytedance/seedream-4.5')input.output_format=file?.type==='image/png'||/прозрач|transparent|alpha|\bpng\b|без фона|удали(?:ть)? фон|убери фон/i.test(input.prompt)?'png':'jpeg';
+ }else if(settings){
+  if(settings.motion){delete input.aspect_ratio;input.character_orientation='video';}
+  else{input.duration=settings.numericDuration?Number(body.duration??4):String(body.duration??4);if(settings.omitRatio)delete input.aspect_ratio;}
+  if(selection.resolution)input[settings.mode?'mode':'resolution']=selection.resolution;
+  if(settings.audio)input[settings.audio]=false;
+ }else{input.duration=String(body.duration??4);input.resolution=selection.resolution||config.resolution;if(model!=='gemini-omni-video')input.generate_audio=false;}
+ return input;
+}
+function mediaPrice(env,body,source=null,selected=null){
+ source=source||{type:String(body.sourceType||''),duration:Number(body.sourceDuration||0)};
+ const selection=selected||choosePremiumMedia(body,source.type?source:null),model=selection.model,config=PREMIUM_MEDIA_MODELS[model],pricing=MEDIA_PRICE_BOOK[model];
+ if(!config||config.kind!==body.kind||!pricing)throw Error('Для этой модели тариф пока не задан.');
+ const settings=selection.settings,photo=selection.photoSettings,ratio=String(body.ratio||'1:1'),duration=Number(body.duration??4),video=source.type.startsWith('video/');
+ if(!(settings?.ratios||photo?.ratios||['1:1','9:16','16:9']).includes(ratio))throw Error('Выбери доступный формат для этой модели.');
+ if(body.kind==='video'&&!(settings?.durations||[4,6,8]).includes(duration))throw Error('Выбери доступную длительность для этой модели.');
+ if(video&&settings&&!settings.video)throw Error('Эта модель принимает описание или фото. Для изменения видео выбери Seedance или Авто.');
+ if(settings?.motion&&!video)return {amount:null,currency:'ANI',enabled:true,version:MEDIA_TARIFF_VERSION,model,requiresVideo:true};
+ const seconds=settings?.motion?Math.ceil(Number(source.duration)-0.000001):duration;
+ if(settings?.motion&&(!Number.isSafeInteger(seconds)||seconds<1||seconds>15))throw Error('Добавь видео до 15 секунд, чтобы рассчитать стоимость переноса движения.');
+ const input=premiumInputSettings(body,selection,source),context={...input,has_video:video,sound:input.sound??input.generate_audio??false,input_images_count:source.type.startsWith('image/')?1:0};
+ const tiers=pricing.tiers?.filter(t=>t.conditions.every(condition=>{const [key,value]=condition.split('=');return String(context[key]).toLowerCase()===value.toLowerCase();})).sort((a,b)=>b.conditions.length-a.conditions.length);
+ const rate=Number(tiers?.[0]?.cost_rub??pricing.per_request),perSecond=pricing.unitParam==='duration';
+ if(!Number.isFinite(rate)||rate<=0)throw Error('Для этих настроек тариф пока не задан.');
+ const costMicros=Math.round(rate*1000000)*(perSecond?seconds:1);
+ // Exact approved formula: ceil(cost * 1.10 / (3 Stars * $0.013 * 80 RUB * 0.90 * 0.70)).
+ // Integer micro-rubles avoid charging an extra coin at an exact rounding boundary.
+ const amount=Math.ceil(costMicros*1375/(2457*1000000));
+ if(!Number.isSafeInteger(costMicros)||!Number.isSafeInteger(amount)||amount<=0||amount>1000000)throw Error('Не удалось рассчитать стоимость.');
+ const priceKey=perSecond?'video_per_second':body.kind==='image'&&!pricing.per_request?'image':'request';
+ const provider={only:['mie'],allow_fallbacks:false,max_price:{[priceKey]:Math.ceil(Math.round(rate*1000000)*11/10)/1000000}};
+ return {amount,currency:'ANI',enabled:true,version:MEDIA_TARIFF_VERSION,model,billableSeconds:body.kind==='video'?seconds:undefined,provider};
+}
+function publicMediaPrice(price){
+ return {amount:price.amount,currency:price.currency,enabled:price.enabled,version:price.version,model:price.model,...(price.requiresVideo?{requiresVideo:true}:{}),...(price.billableSeconds?{billableSeconds:price.billableSeconds}:{})};
+}
+async function billingVideoDuration(file){
+ const bytes=await file.arrayBuffer(),view=new DataView(bytes),length=view.byteLength;
+ const text=(offset,n)=>String.fromCharCode(...new Uint8Array(bytes,offset,n));
+ const invalid=()=>Error('Не удалось определить длительность видео. Сохрани ролик в MP4 и добавь его снова. Запрос ещё не отправлен.');
+ // ISO BMFF: ordinary MP4 and iPhone QuickTime/MOV, with 32- or 64-bit movie headers.
+ if(length>=16&&text(4,4)==='ftyp'){
+  function boxes(start,end,find){
+   let count=0;
+   for(let at=start;at+8<=end&&count++<10000;){
+    let size=view.getUint32(at),head=8;if(size===1){if(at+16>end)throw invalid();size=view.getUint32(at+8)*4294967296+view.getUint32(at+12);head=16;}else if(size===0)size=end-at;
+    if(!Number.isSafeInteger(size)||size<head||at+size>end)throw invalid();
+    const found=find(text(at+4,4),at+head,at+size);if(found!==undefined)return found;at+=size;
+   }
+  }
+  const duration=boxes(0,length,(type,start,end)=>type==='moov'?boxes(start,end,(type,p,last)=>{
+   if(type!=='mvhd')return;const version=view.getUint8(p),offset=version===1?20:version===0?12:-1;if(offset<0||p+offset+(version===1?12:8)>last)throw invalid();
+   const scale=view.getUint32(p+offset),ticks=version===1?view.getUint32(p+offset+4)*4294967296+view.getUint32(p+offset+8):view.getUint32(p+offset+4);return scale?ticks/scale:NaN;
+  }):undefined);
+  if(Number.isFinite(duration)&&duration>0)return duration;
+ }
+ // WebM: read the bounded Segment/Info duration and its timecode scale, never scan frame payloads.
+ if(length>=4&&view.getUint32(0)===0x1a45dfa3){
+  function vint(at,isId){if(at>=length)throw invalid();const first=view.getUint8(at);let width=1,mask=128;while(width<=8&&!(first&mask)){width++;mask>>=1;}if(width>8||isId&&width>4||at+width>length)throw invalid();let value=isId?first:first&(mask-1),unknown=!isId&&(first&(mask-1))===mask-1;for(let i=1;i<width;i++){const b=view.getUint8(at+i);value=value*256+b;unknown=unknown&&b===255;}return {value,width,unknown};}
+  function elements(start,end,find){let count=0;for(let at=start;at<end&&count++<10000;){const id=vint(at,true),size=vint(at+id.width,false),p=at+id.width+size.width,last=size.unknown?end:p+size.value;if(last>end||last<p||!Number.isSafeInteger(last))throw invalid();const found=find(id.value,p,last);if(found!==undefined)return found;at=last;}}
+  const duration=elements(0,length,(id,start,end)=>id===0x18538067?elements(start,end,(id,p,last)=>{
+   if(id!==0x1549a966)return;let scale=1000000,ticks=NaN;
+   elements(p,last,(id,a,b)=>{const n=b-a;if(id===0x2ad7b1){if(n>8)throw invalid();scale=0;for(let i=a;i<b;i++)scale=scale*256+view.getUint8(i);}if(id===0x4489)ticks=n===8?view.getFloat64(a):n===4?view.getFloat32(a):NaN;});return ticks*scale/1000000000;
+  }):undefined);
+  if(Number.isFinite(duration)&&duration>0)return duration;
+ }
+ throw invalid();
 }
 async function reserveMediaCoins(env,userId,jobId,amount){
  if(!amount)return;
@@ -201,7 +299,14 @@ async function createPremiumMedia(env,userId,body,file,identityFile=null){
  }
  const existing=await env.DB.prepare('SELECT * FROM media_jobs WHERE id=? AND user_id=?').bind(id,userId).first();
  if(existing){await settleMediaCoins(env,userId,id);return billedMediaJob(env,existing);}
- const price=mediaPrice(env,body);if(price.enabled&&Number(body.acceptedPrice)!==price.amount){const error=Error('Стоимость изменилась. Подтверди актуальную цену перед созданием.');error.status=409;throw error;}
+ const source={type:file?.type||'',duration:0};
+ if(source.type.startsWith('video/')){
+  source.duration=await billingVideoDuration(file);
+  const max=model==='bytedance/seedance-2-5'?30:model==='gemini-omni-video'?10:15;
+  if(source.duration>max+.001)throw Error('Для этой модели добавь исходное видео до '+max+' секунд.');
+ }
+ const price=mediaPrice(env,body,source,selection);
+ if(Number(body.acceptedPrice)!==price.amount||body.acceptedTariff&&body.acceptedTariff!==price.version||body.acceptedModel&&body.acceptedModel!==model){const error=Error('Стоимость изменилась. Подтверди актуальную цену перед созданием.');error.status=409;throw error;}
  const groupId=String(body.groupId||id);
  if(groupId!==id){const root=await env.DB.prepare('SELECT * FROM media_jobs WHERE id=? AND user_id=?').bind(groupId,userId).first();if(!root||root.kind!==kind)throw Error('Исходный проект не найден. Открой его в своих проектах.');}
  // Reserve before the paid request. Repeated clicks never create another provider job.
@@ -215,26 +320,12 @@ async function createPremiumMedia(env,userId,body,file,identityFile=null){
   if(region){const points=region.points.map(p=>({x:p.x,y:p.y})),xs=points.map(p=>p.x),ys=points.map(p=>p.y),bounds={x:Math.min(...xs),y:Math.min(...ys),w:Math.max(...xs)-Math.min(...xs),h:Math.max(...ys)-Math.min(...ys)};if(bounds.w<.015||bounds.h<.015)throw Error('Выдели область чуть крупнее.');region={points,bounds};}
   row.prompt=prompt;row.quality=String(body.quality||'fast');row.ratio=ratio;row.duration=duration;row.region_json=region?JSON.stringify(region):null;
   await env.DB.prepare('UPDATE media_jobs SET prompt=?,quality=?,ratio=?,duration=?,region_json=? WHERE id=? AND user_id=?').bind(prompt,row.quality,ratio,duration,row.region_json,id,userId).run();
-  const input={prompt,aspect_ratio:ratio};
-  if(kind==='image'){
-   if(photoSettings){
-    if(photoSettings.parameter)input[photoSettings.parameter]=selection.photoValue;
-    if(photoSettings.outputFormat)input.output_format=file?.type==='image/png'||/прозрач|transparent|alpha|\bpng\b|без фона|удали(?:ть)? фон|убери фон/i.test(prompt)?'png':'jpeg';
-   }
-   else if(model==='bytedance/seedream-4.5')input.quality=(selection.resolution||config.resolution)==='4K'?'high':'basic';
-   else{input.image_resolution=selection.resolution||config.resolution;input.output_format=file?.type==='image/png'||/прозрач|transparent|alpha|\bpng\b|без фона|удали(?:ть)? фон|убери фон/i.test(prompt)?'png':'jpeg';}
-  }
-  else if(videoSettings){
-   if(videoSettings.motion){delete input.aspect_ratio;input.character_orientation='video';}
-   else{input.duration=videoSettings.numericDuration?duration:String(duration);if(videoSettings.omitRatio)delete input.aspect_ratio;}
-   if(selection.resolution)input[videoSettings.mode?'mode':'resolution']=selection.resolution;
-   if(videoSettings.audio)input[videoSettings.audio]=false;
-  }
-  else{input.duration=String(duration);input.resolution=selection.resolution||config.resolution;if(model!=='gemini-omni-video')input.generate_audio=false;}
+  const input=premiumInputSettings(body,selection,file);
+  await reserveMediaCoins(env,userId,id,price.amount);
   if(file){const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));input[file.type.startsWith('image/')?'images':'videos']=[{type:'base64',data:'data:'+file.type+';base64,'+btoa(binary)}];}
   if(identityFile){const bytes=new Uint8Array(await identityFile.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));input.images=[...(input.images||[]),{type:'base64',data:'data:'+identityFile.type+';base64,'+btoa(binary)}];}
-  await reserveMediaCoins(env,userId,id,price.amount);providerAttempted=true;
-  const data=await polzaMediaRequest(env,'',{model,input,async:true,user:'anis-'+userId});
+  providerAttempted=true;
+  const data=await polzaMediaRequest(env,'',{model,input,provider:price.provider,async:true,user:'anis-'+userId});
   if(typeof data.id!=='string'||!/^[\w-]{1,200}$/.test(data.id))throw Error('Сервис не подтвердил номер проекта.');
   await env.DB.prepare('UPDATE media_jobs SET provider_id=? WHERE id=? AND user_id=?').bind(data.id,id,userId).run();
   return await updatePremiumJob(env,row,data);
@@ -1773,7 +1864,7 @@ export default {
         }catch(error){return json({error:error.message},error.status||400,headers);}
       }
       if(action==='media-quote'){
-        try{return json(mediaPrice(env,body),200,headers);}catch(error){return json({error:error.message},400,headers);}
+        try{const price=publicMediaPrice(mediaPrice(env,body));const wallet=await readWallet(env.DB,userId);return json({...price,balance:wallet.balance},200,headers);}catch(error){return json({error:error.message},error.status||400,headers);}
       }
       if(action==='media-download-link'){
         try{return json(await requestOriginalDownload(env,userId,body.jobId,request.url,ctx,!!body.retry),200,headers);}catch(error){return json({error:error.message},error.status||502,headers);}

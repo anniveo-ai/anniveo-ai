@@ -1,12 +1,13 @@
 /* Provider payload and wallet tests. All provider requests are mocked. */
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),{DatabaseSync}=require('node:sqlite');
+const {fund,accept,videoFile}=require('./media-test-helpers.cjs');
 const raw=new DatabaseSync(':memory:');raw.exec('CREATE TABLE chat_messages(id INTEGER PRIMARY KEY,user_id TEXT,role TEXT,content TEXT,created_at TEXT)');for(const file of ['media-jobs.sql','payments.sql','stability-migration.sql','project-groups.sql','media-billing.sql'])raw.exec(fs.readFileSync(file,'utf8'));raw.exec('CREATE TABLE usage_events(id TEXT PRIMARY KEY,user_id TEXT,kind TEXT)');
 const db={prepare(sql){const make=p=>({bind(...args){return make(args)},async first(){return raw.prepare(sql).get(...p)||null},async all(){return {results:raw.prepare(sql).all(...p)}},async run(){return {meta:{changes:Number(raw.prepare(sql).run(...p).changes)}}}});return make([])}};
 const calls=[],context=vm.createContext({URL,Uint8Array,AbortController,setTimeout,clearTimeout,Response,btoa,fetch:async(url,options)=>{calls.push(JSON.parse(options.body));return Response.json({id:'provider-'+calls.length,status:'pending'});}});
 vm.runInContext(fs.readFileSync('worker.js','utf8').split('export default')[0]+';globalThis.catalog=VIDEO_MODEL_SETTINGS',context);context.env={DB:db,POLZA_API_KEY:'mock'};
-const run=s=>vm.runInContext(s,context),settings=JSON.parse(JSON.stringify(context.catalog)),photo=new File(['reference'],'face.png',{type:'image/png'}),video=new File(['clip'],'motion.mp4',{type:'video/mp4'});let seq=0;
+const run=s=>vm.runInContext(s,context),settings=JSON.parse(JSON.stringify(context.catalog)),photo=new File(['reference'],'face.png',{type:'image/png'}),video=videoFile(10);let seq=0;
 const body=(model,quality,cfg)=>({kind:'video',model,quality,ratio:cfg.ratios[0],duration:cfg.durations.at(-1),prompt:'Плавное движение камеры',requestId:'video-model-test-'+String(++seq).padStart(6,'0')});
-const create=async(b,file=null,identity=null)=>{context.body=b;context.owner='user-'+(++seq);context.file=file;context.identity=identity;return run('createPremiumMedia(env,owner,body,file,identity)');};
+const create=async(b,file=null,identity=null)=>{context.body=b;context.owner='user-'+(++seq);context.file=file;context.identity=identity;fund(raw,context.owner);try{context.body=await accept(context,b,file);}catch{}return run('createPremiumMedia(env,owner,body,file,identity)');};
 (async()=>{
  for(const [model,cfg]of Object.entries(settings))for(const quality of Object.keys(cfg.qualities)){
   const b=body(model,quality,cfg),job=await create(b,cfg.motion?video:photo,cfg.motion?photo:null),sent=calls.at(-1),before=calls.length;
@@ -32,9 +33,9 @@ const create=async(b,file=null,identity=null)=>{context.body=b;context.owner='us
  await assert.rejects(create(body('wan/2.5','720p',settings['wan/2.5']),photo,photo),/дополнительное фото/);
  await assert.rejects(create({...body('wan/2.5','720p',settings['wan/2.5']),prompt:'а'.repeat(801)}),/800/);
  assert.equal(calls.length,before);
- context.env.MEDIA_PRICES_JSON=JSON.stringify({'video:720p:5':1,'wan/2.5:video:720p:10':60});context.body={kind:'video',model:'wan/2.5',quality:'720p',duration:5};assert.throws(()=>run('mediaPrice(env,body)'),/тариф пока не задан/,'explicit model cannot inherit generic tariff');
- const priced={...body('wan/2.5','720p',settings['wan/2.5']),acceptedPrice:60};await assert.rejects(create(priced),/Недостаточно аниумов/);assert.equal(calls.length,before,'wallet protects new models');
- context.body=priced;assert.equal(run('mediaPrice(env,body).amount'),60);delete context.env.MEDIA_PRICES_JSON;
+ context.body={kind:'video',model:'wan/2.5',quality:'720p',duration:5};assert.equal(run('mediaPrice(env,body).amount'),26,'explicit model uses its own approved tariff');
+ context.body=await accept(context,body('wan/2.5','720p',settings['wan/2.5']));await assert.rejects(run("createPremiumMedia(env,'empty',body,null)"),/Недостаточно аниумов/);assert.equal(calls.length,before,'wallet protects new models');
+ assert.equal(run('mediaPrice(env,body).amount'),51);
  context.body={kind:'video',model:'bytedance/seedance-2-fast',quality:'fhd',ratio:'16:9'};assert.throws(()=>run('choosePremiumMedia(body,null)'),/качество/,'explicit model never switches silently');
  console.log('PASS: 13 real video model routes, every quality, native parameters, motion files, history, source validation, duration/ratio limits, unavailable model rejection, idempotence and model-specific wallet tariffs. No paid requests.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

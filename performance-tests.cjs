@@ -9,7 +9,7 @@ const request=body=>new Request('https://api.test/',{method:'POST',headers:{'Con
  let writes=0;const c=worker();c.db={prepare(){return{bind(){return this},first:async()=>({id:'legacy'}),run:async()=>{writes++}}}};
  assert.equal(await run(c,"requireChatThread(db,'user','legacy')"),'legacy');assert.equal(writes,0);
  // Unchanged provider states avoid redundant database writes.
- let updates=0;c.env={DB:{prepare(){return{bind(){return this},run:async()=>{updates++}}}}};c.row={id:'job',user_id:'user',kind:'image',status:'processing'};
+ let updates=0;c.env={DB:{prepare(sql){return{bind(){return this},first:async()=>sql.startsWith('SELECT * FROM media_jobs')?c.row:null,run:async()=>{if(sql.startsWith('UPDATE media_jobs SET status='))updates++}}}}};c.row={id:'job',user_id:'user',kind:'image',status:'processing'};
  await run(c,"updatePremiumJob(env,row,{status:'processing'})");assert.equal(updates,0);
  await run(c,"updatePremiumJob(env,row,{status:'pending'})");assert.equal(updates,1);
  // The first-token deadline includes time already spent waiting for headers.

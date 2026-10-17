@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="image-models.css?v=__ANIS_BUILD__">
 <link rel="stylesheet" href="video-models.css?v=__ANIS_BUILD__">
 <link rel="stylesheet" href="topup.css?v=__ANIS_BUILD__">
+<link rel="stylesheet" href="media-creation.css?v=__ANIS_BUILD__">
 <title>ANIS AI</title><script>try{document.documentElement.dataset.theme=localStorage.getItem("anis-theme")==="light"?"light":"dark";}catch{}</script>
 <link rel="preconnect" href="https://anniveo-ai-api.yaylaevismail.workers.dev" crossorigin>
 <link rel="preload" as="image" href="orb20-real.webp">
@@ -4965,7 +4966,7 @@ async function launchStudioProject(p){
  try{
   const preparedFile=p.sourceFile&&p.sourceFile.type.startsWith('image/')?await prepareStudioImage(p.sourceFile):p.sourceFile;
   const file=await materializeStudioUpload(preparedFile,p.kind==='image'?'reference.png':'reference.mp4'),identityFile=await materializeStudioUpload(p.identityFile,'identity.jpg');
-  const payload={action:'media-create',kind:p.kind,requestId:p.id,prompt:p.providerPrompt||p.prompt,quality:p.quality,ratio:p.ratio,groupId:p.groupId||p.id,acceptedPrice:p.acceptedPrice||0,initData};if(p.model&&p.model!=='auto')payload.model=p.model;if(p.kind==='video')payload.duration=p.duration;if(p.region)payload.region=JSON.stringify(p.region);
+  const payload={action:'media-create',kind:p.kind,requestId:p.id,prompt:p.providerPrompt||p.prompt,quality:p.quality,ratio:p.ratio,groupId:p.groupId||p.id,acceptedPrice:p.acceptedPrice||0,acceptedTariff:p.acceptedTariff||'',acceptedModel:p.acceptedModel||'',initData};if(p.model&&p.model!=='auto')payload.model=p.model;if(p.kind==='video')payload.duration=p.duration;if(p.region)payload.region=JSON.stringify(p.region);
   let response;if(file||identityFile){const form=new FormData();for(const [key,value]of Object.entries(payload))form.append(key,String(value));if(file)form.append('file',file,file.name);if(identityFile)form.append('identityFile',identityFile,identityFile.name);response=await fetch(API_URL,{method:'POST',body:form,signal:controller.signal});}
   else response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});
   const data=await response.json();if(!response.ok){p.status='failed';const error=Error(data.error||'Не удалось создать проект.');error.status=response.status;throw error;}
@@ -5309,6 +5310,7 @@ syncMediaMic();
 <script src="image-models.js?v=__ANIS_BUILD__"></script>
 <script src="video-models.js?v=__ANIS_BUILD__"></script>
 <script src="stability.js?v=__ANIS_BUILD__"></script>
+<script src="media-creation.js?v=__ANIS_BUILD__"></script>
 
 </body>
 </html>

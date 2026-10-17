@@ -134,8 +134,11 @@
    if(snapshot.kind==='image')try{window.anisImageModels?.validate(snapshot);}catch(error){toast(error.message);return;}
    if(snapshot.kind==='video')try{await window.anisVideoModels?.validate(snapshot);}catch(error){toast(error.message);return;}
    if(snapshot.prompt.trim().length>=3&&snapshot.prompt.trim().length<=1200){
-    let quote;try{quote=await mediaJSON({action:'media-quote',kind:snapshot.kind,model:snapshot.model,quality:snapshot.quality,ratio:snapshot.ratio,duration:snapshot.duration});}catch(error){toast(readableMediaError(error));return;}
-    if(quote.enabled){const text='Создать '+(snapshot.kind==='video'?'видео':'фото')+' за '+quote.amount+' аниумов? При подтверждённой ошибке создания сумма вернётся на баланс.';const confirmed=typeof tg!=='undefined'&&tg?.showConfirm?await new Promise(resolve=>tg.showConfirm(text,resolve)):window.confirm(text);if(!confirmed)return;snapshot={...snapshot,acceptedPrice:quote.amount};}
+    let quote;try{quote=await window.anisMediaPricing.quoteSnapshot(snapshot,{fresh:true});}catch(error){toast(readableMediaError(error));return;}
+    if(quote.requiresVideo)return toast('Добавь видео и фото персонажа, чтобы рассчитать стоимость.');
+    if(Number.isFinite(quote.balance)&&quote.balance<quote.amount){toast('Недостаточно аниумов. Для создания нужно '+quote.amount+'. Пополни баланс.');void refreshWallet();return;}
+    if(!window.anisMediaPricing.displayed(snapshot,quote)){const text='Создать '+(snapshot.kind==='video'?'видео':'фото')+' за '+quote.amount+' аниумов? При подтверждённой ошибке создания сумма вернётся на баланс.';const confirmed=typeof tg!=='undefined'&&tg?.showConfirm?await new Promise(resolve=>tg.showConfirm(text,resolve)):window.confirm(text);if(!confirmed)return;}
+    snapshot={...snapshot,acceptedPrice:quote.amount,acceptedTariff:quote.version,acceptedModel:quote.model};
    }
    if(snapshot.kind==='video'&&['qhd','uhd'].includes(snapshot.quality)&&snapshot.sourceFile?.type.startsWith('video/')){const source=await window.anisMediaQuality.inspectVideo(snapshot.sourceFile);if(source.duration>10.1){toast('Для 2K и 4K добавь видео до 10 секунд. Можно сначала обрезать ролик.');return;}}
    // Original creator adds the ID synchronously. Pump is held until the snapshot is committed.
