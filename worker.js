@@ -1801,6 +1801,56 @@ function controlFilter(body,cfg,{trash=false,lifetime=false}={}){
  return {where:clauses.join(' AND '),params,range};
 }
 const CONTROL_RECORD_JOIN=' FROM control_records r LEFT JOIN control_users u ON u.user_id=r.user_id ';
+function controlProfileImage(mime,data){
+ if(!data||!['image/jpeg','image/png','image/webp'].includes(mime))return '';
+ const bytes=data instanceof ArrayBuffer?new Uint8Array(data):Uint8Array.from(data);if(!bytes.length||bytes.length>131072)return '';
+ let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));
+ return 'data:'+mime+';base64,'+btoa(binary);
+}
+async function controlProfileRead(response,limit){
+ if(!response.ok||Number(response.headers.get('Content-Length')||0)>limit){await response.body?.cancel();return null;}
+ const reader=response.body?.getReader();if(!reader)return null;const chunks=[];let size=0;
+ try{for(;;){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>limit){await reader.cancel();return null;}chunks.push(value);}}finally{reader.releaseLock();}
+ const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}return bytes;
+}
+async function controlProfileAPI(env,method,payload){
+ const response=await fetch('https://api.telegram.org/bot'+env.TELEGRAM_BOT_TOKEN+'/'+method,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(1800),redirect:'error'});
+ const bytes=await controlProfileRead(response,65536);if(!bytes)return null;
+ const data=JSON.parse(new TextDecoder().decode(bytes));return data.ok?data.result:null;
+}
+async function controlRefreshProfile(env,row){
+ const now=Math.floor(Date.now()/1000);let status='unavailable',mime=null,bytes=null,next=now+300;
+ try{
+  const profile=await controlProfileAPI(env,'getChat',{chat_id:row.user_id});
+  if(profile&&String(profile.id)===String(row.user_id)&&profile.type==='private'){
+   // A profile lookup is not a visit: never change first_seen or last_seen here.
+   const names={first_name:String(profile.first_name||row.first_name||'').slice(0,100),last_name:String(profile.last_name||'').slice(0,100),username:String(profile.username||'').slice(0,64)};
+   await env.DB.prepare('UPDATE control_users SET first_name=?,last_name=?,username=? WHERE user_id=?').bind(names.first_name,names.last_name,names.username,row.user_id).run();Object.assign(row,names);
+   status='no_photo';next=now+86400;
+   if(profile.photo?.small_file_id){
+    status='unavailable';next=now+300;
+    const file=await controlProfileAPI(env,'getFile',{file_id:profile.photo.small_file_id}),path=file?.file_path;
+    if(path&&/^[a-zA-Z0-9_/-]+\.(?:jpe?g|png|webp)$/i.test(path)&&!path.startsWith('/')&&Number(file.file_size||0)<=131072){
+     const response=await fetch('https://api.telegram.org/file/bot'+env.TELEGRAM_BOT_TOKEN+'/'+path,{signal:AbortSignal.timeout(1800),redirect:'error'});bytes=await controlProfileRead(response,131072);
+     if(bytes?.length>=12){mime=bytes[0]===255&&bytes[1]===216?'image/jpeg':bytes[0]===137&&bytes[1]===80&&bytes[2]===78&&bytes[3]===71?'image/png':new TextDecoder().decode(bytes.subarray(0,4))==='RIFF'&&new TextDecoder().decode(bytes.subarray(8,12))==='WEBP'?'image/webp':null;}
+     if(mime)status='ready';else{bytes=null;next=now+300;}
+    }else next=now+300;
+   }
+  }
+ }catch{next=now+300;}
+ // Neither file IDs nor bot-token download URLs ever leave the server.
+ await env.DB.prepare('INSERT INTO control_profile_cache(user_id,checked_at,next_check_at,status,mime,data) VALUES(?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET checked_at=excluded.checked_at,next_check_at=excluded.next_check_at,status=excluded.status,mime=excluded.mime,data=excluded.data').bind(row.user_id,now,next,status,mime,mime&&bytes?bytes.buffer:null).run();
+ return {user_id:row.user_id,next_check_at:next,status,mime,data:mime?bytes:null};
+}
+async function controlProfiles(env,items){
+ if(!items.length||!env.TELEGRAM_BOT_TOKEN)return {items,pending:0};
+ try{
+  const result=await env.DB.prepare('SELECT * FROM control_profile_cache WHERE user_id IN ('+items.map(()=>'?').join(',')+')').bind(...items.map(row=>row.user_id)).all(),cache=new Map((result.results||[]).map(row=>[row.user_id,row])),now=Math.floor(Date.now()/1000);
+  const due=items.filter(row=>/^[1-9]\d{4,15}$/.test(row.user_id)&&(!cache.has(row.user_id)||cache.get(row.user_id).next_check_at<=now));
+  await Promise.all(due.slice(0,5).map(async row=>{const profile=await controlRefreshProfile(env,row);cache.set(row.user_id,profile);}));
+  return {items:items.map(row=>{const profile=cache.get(row.user_id),image=controlProfileImage(profile?.mime,profile?.data);return {...row,photo_url:image||(profile?.status==='no_photo'?'':row.photo_url),profile_status:profile?.status||'pending'};}),pending:Math.max(0,due.length-5)};
+ }catch{return {items,pending:0};}
+}
 async function controlRecords(env,body,cfg){
  const f=controlFilter(body,cfg,{trash:body.category==='trash'}),limit=Math.max(1,Math.min(100,Number(body.limit)||25)),offset=Math.max(0,Math.min(1000000,Math.floor(Number(body.offset)||0)));
  const result=await env.DB.batch([
@@ -1819,7 +1869,7 @@ async function controlUsers(env,body,cfg){
  const where=clauses.join(' AND '),results=await env.DB.batch([
   env.DB.prepare("SELECT u.*,(SELECT COUNT(*) FROM control_records r WHERE r.user_id=u.user_id AND r.kind IN ('chat','assistant')) messages,(SELECT COUNT(*) FROM media_jobs j WHERE j.user_id=u.user_id AND j.kind='image') images,(SELECT COUNT(*) FROM media_jobs j WHERE j.user_id=u.user_id AND j.kind='video') videos,(SELECT COALESCE(SUM(active_seconds),0) FROM control_sessions s WHERE s.user_id=u.user_id) active_seconds FROM control_users u WHERE "+where+' ORDER BY u.last_seen DESC,u.user_id LIMIT ? OFFSET ?').bind(...params,limit,offset),
   env.DB.prepare('SELECT COUNT(*) n FROM control_users u WHERE '+where).bind(...params)
- ]);const items=results[0].results||[],total=results[1].results?.[0]?.n||0;return {items,total,offset,nextOffset:offset+items.length<total?offset+items.length:null,timezone:range.zone};
+ ]);const profiles=await controlProfiles(env,results[0].results||[]),items=profiles.items,total=results[1].results?.[0]?.n||0;return {items,total,offset,nextOffset:offset+items.length<total?offset+items.length:null,timezone:range.zone,profilesPending:profiles.pending};
 }
 async function controlOverview(env,body,cfg){
  const f=controlFilter({...body,category:'all',kind:'',status:'',q:'',userId:''},cfg),life=controlFilter({...body,category:'all'},cfg,{lifetime:true}),range=f.range;
@@ -1838,8 +1888,8 @@ async function controlOverview(env,body,cfg){
   env.DB.prepare("SELECT COUNT(*) n FROM control_records r WHERE (kind IN ('error','payment') OR status IN ('failed','unknown','cancelled')) AND created_at>?").bind(cfg.alerts_read_at||'1970-01-01')
  ]);
  const map=r=>Object.fromEntries((r.results||[]).map(x=>[x.kind,{count:x.n,completed:x.completed||0}])),period=map(results[0]),lifetime=map(results[1]);
- const [recent,users]=await Promise.all([controlRecords(env,{...body,category:'all',kind:'',status:'',q:'',userId:'',limit:5,offset:0},cfg),controlUsers(env,{...body,q:'',offset:0},cfg)]);
- return {period,lifetime,activeUsers:results[2].results?.[0]?.n||0,newUsers:results[3].results?.[0]?.n||0,totalUsers:results[4].results?.[0]?.n||0,activeSeconds:results[5].results?.[0]?.n||0,lifetimeActiveSeconds:results[6].results?.[0]?.n||0,daily:results[7].results||[],unreadErrors:results[8].results?.[0]?.n||0,recent:recent.items,users:users.items.slice(0,5),trackingSince:cfg.tracking_since,timezone:range.zone};
+ const users=await controlUsers(env,{...body,q:'',offset:0},cfg),recent=await controlRecords(env,{...body,category:'all',kind:'',status:'',q:'',userId:'',limit:5,offset:0},cfg);
+ return {period,lifetime,activeUsers:results[2].results?.[0]?.n||0,newUsers:results[3].results?.[0]?.n||0,totalUsers:results[4].results?.[0]?.n||0,activeSeconds:results[5].results?.[0]?.n||0,lifetimeActiveSeconds:results[6].results?.[0]?.n||0,daily:results[7].results||[],unreadErrors:results[8].results?.[0]?.n||0,recent:recent.items,users:users.items.slice(0,5),profilesPending:users.profilesPending,trackingSince:cfg.tracking_since,timezone:range.zone};
 }
 async function controlFinance(env,body,cfg){
  const range=controlRange(body,cfg),results=await env.DB.batch([
@@ -1858,7 +1908,7 @@ async function controlHandle(env,ownerId,body,origin,ctx=null){
  if(action==='control-finance')return controlFinance(env,body,cfg);
  if(action==='control-user'){
   const id=String(body.userId||'');const user=await env.DB.prepare('SELECT * FROM control_users WHERE user_id=?').bind(id).first();if(!user)throw controlFailure('Пользователь не найден.',404);
-  const [wallet,records]=await Promise.all([readWallet(env.DB,id),controlRecords(env,{...body,period:body.period||'all'},cfg)]);return {user,wallet,records};
+  const [wallet,records,profiles]=await Promise.all([readWallet(env.DB,id),controlRecords(env,{...body,period:body.period||'all'},cfg),controlProfiles(env,[user])]);return {user:profiles.items[0],wallet,records};
  }
  if(action==='control-detail'){
   const record=await env.DB.prepare('SELECT r.*,u.first_name,u.last_name,u.username'+CONTROL_RECORD_JOIN+'WHERE r.id=?').bind(String(body.recordId||'')).first();if(!record)throw controlFailure('Запись не найдена.',404);
