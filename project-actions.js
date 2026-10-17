@@ -392,10 +392,10 @@
     const room=$('mediaResultDialog'),origin={view:currentView,scrollTop:$('app').scrollTop,roomId:room.open?selectedStudioProject:null,roomScroll:room.scrollTop};
     // Navigation does not depend on downloading the original file.
     openActionStudio(kind);
-    if(kind==='image')window.anisImageModels?.select(project.model||'auto');
+    if(kind==='image')window.anisImageModels?.select(project.model||'auto',{quality:project.quality,ratio:project.ratio});
     if(kind==='video')window.anisVideoModels?.forEnhancement(project);
     selectValue(kind+'Ratio',project.ratio||(kind==='video'?'16:9':'1:1'));
-    if(kind==='image'||!window.anisVideoModels)selectValue(kind+'Quality',project.quality||'fhd');if(kind==='video')selectValue('duration',project.duration??4);
+    if(kind==='image'?!window.anisImageModels:!window.anisVideoModels)selectValue(kind+'Quality',project.quality||'fhd');if(kind==='video')selectValue('duration',project.duration??4);
     const session=enhancementReturnControl(kind,origin,create,project);
     enhancementSources.delete(kind);
     const prompt=$(kind+'Prompt');prompt.value='';prompt.dispatchEvent(new Event('input',{bubbles:true}));
@@ -414,10 +414,10 @@
   function prepareAction(project,item,action){
     const kind=project.kind;openActionStudio(kind);
     if(kind==='video'){clearVideoIdentity();if(setStudioVideo(item.file)===false)throw Error('Не удалось добавить видео. Проверь размер файла и заверши текущую отправку.');}else if(setStudioPhoto(item.file)===false)throw Error('Не удалось добавить фото. Проверь размер файла и заверши текущую отправку.');
-    if(kind==='image')window.anisImageModels?.select(project.model||'auto');
+    if(kind==='image')window.anisImageModels?.select(project.model||'auto',{quality:project.quality,ratio:project.ratio});
     if(kind==='video')window.anisVideoModels?.forEnhancement(project);
     selectValue(kind+'Ratio',project.ratio||(kind==='video'?'16:9':'1:1'));
-    if(kind==='image'||!window.anisVideoModels)selectValue(kind+'Quality',project.quality||'fhd');
+    if(kind==='image'?!window.anisImageModels:!window.anisVideoModels)selectValue(kind+'Quality',project.quality||'fhd');
     if(kind==='video')selectValue('duration',project.duration??4);
     const subject=kind==='video'?'видео':'фото',prompt=$(kind+'Prompt');
     prompt.value=action==='enhance'?'Улучши качество этого '+subject+'. Сохрани лица, композицию, цвета и все важные детали. Добавь естественную чёткость'+(kind==='video'?', плавность и стабильность движения.':', аккуратно убери шум.'):

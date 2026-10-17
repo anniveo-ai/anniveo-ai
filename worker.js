@@ -66,10 +66,27 @@ const VIDEO_MODEL_SETTINGS=Object.freeze({
  'wan/2.6':{qualities:{'720p':'720p','1080p':'1080p'},durations:[5,10,15],ratios:['source'],omitRatio:true},
  'gemini-omni-video':{qualities:{'720p':'720p','1080p':'1080p','4k':'4k'},durations:[4,6,8,10],ratios:['16:9','9:16'],video:true,identity:true}
 });
+// Native photo parameters verified against the live Polza image catalog, 2026-10-17.
+// Existing photo jobs retain their original quality codes and provider IDs.
+const PHOTO_MODEL_SETTINGS=Object.freeze({
+ 'google/gemini-3.1-flash-image-preview':{qualities:{'img-1k':'1K','img-2k':'2K','img-4k':'4K'},ratios:['1:1','9:16','16:9'],parameter:'image_resolution',outputFormat:true,legacy:true},
+ 'google/gemini-3-pro-image-preview':{qualities:{'img-1k':'1K','img-2k':'2K','img-4k':'4K'},ratios:['1:1','9:16','16:9'],parameter:'image_resolution',outputFormat:true,legacy:true},
+ 'bytedance/seedream-4.5':{qualities:{'img-2k':'basic','img-4k':'high'},ratios:['1:1','9:16','16:9'],parameter:'quality',legacy:true},
+ 'google/gemini-3.1-flash-lite-image':{qualities:{'img-auto':null},ratios:['1:1','9:16','16:9']},
+ 'google/gemini-nano-banana-2.1':{qualities:{'img-1k':'1K','img-2k':'2K','img-4k':'4K'},ratios:['1:1','9:16','16:9'],parameter:'image_resolution',outputFormat:true},
+ 'google/gemini-2.5-flash-image':{qualities:{'img-auto':null},ratios:['1:1','9:16','16:9']},
+ 'openai/gpt-image-2.5-flare':{qualities:{'img-1k':'1K','img-2k':'2K','img-4k':'4K'},ratios:['1:1','9:16','16:9'],parameter:'image_resolution',squareNo4K:true},
+ 'openai/gpt-image-2.5-sunburst':{qualities:{'img-1k':'1K','img-2k':'2K','img-4k':'4K'},ratios:['1:1','9:16','16:9'],parameter:'image_resolution',squareNo4K:true},
+ 'openai/gpt-5.4-image-2':{qualities:{'img-1k':'1K','img-2k':'2K','img-4k':'4K'},ratios:['1:1','9:16','16:9'],parameter:'image_resolution',squareNo4K:true},
+ 'openai/gpt-image-1.5':{qualities:{'img-medium':'medium','img-high':'high'},ratios:['1:1','2:3','3:2'],parameter:'quality'},
+ 'bytedance/seedream-5-lite':{qualities:{'img-2k':'basic','img-3k':'high'},ratios:['1:1','9:16','16:9'],parameter:'quality'},
+ 'seedream/5-pro-text-to-image':{qualities:{'img-1k':'basic','img-2k':'high'},ratios:['1:1','9:16','16:9'],parameter:'quality',outputFormat:true},
+ 'bytedance/seedream-4':{qualities:{'img-1k':'1K','img-2k':'2K','img-4k':'4K'},ratios:['1:1','9:16','16:9'],parameter:'image_resolution'},
+ 'black-forest-labs/flux.2-flex':{qualities:{'img-1k':'1K','img-2k':'2K'},ratios:['1:1','9:16','16:9'],parameter:'image_resolution'},
+ 'black-forest-labs/flux.2-pro':{qualities:{'img-1k':'1K','img-2k':'2K'},ratios:['1:1','9:16','16:9'],parameter:'image_resolution'}
+});
 const PREMIUM_MEDIA_MODELS=Object.freeze({
- 'google/gemini-3.1-flash-image-preview':{kind:'image',resolution:'1K'},
- 'google/gemini-3-pro-image-preview':{kind:'image',resolution:'2K'},
- 'bytedance/seedream-4.5':{kind:'image',resolution:'2K'},
+ ...Object.fromEntries(Object.entries(PHOTO_MODEL_SETTINGS).map(([id,settings])=>[id,{kind:'image',resolution:id==='google/gemini-3.1-flash-image-preview'?'1K':'2K'}])),
  ...Object.fromEntries(Object.entries(VIDEO_MODEL_SETTINGS).map(([id,settings])=>[id,{kind:'video',resolution:id==='gemini-omni-video'?'4k':settings.qualities['720p']||Object.values(settings.qualities)[0]}]))
 });
 function premiumError(status){return status===402?'На балансе сервиса ИИ недостаточно средств. Пополни баланс Polza.':status===401||status===403?'Платный сервис ИИ недоступен: проверь доступ API-ключа.':status===429?'Сервис ИИ занят. Подожди немного.':'Сервис ИИ не смог обработать запрос. Повтори позже.';}
@@ -86,7 +103,8 @@ function mediaPrice(env,body){
  let prices;try{prices=JSON.parse(env.MEDIA_PRICES_JSON);}catch{throw Error('Тарифы временно недоступны.');}
  const suffix=[body.kind,body.quality,body.kind==='video'?Number(body.duration??4):0].join(':');
  // A new explicit model cannot silently inherit another model's price.
- const key=body.kind==='video'&&body.model&&body.model!=='auto'?[body.model,suffix].join(':'):suffix,amount=prices[key];
+ const explicit=body.model&&body.model!=='auto',nativePhoto=body.kind==='image'&&explicit&&PHOTO_MODEL_SETTINGS[body.model]&&(!PHOTO_MODEL_SETTINGS[body.model].legacy||String(body.quality).startsWith('img-'));
+ const key=explicit&&(body.kind==='video'||nativePhoto)?[body.model,suffix].join(':'):suffix,amount=prices[key];
  if(!Number.isSafeInteger(amount)||amount<=0||amount>1000000)throw Error('Для этих настроек тариф пока не задан.');return {amount,currency:'ANI',enabled:true};
 }
 async function reserveMediaCoins(env,userId,jobId,amount){
@@ -115,11 +133,17 @@ async function updatePremiumJob(env,row,data){
 }
 function choosePremiumMedia(body,file){
  const kind=body.kind,quality=body.quality;
- if(quality===undefined){if(kind==='video'&&VIDEO_MODEL_SETTINGS[body.model]&&!['bytedance/seedance-2','bytedance/seedance-2-fast','gemini-omni-video'].includes(body.model))throw Error('Выбери качество видео.');return {model:String(body.model||''),resolution:null};}
+ if(quality===undefined){if(kind==='image'&&PHOTO_MODEL_SETTINGS[body.model]&&!PHOTO_MODEL_SETTINGS[body.model].legacy)throw Error('Выбери качество фото.');if(kind==='video'&&VIDEO_MODEL_SETTINGS[body.model]&&!['bytedance/seedance-2','bytedance/seedance-2-fast','gemini-omni-video'].includes(body.model))throw Error('Выбери качество видео.');return {model:String(body.model||''),resolution:null};}
  if(kind==='image'){
   if(body.model&&body.model!=='auto'){
    const model=String(body.model),config=PREMIUM_MEDIA_MODELS[model];
    if(!config||config.kind!=='image')throw Error('Выбери доступную модель фото или видео.');
+   const settings=PHOTO_MODEL_SETTINGS[model];
+   if(Object.hasOwn(settings.qualities,quality)){
+    if(settings.squareNo4K&&body.ratio==='1:1'&&quality==='img-4k')throw Error('Для этой модели 4K доступен в вертикальном или широком формате.');
+    return {model,resolution:null,photoSettings:settings,photoValue:settings.qualities[quality]};
+   }
+   if(!settings.legacy)throw Error('Выбери доступное качество для этой фотомодели.');
    if(!['fhd','qhd','uhd','fast','high','max'].includes(quality))throw Error('Выбери качество фото.');
    const resolution=['fast','high','max'].includes(quality)?{fast:'1K',high:'2K',max:'4K'}[quality]:quality==='uhd'||quality==='qhd'&&body.ratio==='1:1'?'4K':'2K';
    return {model,resolution};
@@ -163,8 +187,8 @@ async function createPremiumMedia(env,userId,body,file,identityFile=null){
  const prompt=String(body.prompt||'').trim(),ratio=String(body.ratio||'1:1'),id=String(body.requestId||'');
  if(!/^[a-zA-Z0-9-]{16,80}$/.test(id))throw Error('Неверный номер запроса.');
  if(prompt.length<3||prompt.length>1200)throw Error('Описание должно содержать от 3 до 1200 символов.');
- const videoSettings=kind==='video'?selection.settings:null;
- if(!(videoSettings?.ratios||['1:1','9:16','16:9']).includes(ratio))throw Error('Выбери доступный формат для этой модели.');
+ const videoSettings=kind==='video'?selection.settings:null,photoSettings=selection.photoSettings;
+ if(!(videoSettings?.ratios||photoSettings?.ratios||['1:1','9:16','16:9']).includes(ratio))throw Error('Выбери доступный формат для этой модели.');
  const duration=Number(body.duration??4);if(kind==='video'&&!(videoSettings?.durations||[4,6,8]).includes(duration))throw Error('Выбери доступную длительность для этой модели.');
  if(videoSettings?.promptMax&&prompt.length>videoSettings.promptMax)throw Error('Для этой модели сократи описание до '+videoSettings.promptMax+' символов.');
  if(file&&(typeof file==='string'||!file.size||file.size>(kind==='image'?20:25)*1024*1024||!(kind==='image'?['image/jpeg','image/png','image/webp']:['image/jpeg','image/png','image/webp','video/mp4','video/quicktime','video/webm']).includes(file.type)))throw Error('Файл не поддерживается или слишком большой.');
@@ -193,7 +217,11 @@ async function createPremiumMedia(env,userId,body,file,identityFile=null){
   await env.DB.prepare('UPDATE media_jobs SET prompt=?,quality=?,ratio=?,duration=?,region_json=? WHERE id=? AND user_id=?').bind(prompt,row.quality,ratio,duration,row.region_json,id,userId).run();
   const input={prompt,aspect_ratio:ratio};
   if(kind==='image'){
-   if(model==='bytedance/seedream-4.5')input.quality=(selection.resolution||config.resolution)==='4K'?'high':'basic';
+   if(photoSettings){
+    if(photoSettings.parameter)input[photoSettings.parameter]=selection.photoValue;
+    if(photoSettings.outputFormat)input.output_format=file?.type==='image/png'||/прозрач|transparent|alpha|\bpng\b|без фона|удали(?:ть)? фон|убери фон/i.test(prompt)?'png':'jpeg';
+   }
+   else if(model==='bytedance/seedream-4.5')input.quality=(selection.resolution||config.resolution)==='4K'?'high':'basic';
    else{input.image_resolution=selection.resolution||config.resolution;input.output_format=file?.type==='image/png'||/прозрач|transparent|alpha|\bpng\b|без фона|удали(?:ть)? фон|убери фон/i.test(prompt)?'png':'jpeg';}
   }
   else if(videoSettings){

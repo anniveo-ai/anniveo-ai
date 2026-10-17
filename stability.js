@@ -131,6 +131,7 @@
   if(creationLock||lastCreation.fingerprint===stamp&&now-lastCreation.time<2500){if(lastCreation.id)openProjectRoom(lastCreation.id);return;}
   creationLock=true;lastCreation={fingerprint:stamp,time:now,id:null};
   try{
+   if(snapshot.kind==='image')try{window.anisImageModels?.validate(snapshot);}catch(error){toast(error.message);return;}
    if(snapshot.kind==='video')try{await window.anisVideoModels?.validate(snapshot);}catch(error){toast(error.message);return;}
    if(snapshot.prompt.trim().length>=3&&snapshot.prompt.trim().length<=1200){
     let quote;try{quote=await mediaJSON({action:'media-quote',kind:snapshot.kind,model:snapshot.model,quality:snapshot.quality,ratio:snapshot.ratio,duration:snapshot.duration});}catch(error){toast(readableMediaError(error));return;}
@@ -266,6 +267,7 @@
  }
  const videoQualityNote=el('p',{className:'studio-tool-hint',id:'videoQualityNote'});$('videoQuality').parentElement.append(videoQualityNote);
  function syncQualityFormats(){
+  window.anisImageModels?.syncSettings();
   if(window.anisVideoModels){window.anisVideoModels.syncSettings();settingCardSync.forEach(sync=>sync());return;}
   const square=$('videoRatio').value==='1:1';for(const option of $('videoQuality').options)option.disabled=square&&['qhd','uhd'].includes(option.value);
   if($('videoQuality').selectedOptions[0]?.disabled)$('videoQuality').value='fhd';
@@ -274,7 +276,8 @@
  }
  $('videoRatio').addEventListener('change',syncQualityFormats);$('videoQuality').addEventListener('change',syncQualityFormats);syncQualityFormats();
  $('videoModel')?.addEventListener('change',syncQualityFormats);
- const formatHelpOriginal=applyFormatHelp;applyFormatHelp=function(...args){const result=formatHelpOriginal(...args);settingCardSync.forEach(sync=>sync());saveDrafts();return result;};
+ $('imageModel')?.addEventListener('change',syncQualityFormats);$('imageRatio').addEventListener('change',syncQualityFormats);$('imageQuality').addEventListener('change',syncQualityFormats);
+ const formatHelpOriginal=applyFormatHelp;applyFormatHelp=function(...args){const result=formatHelpOriginal(...args);window.anisImageModels?.syncSettings();settingCardSync.forEach(sync=>sync());saveDrafts();return result;};
  const room=$('mediaResultDialog'),roomHeader=room.querySelector('header'),roomTitle=$('mediaResultTitle');roomHeader.after(roomTitle);
  function syncRoomSafeTop(){
   const contentTop=Number(tg?.contentSafeAreaInset?.top)||0,safeTop=Number(tg?.safeAreaInset?.top)||0;

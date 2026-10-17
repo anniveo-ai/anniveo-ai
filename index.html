@@ -4608,7 +4608,7 @@ function openFormatHelp(kind){
 function applyFormatHelp(ratio){
  const kind=formatHelpKind;if($(kind==='image'?'makeImage':'makeVideo').disabled)return;
  if(!FORMAT_GUIDES[kind].some(item=>item[3]===ratio))return;
- if(kind==='video'&&[...$('videoRatio').options].find(option=>option.value===ratio)?.disabled){toast('Этот формат недоступен для выбранной модели.');return;}
+ if([...$(kind+'Ratio').options].find(option=>option.value===ratio)?.disabled){toast('Этот формат недоступен для выбранной модели.');return;}
  $(kind+'Ratio').value=ratio;$('formatHelpDialog').close();toast('Формат '+ratio+' выбран');tg?.HapticFeedback?.selectionChanged?.();
 }
 
