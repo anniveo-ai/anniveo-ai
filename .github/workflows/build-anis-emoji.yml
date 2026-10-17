@@ -49,6 +49,9 @@ jobs:
           PY
           python3 /tmp/anis-animate.py
 
+      - name: Install FFmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+
       - name: Encode transparent VP9 video emoji
         run: |
           ffmpeg -hide_banner -loglevel error -y -framerate 25 -i /tmp/anis-orb-frames/%03d.png -frames:v 75 -an -c:v libvpx-vp9 -pix_fmt yuva420p -deadline good -cpu-used 3 -b:v 0 -crf 24 -auto-alt-ref 0 -metadata:s:v:0 alpha_mode=1 telegram-assets/anis-ai-emoji.webm
