@@ -26,6 +26,10 @@
  }
  function render(state,phase,quote=null,message=''){
   state.phase=phase;state.quote=quote;state.message=message;
+  const automatic=snapshot(state.kind).model==='auto',models=(state.kind==='image'?window.anisImageModels:window.anisVideoModels)?.models;
+  const model=models?.find(model=>model.id===quote?.model);
+  state.autoModel.hidden=!automatic;
+  state.autoModel.textContent=automatic?(model?'Модель: '+model.name:phase==='loading'?'Подбираем модель…':'Модель пока недоступна'):'';
   state.button.classList.toggle('price-pending',phase==='loading');state.button.setAttribute('aria-disabled',String(phase!=='ready'));
   state.price.textContent=phase==='ready'?quote.amount.toLocaleString('ru-RU'):phase==='loading'?'…':'—';
   state.button.setAttribute('aria-label',(state.kind==='image'?'Создать фото':'Создать видео')+(phase==='ready'?', '+quote.amount+' '+coinWord(quote.amount):phase==='needs-video'?', добавь видео для расчёта':', стоимость рассчитывается'));
@@ -49,7 +53,9 @@
   const coin=document.createElement('img');coin.src='anium-coin-v1.webp';coin.width=28;coin.height=28;coin.alt='';coin.setAttribute('aria-hidden','true');
   const value=document.createElement('span');value.className='media-create-price-value';value.textContent='…';badge.append(coin,value);
   button.replaceChildren(label,badge);button.hidden=true;dock.append(button);
-  const state={kind,button,price:value,epoch:0,phase:'loading',quote:null};states.set(kind,state);
+  const autoModel=document.createElement('p');autoModel.id=kind+'AutoModel';autoModel.className='media-auto-model';autoModel.hidden=true;autoModel.setAttribute('role','status');autoModel.setAttribute('aria-live','polite');
+  document.querySelector('#view-'+(kind==='image'?'studio':'video')+' .media-settings').insertAdjacentElement('afterend',autoModel);
+  const state={kind,button,price:value,autoModel,epoch:0,phase:'loading',quote:null};states.set(kind,state);
   button.addEventListener('click',event=>{
    if(state.phase==='ready')return;
    event.preventDefault();event.stopImmediatePropagation();

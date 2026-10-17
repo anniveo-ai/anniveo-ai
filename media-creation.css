@@ -1,4 +1,5 @@
 /* Matches the main navigation footprint; only creation screens replace it. */
+.media-auto-model{margin:10px 4px 0;color:#c9addb;font-size:13px;line-height:1.5;overflow-wrap:anywhere}.media-auto-model[hidden]{display:none!important}html[data-theme=light] .media-auto-model{color:#644575}
 #mediaCreateDock{position:fixed;z-index:55;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom));width:min(720px,calc(100% - 32px));display:flex;align-items:center;gap:7px;padding:7px;border:1px solid #d5b3f34d;border-radius:38px;background:#34263fce;-webkit-backdrop-filter:blur(26px) saturate(145%);backdrop-filter:blur(26px) saturate(145%);box-shadow:0 10px 32px #0005,inset 0 1px 1px #ffffff25}
 #mediaCreateDock[hidden],#mediaCreateDock button[hidden],body.media-creation-active #bottomNav{display:none!important}
 #mediaCreateDock .media-create-home{flex:none;display:grid;place-items:center;width:45px;height:58px;padding:0;border:0;border-radius:28px;background:#e4d4fa12;color:#ecddff;cursor:pointer;touch-action:manipulation}
