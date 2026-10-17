@@ -594,7 +594,7 @@
   try{const data=await mediaJSON({action:'prompt-improve',kind:helperKind,prompt:helperIdea.value,details:helperDetails.value});helperOutput.value=data.prompt;helperOutput.hidden=false;useDescription.hidden=false;}
   catch(error){explain(error,()=>improveButton.click(),'Попробовать ещё раз');}finally{improveButton.disabled=false;improveButton.textContent='Подготовить описание';}
  },true);
- const useDescription=button('Использовать описание',()=>{$(helperKind+'Prompt').value=helperOutput.value;saveDrafts();helper.close();$(helperKind+'Prompt').focus();},true);useDescription.hidden=true;
+ const useDescription=button('Использовать описание',()=>{$(helperKind+'Prompt').value=helperOutput.value;$(helperKind+'Prompt').dispatchEvent(new Event('input',{bubbles:true}));saveDrafts();helper.close();$(helperKind+'Prompt').focus();},true);useDescription.hidden=true;
  helper.append(improveButton,helperOutput,useDescription,el('p',{},'Проверь и поправь описание. Создание начнётся только после нажатия «Создать» в студии.'));
  state.regionButton=button('',()=>{document.activeElement?.blur();if(studioImageFile)void openRegion();else pickStudioPhoto(true);});
  state.regionButton.id='imagePromptPencil';state.regionButton.className='media-prompt-pencil';state.regionButton.title='Карандаш — выделить область';state.regionButton.setAttribute('aria-label','Карандаш — выделить область');state.regionButton.setAttribute('aria-haspopup','dialog');

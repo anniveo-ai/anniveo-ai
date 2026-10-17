@@ -4848,7 +4848,7 @@ async function transcribeMediaDictation(task){
     const response=await fetch(API_URL,{method:'POST',body:form,signal:task.controller.signal});const data=await response.json();
     if(!response.ok||!data.text)throw Error(data.error||'Не удалось распознать описание.');
     if(task.cancelled||mediaVoiceTask!==task)return;
-    const field=$(task.kind+'Prompt'),text=String(data.text).trim();field.value=field.value.trim()?field.value.trim()+'\n'+text:text;
+    const field=$(task.kind+'Prompt'),text=String(data.text).trim();field.value=field.value.trim()?field.value.trim()+'\n'+text:text;field.dispatchEvent(new Event('input',{bubbles:true}));
     invalidateUsageStats();$(task.kind+'VoiceNote').textContent='Описание добавлено. Можно отредактировать текст.';
     if(field.value.length>1200)toast('Текст вставлен полностью. Сократи описание до 1200 символов.');
   }catch(error){if(!task.cancelled&&mediaVoiceTask===task)$(task.kind+'VoiceNote').textContent=readableMediaError(error);}
@@ -5020,7 +5020,7 @@ function stageMediaAttachment(kind,file){
 function confirmStagedAttachment(){const staged=stagedMediaAttachment;if(!staged)return;const applied=staged.kind==='image'?setStudioPhoto(staged.file):staged.kind==='videoFace'?setVideoIdentity(staged.file):setStudioVideo(staged.file);if(applied){cancelStagedAttachment();toast('Файл добавлен');}}
 function setVideoIdentity(file){if(!file||!file.type.startsWith('image/')||file.size>10*1024*1024)return false;studioVideoIdentityFile=file;return true;}
 function clearVideoIdentity(){studioVideoIdentityFile=null;}
-function useOwnVideoTemplate(){openView('video');$('videoPrompt').value='Воссоздай сцену и движение исходного видео с человеком с добавленного фото. Сохрани внешность и черты лица человека на фото. Стабильное лицо, естественные движения и согласованный свет.';toast('Выбери готовый ролик, затем добавь своё фото.');pickStudioVideo('video');}
+function useOwnVideoTemplate(){openView('video');$('videoPrompt').value='Воссоздай сцену и движение исходного видео с человеком с добавленного фото. Сохрани внешность и черты лица человека на фото. Стабильное лицо, естественные движения и согласованный свет.';$('videoPrompt').dispatchEvent(new Event('input',{bubbles:true}));toast('Выбери готовый ролик, затем добавь своё фото.');pickStudioVideo('video');}
 function openTextImageCreation(){document.activeElement?.blur();openView('studio');}
 function applyAppTheme(theme){
  const value=theme==='light'?'light':'dark';document.documentElement.dataset.theme=value;
@@ -5038,7 +5038,7 @@ const STUDIO_TEMPLATES=Object.freeze([
  {id:'neon',title:'Неоновая история',kind:'video',tag:'Видео · клип',image:'template-cinema-v1.jpg',prompt:'Создай короткий кинематографичный клип с человеком с загруженного фото: ночной город, неоновые фиолетовые отражения, плавное движение камеры вокруг героя. Сохрани его лицо и внешность, естественная пластика, стабильные детали.'}
 ]);
 function renderStudioTemplates(){const list=$('studioTemplateList');list.replaceChildren();for(const [index,t]of STUDIO_TEMPLATES.entries()){const card=document.createElement('button');card.type='button';card.className='studio-template-card';const img=document.createElement('img');img.src=t.image;img.alt='Пример стиля';img.loading=index<2?'eager':'lazy';img.decoding='async';img.width=240;img.height=320;const label=document.createElement('span');const title=document.createElement('strong');title.textContent=t.title;const meta=document.createElement('small');meta.textContent=t.tag;label.append(meta,title);const arrow=document.createElement('b');arrow.textContent=t.kind==='video'?'▷':'↗';card.append(img,label,arrow);card.onclick=()=>useStudioTemplate(t.id);list.append(card);}}
-function useStudioTemplate(id){const t=STUDIO_TEMPLATES.find(t=>t.id===id);if(!t)return;openView(t.kind==='image'?'studio':'video');$(t.kind+'Prompt').value=t.prompt;$(t.kind+'Ratio').value=t.id==='cover'?'16:9':'9:16';toast('Добавь своё фото, затем нажми «Создать».');if(t.kind==='image')pickStudioPhoto();else pickStudioVideo('image');}
+function useStudioTemplate(id){const t=STUDIO_TEMPLATES.find(t=>t.id===id);if(!t)return;openView(t.kind==='image'?'studio':'video');$(t.kind+'Prompt').value=t.prompt;$(t.kind+'Ratio').value=t.id==='cover'?'16:9':'9:16';$(t.kind+'Prompt').dispatchEvent(new Event('input',{bubbles:true}));$(t.kind+'Ratio').dispatchEvent(new Event('change',{bubbles:true}));toast('Добавь своё фото, затем нажми «Создать».');if(t.kind==='image')pickStudioPhoto();else pickStudioVideo('image');}
 function jumpToChatHistory(index,items){
  if(recording||openingMic||transcribing||busy){toast('Сначала заверши текущий запрос.');return;}
  if(anonymous){anonymous=false;$('anonToggle').classList.remove('on');$('anonToggle').setAttribute('aria-checked','false');$('modeText').textContent='История сохраняется';}
