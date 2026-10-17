@@ -412,9 +412,31 @@ async function getUsageStats(db, userId, requestedDays, requestedOffset, nowMs =
 
 // Server-owned prices; never accept coin quantities or prices from the client.
 const STAR_PACKS = Object.freeze([
-  { id: 'coins100', coins: 100, stars: 99 },
-  { id: 'coins500', coins: 500, stars: 499 },
-  { id: 'coins1000', coins: 1000, stars: 999 }
+  {
+    "id": "anium30-v1",
+    "coins": 30,
+    "stars": 120
+  },
+  {
+    "id": "anium100-v1",
+    "coins": 100,
+    "stars": 370
+  },
+  {
+    "id": "anium170-v1",
+    "coins": 170,
+    "stars": 595
+  },
+  {
+    "id": "anium250-v1",
+    "coins": 250,
+    "stars": 825
+  },
+  {
+    "id": "anium600-v1",
+    "coins": 600,
+    "stars": 1800
+  }
 ]);
 const PAYMENT_WEBHOOK_URL = 'https://anniveo-ai-api.yaylaevismail.workers.dev/telegram/payments';
 

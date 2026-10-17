@@ -1,0 +1,22 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),{DatabaseSync}=require('node:sqlite');
+const expected=[{id:'anium30-v1',coins:30,stars:120},{id:'anium100-v1',coins:100,stars:370},{id:'anium170-v1',coins:170,stars:595},{id:'anium250-v1',coins:250,stars:825},{id:'anium600-v1',coins:600,stars:1800}];
+const dbRaw=new DatabaseSync(':memory:');dbRaw.exec(fs.readFileSync('payments.sql','utf8'));dbRaw.exec(fs.readFileSync('media-billing.sql','utf8'));
+const db={prepare(sql){return{bind(...p){return{async first(){return dbRaw.prepare(sql).get(...p)||null},async all(){return{results:dbRaw.prepare(sql).all(...p)}},async run(){return{meta:{changes:Number(dbRaw.prepare(sql).run(...p).changes)}}}}}}},async batch(ops){dbRaw.exec('BEGIN');try{const results=[];for(const op of ops)results.push(await op.run());dbRaw.exec('COMMIT');return results}catch(e){dbRaw.exec('ROLLBACK');throw e}}};
+const requests=[],ctx=vm.createContext({crypto:require('node:crypto').webcrypto,TextEncoder,AbortSignal,Response,Request,console,fetch:async(url,opts)=>{const method=url.split('/').pop(),body=JSON.parse(opts.body);requests.push({method,body});return Response.json({ok:true,result:method==='getWebhookInfo'?{url:'https://anniveo-ai-api.yaylaevismail.workers.dev/telegram/payments'}:method==='createInvoiceLink'?'https://t.me/$mock':true});}});vm.runInContext(fs.readFileSync('worker.js','utf8').split('export default')[0],ctx);ctx.env={DB:db,TELEGRAM_BOT_TOKEN:'mock-token'};const run=s=>vm.runInContext(s,ctx);
+(async()=>{
+ assert.deepEqual(JSON.parse(run('JSON.stringify(STAR_PACKS)')),expected);
+ for(const [i,pack]of expected.entries()){
+  ctx.owner=String(1000+i);ctx.pack=pack;const invoice=await run('createWalletInvoice(env,owner,pack.id)');assert.equal(invoice.coins,pack.coins);assert.equal(invoice.stars,pack.stars);assert.equal(requests.at(-1).body.currency,'XTR');assert.equal(requests.at(-1).body.prices[0].amount,pack.stars);
+  ctx.update={pre_checkout_query:{id:'q-'+i,from:{id:1000+i},invoice_payload:invoice.orderId,currency:'XTR',total_amount:pack.stars}};await run('handlePaymentUpdate(update,env)');assert.equal(requests.at(-1).body.ok,true);assert.equal((await run('readWallet(env.DB,owner)')).balance,0);
+  ctx.update={message:{from:{id:1000+i},date:1700000000,successful_payment:{invoice_payload:invoice.orderId,currency:'XTR',total_amount:pack.stars,telegram_payment_charge_id:'charge-'+i}}};await run('handlePaymentUpdate(update,env)');await run('handlePaymentUpdate(update,env)');assert.equal((await run('readWallet(env.DB,owner)')).balance,pack.coins,'correct credit, once only');
+  assert.equal((pack.coins*4-pack.stars)/(pack.coins*4)*100,[0,7.5,12.5,17.5,25][i]);
+ }
+ // Pending orders issued before the redesign retain their original amounts.
+ const now=Math.floor(Date.now()/1000);dbRaw.prepare('INSERT INTO payment_orders(id,user_id,coins,stars,created_at,expires_at) VALUES(?,?,?,?,?,?)').run('legacy-open-order','legacy-user',500,499,now,now+1800);
+ ctx.update={pre_checkout_query:{id:'legacy-q',from:{id:'legacy-user'},invoice_payload:'legacy-open-order',currency:'XTR',total_amount:499}};await run('handlePaymentUpdate(update,env)');assert.equal(requests.at(-1).body.ok,true);
+ ctx.update={message:{from:{id:'legacy-user'},successful_payment:{invoice_payload:'legacy-open-order',currency:'XTR',total_amount:499,telegram_payment_charge_id:'legacy-charge'}}};await run('handlePaymentUpdate(update,env)');assert.equal((await run("readWallet(env.DB,'legacy-user')")).balance,500);
+ for(const id of ['coins100','coins500','coins1000'])assert.equal((await run('createWalletInvoice(env,"cached-client",'+JSON.stringify(id)+')')).status,400,'old cached clients cannot buy the retired tariff');
+ const html=fs.readFileSync('index.html','utf8'),catalog=html.match(/const WALLET_PACKS=Object.freeze\((\[[^\n]+\])\);/);assert.deepEqual(JSON.parse(catalog[1]),expected,'frontend and server prices match');
+ const section=html.slice(html.indexOf('<!-- БАЛАНС -->'),html.indexOf('</section>',html.indexOf('<!-- БАЛАНС -->')));assert.equal((section.match(/class="topup-buy"/g)||[]).length,5);assert.ok(section.includes('25% скидка'));assert.ok(section.includes('wallet-bonus')&&section.includes('wallet-tools'),'existing wallet features preserved');
+ console.log('PASS: 5 exact tariffs, discounts, invoices, precheckout, one-time credit, existing balances and pending old orders; old tariff IDs rejected; frontend/server match. Mock Telegram only.');
+})().catch(e=>{console.error(e);process.exitCode=1});
