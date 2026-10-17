@@ -1,0 +1,65 @@
+name: Build ANIS AI Telegram emoji
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/build-anis-emoji.yml
+
+permissions:
+  contents: write
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Create animated frames from the original ANIS AI orb
+        shell: bash
+        run: |
+          python3 -m pip install --quiet --break-system-packages Pillow || pip3 install --quiet Pillow
+          mkdir -p /tmp/anis-orb-frames telegram-assets
+          cat > /tmp/anis-animate.py <<'PY'
+          from PIL import Image, ImageEnhance, ImageFilter
+          import math, os
+          src=Image.open('orb20-real.webp').convert('RGBA')
+          bbox=src.getbbox()
+          if bbox: src=src.crop(bbox)
+          frames=75
+          for n in range(frames):
+              t=2*math.pi*n/frames
+              pulse=0.5+0.5*math.sin(t-0.4)
+              size=88+int(round(3*math.sin(t-0.4)))
+              body=src.resize((size,size),Image.Resampling.LANCZOS)
+              body=ImageEnhance.Brightness(body).enhance(0.97+0.08*pulse)
+              body=body.rotate(3.2*math.sin(t),resample=Image.Resampling.BICUBIC,expand=True)
+              alpha=body.getchannel('A')
+              glow=Image.new('RGBA',body.size,(147,42,255,0))
+              blurred=alpha.filter(ImageFilter.GaussianBlur(4))
+              glow.putalpha(blurred.point(lambda p:int(p*0.24*(0.65+0.35*pulse))))
+              canvas=Image.new('RGBA',(100,100),(0,0,0,0))
+              x=(100-body.width)//2+int(round(math.sin(t)*0.75))
+              y=(100-body.height)//2+int(round(-math.cos(t)*1.0))
+              canvas.alpha_composite(glow,(x,y))
+              canvas.alpha_composite(body,(x,y))
+              canvas.save(f'/tmp/anis-orb-frames/{n:03d}.png')
+          PY
+          python3 /tmp/anis-animate.py
+
+      - name: Encode transparent VP9 video emoji
+        run: |
+          ffmpeg -hide_banner -loglevel error -y -framerate 25 -i /tmp/anis-orb-frames/%03d.png -frames:v 75 -an -c:v libvpx-vp9 -pix_fmt yuva420p -deadline good -cpu-used 3 -b:v 0 -crf 24 -auto-alt-ref 0 -metadata:s:v:0 alpha_mode=1 telegram-assets/anis-ai-emoji.webm
+          ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate -show_entries format=duration,size -of default=noprint_wrappers=1 telegram-assets/anis-ai-emoji.webm
+          test "$(stat -c %s telegram-assets/anis-ai-emoji.webm)" -le 262144
+
+      - name: Commit finished video emoji
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add telegram-assets/anis-ai-emoji.webm
+          git diff --cached --quiet && exit 0
+          git commit -m "Add animated transparent ANIS AI Telegram video emoji"
+          git push
