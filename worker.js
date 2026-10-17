@@ -168,7 +168,7 @@ function mediaPrice(env,body,source=null,selected=null){
  if(!Number.isSafeInteger(costMicros)||!Number.isSafeInteger(amount)||amount<=0||amount>1000000)throw Error('Не удалось рассчитать стоимость.');
  const priceKey=perSecond?'video_per_second':body.kind==='image'&&!pricing.per_request?'image':'request';
  const provider={only:['mie'],allow_fallbacks:false,max_price:{[priceKey]:Math.ceil(Math.round(rate*1000000)*11/10)/1000000}};
- return {amount,currency:'ANI',enabled:true,version:MEDIA_TARIFF_VERSION,model,billableSeconds:body.kind==='video'?seconds:undefined,provider};
+ return {amount,currency:'ANI',enabled:true,version:MEDIA_TARIFF_VERSION,model,billableSeconds:body.kind==='video'?seconds:undefined,provider,estimatedCostRub:costMicros/1000000};
 }
 function publicMediaPrice(price){
  return {amount:price.amount,currency:price.currency,enabled:price.enabled,version:price.version,model:price.model,...(price.requiresVideo?{requiresVideo:true}:{}),...(price.billableSeconds?{billableSeconds:price.billableSeconds}:{})};
@@ -226,6 +226,7 @@ async function updatePremiumJob(env,row,data){
  if(status!==row.status||url!==(row.result_url||null)||error!==(row.error||null))await env.DB.prepare("UPDATE media_jobs SET status=?,result_url=?,error=? WHERE id=? AND user_id=? AND status NOT IN ('completed','failed','cancelled')").bind(status,url,error,row.id,row.user_id).run();
  const current=await env.DB.prepare('SELECT * FROM media_jobs WHERE id=? AND user_id=?').bind(row.id,row.user_id).first();
  await settleMediaCoins(env,row.user_id,row.id);
+ await controlMediaEnd(env,current,data);
  if(current.status==='completed')await env.DB.prepare('INSERT OR IGNORE INTO usage_events(id,user_id,kind) VALUES(?,?,?)').bind('media:'+row.id,row.user_id,row.kind).run();
  return billedMediaJob(env,current);
 }
@@ -322,6 +323,7 @@ async function createPremiumMedia(env,userId,body,file,identityFile=null){
   await env.DB.prepare('UPDATE media_jobs SET prompt=?,quality=?,ratio=?,duration=?,region_json=? WHERE id=? AND user_id=?').bind(prompt,row.quality,ratio,duration,row.region_json,id,userId).run();
   const input=premiumInputSettings(body,selection,file);
   await reserveMediaCoins(env,userId,id,price.amount);
+  await controlMediaStart(env,id,price,source.type);
   if(file){const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));input[file.type.startsWith('image/')?'images':'videos']=[{type:'base64',data:'data:'+file.type+';base64,'+btoa(binary)}];}
   if(identityFile){const bytes=new Uint8Array(await identityFile.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));input.images=[...(input.images||[]),{type:'base64',data:'data:'+identityFile.type+';base64,'+btoa(binary)}];}
   providerAttempted=true;
@@ -335,6 +337,7 @@ async function createPremiumMedia(env,userId,body,file,identityFile=null){
   const message=uncertain?'Не удалось подтвердить результат. Не запускай повторно. Поддержка проверит запрос по номеру '+id+'.':error.message;
   await env.DB.prepare("UPDATE media_jobs SET status=?,error=? WHERE id=? AND user_id=? AND status NOT IN ('completed','failed','cancelled')").bind(uncertain?'unknown':'failed',message,id,userId).run();
   await settleMediaCoins(env,userId,id);
+  await controlMediaEnd(env,{...row,status:uncertain?'unknown':'failed'});
   if(uncertain)return billedMediaJob(env,await env.DB.prepare('SELECT * FROM media_jobs WHERE id=? AND user_id=?').bind(id,userId).first());
   error.message=message;throw error;
  }
@@ -516,9 +519,9 @@ async function serveMediaPlayback(request,env){
  const source=new URL(owned.result_url);if(source.origin!=='https://s3.polza.ai'||source.username||source.password)return new Response('Некорректный адрес',{status:502});
  try{const upstream=await fetch(source.href,{method:request.method,headers:range?{Range:range}:{},redirect:'error',signal:AbortSignal.timeout(45000)});if(![200,206,416].includes(upstream.status)){await upstream.body?.cancel();return new Response('Видео временно недоступно',{status:502});}for(const name of ['Content-Type','Content-Length','Content-Range','Accept-Ranges'])if(upstream.headers.has(name))headers[name]=upstream.headers.get(name);return new Response(upstream.body,{status:upstream.status,headers});}catch{return new Response('Не удалось загрузить видео',{status:502});}
 }
-async function recordMediaUsage(db,userId,kind){
+async function recordMediaUsage(db,userId,kind,details=null){
   if(!db)return;
-  try{await db.prepare('INSERT INTO usage_events(id,user_id,kind) VALUES(?,?,?)').bind(crypto.randomUUID(),userId,kind).run();}
+  try{const id=crypto.randomUUID();await db.prepare('INSERT INTO usage_events(id,user_id,kind) VALUES(?,?,?)').bind(id,userId,kind).run();if(details)await controlActivity(db,{...details,id:'voice:'+id,userId,kind:'voice',source:'voice',objectId:id});}
   catch{console.error('Usage event could not be recorded',{kind});}
 }
 
@@ -830,9 +833,10 @@ async function saveConversation(
   requestId,
   message,
   answer,
-  threadId = 'legacy'
+  threadId = 'legacy',
+  control = null
 ) {
-  await db.batch([
+  const results=await db.batch([
     db.prepare(
       "INSERT INTO chat_messages " +
       "(user_id, role, content, thread_id) " +
@@ -853,6 +857,7 @@ async function saveConversation(
       "WHERE user_id = ? AND request_id = ?"
     ).bind(answer, userId, requestId)
   ]);
+  if(control)await controlChat(db,userId,requestId,control.kind,control.started,false,results?.[0]?.meta?.last_row_id||null);
 }
 
 async function cleanupRequest(
@@ -1522,11 +1527,13 @@ function makeStreamResponse(
           requestId,
           message,
           answer,
-          threadId
+          threadId,
+          {kind:options.voice?'assistant':'chat',started}
         );
 
         saved = true;
       }
+      if(anonymous)await controlChat(options.controlDB,userId,options.controlRequestId,options.voice?'assistant':'chat',started,true);
 
       const totalDuration = Date.now() - started;
 
@@ -1545,6 +1552,7 @@ function makeStreamResponse(
       });
 
     } catch (error) {
+      await controlActivity(options.controlDB,{userId,kind:'error',title:'Ошибка ответа в чате',error:error.message,started,private:anonymous});
       console.error("ANIS AI stream error", {
         name: error.name,
         message: error.message,
@@ -1719,6 +1727,172 @@ async function proxyVideo(form, apiKey) {
   }
 }
 
+// ANIS CONTROL: every privileged action checks the immutable, Telegram-verified owner ID.
+const CONTROL_TIMEZONES=Object.freeze({'Europe/Saratov':240,'Europe/Moscow':180,'UTC':0});
+function controlFailure(message,status=400){const e=Error(message);e.status=status;return e;}
+function controlStamp(ms=Date.now()){return new Date(ms).toISOString().slice(0,23).replace('T',' ');}
+// SQLite LIKE folds ASCII only. Fold Russian letters too, using fixed SQL literals.
+function controlSearchText(column){return [...'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ'].reduce((sql,ch)=>`replace(${sql},'${ch}','${ch.toLowerCase()}')`,column);}
+async function controlConfig(db){const r=await db.prepare('SELECT key,value FROM control_settings').all();return Object.fromEntries((r.results||[]).map(x=>[x.key,x.value]));}
+async function controlIsOwner(env,userId){
+ if(!env.DB||!userId)return false;
+ const configured=String(env.CONTROL_OWNER_ID||'');
+ const row=configured?null:await env.DB.prepare("SELECT value FROM control_settings WHERE key='owner_id'").first();
+ return String(userId)===(configured||row?.value||'');
+}
+async function controlSession(env,userId,body){
+ if(!env.DB)throw controlFailure('Статистика пока недоступна.',503);
+ let identity;try{identity=JSON.parse(new URLSearchParams(String(body.initData||'')).get('user')||'null');}catch{}
+ if(!identity||String(identity.id)!==String(userId))throw controlFailure('Открой приложение через Telegram.',401);
+ const session=String(body.sessionId||'');if(!/^[a-zA-Z0-9-]{16,80}$/.test(session))throw controlFailure('Неверный сеанс.');
+ const now=Math.floor(Date.now()/1000),cfg=await controlConfig(env.DB);
+ // Bootstrap only from the preconfigured owner's Telegram-signed handle, then pin the ID forever.
+ if(!cfg.owner_id&&!env.CONTROL_OWNER_ID&&String(identity.username||'').toLowerCase()===cfg.owner_username){
+  await env.DB.prepare("INSERT OR IGNORE INTO control_settings(key,value) VALUES('owner_id',?)").bind(String(userId)).run();
+ }
+ let photo='';try{const u=new URL(identity.photo_url);if(u.protocol==='https:')photo=u.href;}catch{}
+ await env.DB.batch([
+  env.DB.prepare("INSERT INTO control_users(user_id,first_name,last_name,username,photo_url) VALUES(?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET first_name=excluded.first_name,last_name=excluded.last_name,username=excluded.username,photo_url=excluded.photo_url,last_seen=CURRENT_TIMESTAMP").bind(String(userId),String(identity.first_name||'').slice(0,100),String(identity.last_name||'').slice(0,100),String(identity.username||'').slice(0,64),photo),
+  env.DB.prepare('INSERT OR IGNORE INTO control_sessions(id,user_id,started_at,last_seen) VALUES(?,?,?,?)').bind(session,String(userId),now,now),
+  env.DB.prepare('UPDATE control_sessions SET active_seconds=active_seconds+CASE WHEN ?-last_seen BETWEEN 1 AND 75 THEN ?-last_seen ELSE 0 END,last_seen=MAX(last_seen,?) WHERE id=? AND user_id=?').bind(now,now,now,session,String(userId))
+ ]);
+ return {canControl:await controlIsOwner(env,userId),trackingSince:cfg.tracking_since};
+}
+async function controlActivity(db,row){
+ if(!db||!row?.userId)return;
+ try{await db.prepare('INSERT OR IGNORE INTO control_activity(id,user_id,kind,source,object_id,title,detail,status,model,created_at,finished_at,latency_ms,private,error) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+  .bind(String(row.id||crypto.randomUUID()).slice(0,180),String(row.userId),row.kind||'error',row.source||'event',row.objectId==null?null:String(row.objectId),row.private?'':String(row.title||'').slice(0,4000),row.private?'':String(row.detail||'').slice(0,12000),row.status||'completed',row.model||null,controlStamp(row.started||Date.now()),controlStamp(),Number.isFinite(row.started)?Math.max(0,Date.now()-row.started):null,row.private?1:0,row.error?String(row.error).replace(/(?:Bearer\s+|sk-[\w-]+)[^\s]*/gi,'[скрыто]').slice(0,800):null).run();
+ }catch{console.error('Control event accounting deferred',{kind:row.kind});}
+}
+function controlBackground(ctx,db,row){if(!db)return;const task=controlActivity(db,row);if(ctx?.waitUntil)ctx.waitUntil(task);else void task;}
+async function controlChat(db,userId,requestId,kind,started,privateMode=false,objectId=null){
+ return controlActivity(db,{id:'chat:'+userId+':'+requestId,userId,kind,source:privateMode?'event':'chat',objectId,started,private:privateMode});
+}
+async function controlMediaStart(env,id,price,sourceType){
+ try{await env.DB.prepare('INSERT OR IGNORE INTO control_media(job_id,estimated_rub,tariff,source_type) VALUES(?,?,?,?)').bind(id,price.estimatedCostRub,price.version,sourceType||'text').run();}catch{console.error('Media cost accounting deferred',{jobId:id});}
+}
+async function controlMediaEnd(env,row,data=null){
+ if(!['completed','failed','cancelled'].includes(row.status))return;
+ const raw=data?.error?.message||data?.error||data?.message,reason=row.status!=='completed'&&raw?String(raw).replace(/(?:Bearer\s+|sk-[\w-]+)[^\s]*/gi,'[скрыто]').slice(0,800):null;
+ try{await env.DB.prepare('UPDATE control_media SET finished_at=COALESCE(finished_at,?),provider_error=COALESCE(provider_error,?) WHERE job_id=?').bind(controlStamp(),reason,row.id).run();}catch{console.error('Media timing accounting deferred',{jobId:row.id});}
+}
+function controlRange(body,cfg,now=Date.now()){
+ const zone=Object.hasOwn(CONTROL_TIMEZONES,cfg.timezone)?cfg.timezone:'Europe/Saratov',shift=CONTROL_TIMEZONES[zone]*60000;
+ const day=Math.floor((now+shift)/86400000)*86400000-shift;let start=body.period==='all'?0:day-(body.period==='week'?6:body.period==='month'?29:0)*86400000,end=day+86400000;
+ if(body.from||body.to){const date=s=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(s))throw controlFailure('Выбери дату в календаре.');const ms=Date.parse(s+'T00:00:00Z');if(!Number.isFinite(ms)||new Date(ms).toISOString().slice(0,10)!==s)throw controlFailure('Проверь дату.');return ms-shift;};if(body.from)start=date(String(body.from));if(body.to)end=date(String(body.to))+86400000;if(start>=end)throw controlFailure('Начало периода должно быть раньше окончания.');}
+ return {start,end,from:controlStamp(start),to:controlStamp(end),zone,shift};
+}
+function controlFilter(body,cfg,{trash=false,lifetime=false}={}){
+ const range=controlRange(lifetime?{period:'all'}:body,cfg),params=[range.from,range.to],clauses=['r.created_at>=?','r.created_at<?'];
+ if(!lifetime&&body.userId){clauses.push('r.user_id=?');params.push(String(body.userId).slice(0,80));}
+ if(body.excludeOwner&&cfg.owner_id){clauses.push('r.user_id<>?');params.push(cfg.owner_id);}
+ const category=String(body.category||'all'),kinds={conversations:['chat','assistant','voice','speech'],generations:['image','video'],finances:['payment'],errors:[]};
+ if(!lifetime&&kinds[category]?.length){clauses.push('r.kind IN ('+kinds[category].map(()=>'?').join(',')+')');params.push(...kinds[category]);}
+ if(!lifetime&&category==='errors')clauses.push("(r.kind='error' OR r.status IN ('failed','unknown','cancelled'))");
+ if(!lifetime&&body.kind&&['chat','assistant','voice','speech','image','video','payment','error'].includes(body.kind)){clauses.push('r.kind=?');params.push(body.kind);}
+ if(!lifetime&&body.status){clauses.push('r.status=?');params.push(String(body.status).slice(0,30));}
+ if(!lifetime&&String(body.q||'').trim()){
+  const term='%'+String(body.q).trim().slice(0,200).toLowerCase().replace(/[\\%_]/g,'\\$&')+'%';
+  const aliases=Array.isArray(body.modelIds)?body.modelIds.filter(id=>Object.hasOwn(PREMIUM_MEDIA_MODELS,id)).slice(0,28):[];
+  const columns=['r.title','r.detail','r.error',"replace(replace(r.model,'-',' '),'/',' ')",'r.user_id','u.username',"(u.first_name||' '||u.last_name)"];
+  clauses.push('('+columns.map(column=>controlSearchText(column)+" LIKE ? ESCAPE '\\'").join(' OR ')+(aliases.length?' OR r.model IN ('+aliases.map(()=>'?').join(',')+')':'')+')');params.push(...columns.map(()=>term),...aliases);
+ }
+ if(!lifetime)clauses.push((trash?'':'NOT ')+"EXISTS(SELECT 1 FROM control_trash t WHERE t.record_id=r.id)");
+ return {where:clauses.join(' AND '),params,range};
+}
+const CONTROL_RECORD_JOIN=' FROM control_records r LEFT JOIN control_users u ON u.user_id=r.user_id ';
+async function controlRecords(env,body,cfg){
+ const f=controlFilter(body,cfg,{trash:body.category==='trash'}),limit=Math.max(1,Math.min(100,Number(body.limit)||25)),offset=Math.max(0,Math.min(1000000,Math.floor(Number(body.offset)||0)));
+ const result=await env.DB.batch([
+  env.DB.prepare('SELECT r.*,u.first_name,u.last_name,u.username,u.photo_url'+CONTROL_RECORD_JOIN+'WHERE '+f.where+' ORDER BY r.created_at DESC,r.id DESC LIMIT ? OFFSET ?').bind(...f.params,limit,offset),
+  env.DB.prepare('SELECT COUNT(*) n'+CONTROL_RECORD_JOIN+'WHERE '+f.where).bind(...f.params)
+ ]);
+ const rows=result[0].results||[],total=result[1].results?.[0]?.n||0;
+ return {items:rows,total,offset,nextOffset:offset+rows.length<total?offset+rows.length:null,timezone:f.range.zone};
+}
+async function controlUsers(env,body,cfg){
+ const range=controlRange(body,cfg),q=String(body.q||'').trim().slice(0,200).toLowerCase(),term='%'+q.replace(/[\\%_]/g,'\\$&')+'%',limit=25,offset=Math.max(0,Math.floor(Number(body.offset)||0));
+ const params=[range.to],clauses=['u.first_seen<?',"NOT EXISTS(SELECT 1 FROM control_trash t WHERE t.record_id='user:'||u.user_id)"];
+ if(q){clauses.push('('+['u.user_id','u.username',"(u.first_name||' '||u.last_name)"].map(column=>controlSearchText(column)+" LIKE ? ESCAPE '\\'").join(' OR ')+')');params.push(term,term,term);}
+ if(body.period!=='all'){clauses.push('(u.last_seen>=? OR EXISTS(SELECT 1 FROM control_records r WHERE r.user_id=u.user_id AND r.created_at>=? AND r.created_at<?))');params.push(range.from,range.from,range.to);}
+ if(body.excludeOwner&&cfg.owner_id){clauses.push('u.user_id<>?');params.push(cfg.owner_id);}
+ const where=clauses.join(' AND '),results=await env.DB.batch([
+  env.DB.prepare("SELECT u.*,(SELECT COUNT(*) FROM control_records r WHERE r.user_id=u.user_id AND r.kind IN ('chat','assistant')) messages,(SELECT COUNT(*) FROM media_jobs j WHERE j.user_id=u.user_id AND j.kind='image') images,(SELECT COUNT(*) FROM media_jobs j WHERE j.user_id=u.user_id AND j.kind='video') videos,(SELECT COALESCE(SUM(active_seconds),0) FROM control_sessions s WHERE s.user_id=u.user_id) active_seconds FROM control_users u WHERE "+where+' ORDER BY u.last_seen DESC,u.user_id LIMIT ? OFFSET ?').bind(...params,limit,offset),
+  env.DB.prepare('SELECT COUNT(*) n FROM control_users u WHERE '+where).bind(...params)
+ ]);const items=results[0].results||[],total=results[1].results?.[0]?.n||0;return {items,total,offset,nextOffset:offset+items.length<total?offset+items.length:null,timezone:range.zone};
+}
+async function controlOverview(env,body,cfg){
+ const f=controlFilter({...body,category:'all',kind:'',status:'',q:'',userId:''},cfg),life=controlFilter({...body,category:'all'},cfg,{lifetime:true}),range=f.range;
+ // Totals retain archived activity; hiding a row never changes financial or lifetime history.
+ const totalsWhere=f.where.replace(" AND NOT EXISTS(SELECT 1 FROM control_trash t WHERE t.record_id=r.id)",'');
+ const counts='SELECT kind,COUNT(*) n,SUM(CASE WHEN status IN (\'completed\',\'paid\') THEN 1 ELSE 0 END) completed FROM control_records r WHERE ';
+ const results=await env.DB.batch([
+  env.DB.prepare(counts+totalsWhere+' GROUP BY kind').bind(...f.params),
+  env.DB.prepare(counts+life.where+' GROUP BY kind').bind(...life.params),
+  env.DB.prepare('SELECT COUNT(DISTINCT user_id) n FROM (SELECT user_id FROM control_records r WHERE '+totalsWhere+' UNION SELECT user_id FROM control_sessions WHERE started_at>=? AND started_at<?)').bind(...f.params,Math.floor(range.start/1000),Math.floor(range.end/1000)),
+  env.DB.prepare('SELECT COUNT(*) n FROM control_users WHERE first_seen>=? AND first_seen<?').bind(range.from,range.to),
+  env.DB.prepare('SELECT COUNT(*) n FROM control_users'),
+  env.DB.prepare('SELECT COALESCE(SUM(active_seconds),0) n FROM control_sessions WHERE started_at>=? AND started_at<?').bind(Math.floor(range.start/1000),Math.floor(range.end/1000)),
+  env.DB.prepare('SELECT COALESCE(SUM(active_seconds),0) n FROM control_sessions'),
+  env.DB.prepare("SELECT date(r.created_at,?) day,r.kind,COUNT(*) n FROM control_records r WHERE r.created_at>=? AND r.created_at<? GROUP BY day,r.kind ORDER BY day").bind('+'+CONTROL_TIMEZONES[range.zone]+' minutes',controlStamp(Math.max(range.start,Date.now()-29*86400000)),range.to),
+  env.DB.prepare("SELECT COUNT(*) n FROM control_records r WHERE (kind IN ('error','payment') OR status IN ('failed','unknown','cancelled')) AND created_at>?").bind(cfg.alerts_read_at||'1970-01-01')
+ ]);
+ const map=r=>Object.fromEntries((r.results||[]).map(x=>[x.kind,{count:x.n,completed:x.completed||0}])),period=map(results[0]),lifetime=map(results[1]);
+ const [recent,users]=await Promise.all([controlRecords(env,{...body,category:'all',kind:'',status:'',q:'',userId:'',limit:5,offset:0},cfg),controlUsers(env,{...body,q:'',offset:0},cfg)]);
+ return {period,lifetime,activeUsers:results[2].results?.[0]?.n||0,newUsers:results[3].results?.[0]?.n||0,totalUsers:results[4].results?.[0]?.n||0,activeSeconds:results[5].results?.[0]?.n||0,lifetimeActiveSeconds:results[6].results?.[0]?.n||0,daily:results[7].results||[],unreadErrors:results[8].results?.[0]?.n||0,recent:recent.items,users:users.items.slice(0,5),trackingSince:cfg.tracking_since,timezone:range.zone};
+}
+async function controlFinance(env,body,cfg){
+ const range=controlRange(body,cfg),results=await env.DB.batch([
+  env.DB.prepare("SELECT COUNT(*) payments,COALESCE(SUM(CASE WHEN COALESCE(p.refunded_at,f.refunded_at) IS NULL THEN p.stars ELSE 0 END),0) stars,COALESCE(SUM(CASE WHEN COALESCE(p.refunded_at,f.refunded_at) IS NULL THEN p.coins ELSE 0 END),0) purchased,COALESCE(SUM(CASE WHEN COALESCE(p.refunded_at,f.refunded_at) IS NOT NULL THEN p.stars ELSE 0 END),0) refunded_stars FROM payment_receipts p LEFT JOIN payment_refunds f ON f.charge_id=p.charge_id AND f.order_id=p.order_id WHERE p.paid_at>=? AND p.paid_at<?").bind(Math.floor(range.start/1000),Math.floor(range.end/1000)),
+  env.DB.prepare("SELECT state,COUNT(*) n,SUM(amount) coins FROM media_job_charges WHERE created_at>=? AND created_at<? GROUP BY state").bind(range.from,range.to),
+  env.DB.prepare("SELECT j.model,COUNT(*) jobs,SUM(CASE WHEN j.status='completed' THEN 1 ELSE 0 END) completed,SUM(CASE WHEN b.state='charged' THEN b.amount ELSE 0 END) coins,SUM(CASE WHEN j.status='completed' THEN m.estimated_rub ELSE 0 END) estimated_rub,SUM(CASE WHEN j.status='completed' AND m.estimated_rub IS NULL THEN 1 ELSE 0 END) unknown_costs FROM media_jobs j LEFT JOIN media_job_charges b ON b.job_id=j.id LEFT JOIN control_media m ON m.job_id=j.id WHERE j.created_at>=? AND j.created_at<? GROUP BY j.model ORDER BY jobs DESC").bind(range.from,range.to)
+ ]);return {income:results[0].results?.[0]||{},charges:results[1].results||[],models:results[2].results||[],timezone:range.zone};
+}
+async function controlHandle(env,ownerId,body,origin,ctx=null){
+ if(!await controlIsOwner(env,ownerId))throw controlFailure('Доступ только для владельца приложения.',403);
+ const cfg=await controlConfig(env.DB);if(env.CONTROL_OWNER_ID)cfg.owner_id=String(env.CONTROL_OWNER_ID);
+ const action=body.action;
+ if(action==='control-overview')return controlOverview(env,body,cfg);
+ if(action==='control-records')return controlRecords(env,body,cfg);
+ if(action==='control-users')return controlUsers(env,body,cfg);
+ if(action==='control-finance')return controlFinance(env,body,cfg);
+ if(action==='control-user'){
+  const id=String(body.userId||'');const user=await env.DB.prepare('SELECT * FROM control_users WHERE user_id=?').bind(id).first();if(!user)throw controlFailure('Пользователь не найден.',404);
+  const [wallet,records]=await Promise.all([readWallet(env.DB,id),controlRecords(env,{...body,period:body.period||'all'},cfg)]);return {user,wallet,records};
+ }
+ if(action==='control-detail'){
+  const record=await env.DB.prepare('SELECT r.*,u.first_name,u.last_name,u.username'+CONTROL_RECORD_JOIN+'WHERE r.id=?').bind(String(body.recordId||'')).first();if(!record)throw controlFailure('Запись не найдена.',404);
+  return {record,timezone:cfg.timezone};
+ }
+ if(action==='control-media-open'){
+  const row=await env.DB.prepare("SELECT * FROM media_jobs WHERE id=? AND status='completed'").bind(String(body.jobId||'')).first();if(!row)throw controlFailure('Готовая работа не найдена.',404);
+  if(row.kind==='video')return prepareMediaPlayback(env,row.user_id,row.id,origin);
+  const link=await requestOriginalDownload(env,row.user_id,row.id,origin,ctx,false);return {...link,kind:row.kind};
+ }
+ if(action==='control-previews'){
+  if(!Array.isArray(body.ids)||body.ids.length>12)throw controlFailure('Выбери до 12 работ.');if(!body.ids.length)return {items:[]};
+  const rows=await env.DB.prepare('SELECT job_id,mime,data FROM media_previews WHERE job_id IN ('+body.ids.map(()=>'?').join(',')+')').bind(...body.ids.map(String)).all();
+  return {items:(rows.results||[]).map(row=>{const bytes=row.data instanceof ArrayBuffer?new Uint8Array(row.data):Uint8Array.from(row.data);let bin='';for(let i=0;i<bytes.length;i+=16384)bin+=String.fromCharCode(...bytes.subarray(i,i+16384));return {jobId:row.job_id,dataUrl:'data:'+row.mime+';base64,'+btoa(bin)};})};
+ }
+ if(action==='control-trash'){
+  const id=String(body.recordId||'');if(id.length>220||body.confirm!==id)throw controlFailure('Подтверди выбранную запись.');
+  const exists=id.startsWith('user:')?await env.DB.prepare('SELECT user_id FROM control_users WHERE user_id=?').bind(id.slice(5)).first():await env.DB.prepare('SELECT id FROM control_records WHERE id=?').bind(id).first();if(!exists)throw controlFailure('Запись не найдена.',404);
+  await env.DB.batch([env.DB.prepare('INSERT OR IGNORE INTO control_trash(record_id,actor_id) VALUES(?,?)').bind(id,String(ownerId)),env.DB.prepare('INSERT INTO control_audit(id,actor_id,action,target) VALUES(?,?,?,?)').bind(crypto.randomUUID(),String(ownerId),'trash',id)]);return {ok:true};
+ }
+ if(action==='control-restore'){
+  const id=String(body.recordId||'');await env.DB.batch([env.DB.prepare('DELETE FROM control_trash WHERE record_id=?').bind(id),env.DB.prepare('INSERT INTO control_audit(id,actor_id,action,target) VALUES(?,?,?,?)').bind(crypto.randomUUID(),String(ownerId),'restore',id)]);return {ok:true};
+ }
+ if(action==='control-trash-users'){const result=await env.DB.prepare("SELECT u.*,'user:'||u.user_id record_id FROM control_users u JOIN control_trash t ON t.record_id='user:'||u.user_id ORDER BY t.created_at DESC LIMIT 100").all();return {items:result.results||[]};}
+ if(action==='control-settings')return {timezone:cfg.timezone,ownerId:String(ownerId),trackingSince:cfg.tracking_since,services:{chat:!!(env.POLZA_API_KEY||env.POLLINATIONS_API_KEY),media:!!env.POLZA_API_KEY,voice:!!env.POLLINATIONS_API_KEY,database:!!env.DB},tariff:MEDIA_TARIFF_VERSION};
+ if(action==='control-settings-save'){
+  if(!Object.hasOwn(CONTROL_TIMEZONES,body.timezone))throw controlFailure('Выбери доступный часовой пояс.');
+  await env.DB.prepare("INSERT INTO control_settings(key,value) VALUES('timezone',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(body.timezone).run();return {ok:true,timezone:body.timezone};
+ }
+ if(action==='control-alerts-read'){await env.DB.prepare("INSERT INTO control_settings(key,value) VALUES('alerts_read_at',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(controlStamp()).run();return {ok:true};}
+ if(action==='control-audit'){const rows=await env.DB.prepare('SELECT * FROM control_audit ORDER BY created_at DESC LIMIT 100').all();return {items:rows.results||[]};}
+ throw controlFailure('Неизвестное действие панели.');
+}
+
 export default {
   async scheduled(controller,env,ctx){ctx.waitUntil(Promise.allSettled([processMediaNotifications(env),cleanupMediaExports(env),reconcileMediaBilling(env)]));},
   async fetch(request, env, ctx) {
@@ -1758,6 +1932,7 @@ export default {
     let requestId = null;
     let ownsRequest = false;
     let saved = false;
+    let controlAction='';
 
     try {
       if((request.headers.get("content-type")||"").includes("multipart/form-data")){
@@ -1767,6 +1942,7 @@ export default {
         const voiceUser=await verifyTelegram(String(form.get("initData")||""),env.TELEGRAM_BOT_TOKEN);
         if(!voiceUser) return json({error:"Открой ANIS AI через Telegram"},401,headers);
         const multipartAction=String(form.get("action")||"");
+        userId=voiceUser;controlAction=multipartAction;
         // Retired media commands must never reach a provider outside media-create billing.
         if(['image','image-edit','video'].includes(multipartAction))return json({error:'Этот способ создания отключён. Открой актуальную версию приложения.',code:'LEGACY_MEDIA_DISABLED'},410,headers);
         if(multipartAction==='media-preview'){
@@ -1774,11 +1950,11 @@ export default {
         }
         if(multipartAction==='media-export'){
           try{if(form.get('original')==='1')return json(await storeOriginalDownload(env,voiceUser,form.get('jobId'),form.get('file'),request.url),200,headers);const exported=await prepareMediaExport(env,voiceUser,form.get('jobId'),form.get('file'));return json({...exported,url:new URL('/media-download/'+exported.id,request.url).href},200,headers);}
-          catch(error){return json({error:error.message},error.status||400,headers);}
+          catch(error){controlBackground(ctx,env.DB,{userId:voiceUser,kind:'error',title:'Сохранение файла',error:error.message,started});return json({error:error.message},error.status||400,headers);}
         }
         if(multipartAction==="media-create"){
           try{return json(await createPremiumMedia(env,voiceUser,Object.fromEntries(form),form.get('file'),form.get('identityFile')),200,headers);}
-          catch(error){return json({error:error.message},error.status||400,headers);}
+          catch(error){controlBackground(ctx,env.DB,{userId:voiceUser,kind:'error',title:'Создание фото или видео',error:error.message,started});return json({error:error.message},error.status||400,headers);}
         }
         if(!env.POLLINATIONS_API_KEY) return json({error:"Ключ ИИ не настроен"},503,headers);
         const file=form.get("file");
@@ -1817,6 +1993,7 @@ export default {
             body:upload,signal:controller.signal
           });
           if(!response.ok){
+            controlBackground(ctx,env.DB,{userId:voiceUser,kind:'error',title:'Распознавание голоса',error:'Ответ сервиса: '+response.status,started});
             await response.body?.cancel();
             console.error("ANIS AI transcription failed",{providerStatus:response.status});
             return json({error:response.status===403
@@ -1829,7 +2006,7 @@ export default {
           const data=await response.json();
           const text=typeof data.text==="string"?data.text.trim():"";
           if(!text) return json({error:"Речь не распознана. Попробуй ещё раз"},422,headers);
-          const usage=recordMediaUsage(env.DB,voiceUser,"voice");
+          const usage=recordMediaUsage(env.DB,voiceUser,"voice",{title:text,detail:String(form.get('purpose')||'voice').slice(0,40),started,private:form.get('private')!=='0'});
           if(ctx?.waitUntil)ctx.waitUntil(usage);else await usage;
           return json({text},200,headers);
         }finally{clearTimeout(timer);}
@@ -1837,6 +2014,7 @@ export default {
 
       const body = await request.json();
       const action = body.action || "chat";
+      controlAction=action;
 
       userId = await verifyTelegram(
         String(body.initData || ""),
@@ -1853,6 +2031,13 @@ export default {
           headers
         );
       }
+
+      if(action==='control-session'){try{return json(await controlSession(env,userId,body),200,headers);}catch(error){return json({error:error.message},error.status||503,headers);}}
+      if(action==='control-client-error'){
+        if(env.DB){const count=await env.DB.prepare("SELECT COUNT(*) n FROM control_activity WHERE user_id=? AND kind='error' AND created_at>=datetime('now','-1 hour')").bind(String(userId)).first();if((count?.n||0)<30)controlBackground(ctx,env.DB,{userId,kind:'error',title:'Интерфейс приложения',error:String(body.message||'Ошибка интерфейса').slice(0,300),started});}
+        return json({ok:true},200,headers);
+      }
+      if(action.startsWith('control-')){try{return json(await controlHandle(env,userId,body,request.url,ctx),200,headers);}catch(error){return json({error:error.status?error.message:'Не удалось загрузить панель. Повтори попытку.'},error.status||503,headers);}}
 
       // Keep chat, voice and the current media-create flow available.
       if(['image','image-edit','video'].includes(action))return json({error:'Этот способ создания отключён. Открой актуальную версию приложения.',code:'LEGACY_MEDIA_DISABLED'},410,headers);
@@ -1887,7 +2072,7 @@ export default {
       if(action==="media-config")return json({premium:!!env.POLZA_API_KEY},200,headers);
       if(action==="media-status"||action==="media-create"){
         try{return json(action==="media-status"?await readPremiumMedia(env,userId,body.jobId):await createPremiumMedia(env,userId,body,null),200,headers);}
-        catch(error){return json({error:error.message},error.status||400,headers);}
+        catch(error){controlBackground(ctx,env.DB,{userId,kind:'error',title:'Создание или проверка работы',error:error.message,started});return json({error:error.message},error.status||400,headers);}
       }
       if (action === "usage-stats") {
         if (!env.DB) return json({error:"Статистика временно недоступна"},503,headers);
@@ -1927,10 +2112,12 @@ export default {
           if (!response.ok) {
             await response.body?.cancel();
             console.error("ANIS AI speech failed", { providerStatus: response.status });
+            controlBackground(ctx,env.DB,{userId,kind:'error',title:'Озвучка ответа',error:'Ответ сервиса: '+response.status,started});
             return json({ error: "Не удалось озвучить ответ" }, 502, headers);
           }
           const audioHeaders = new Headers(headers);
           audioHeaders.set("Content-Type", response.headers.get("content-type") || "audio/mpeg");
+          controlBackground(ctx,env.DB,{userId,kind:'speech',title:'Озвучка ответа',started});
           return new Response(response.body, { status: 200, headers: audioHeaders });
         } finally {
           clearTimeout(timer);
@@ -2162,7 +2349,10 @@ export default {
             requestId,
             message,
             started,
-            threadId
+            threadId,
+            voice:body.voice===true,
+            controlDB:env.DB,
+            controlRequestId:String(body.requestId||crypto.randomUUID()).slice(0,100)
           },
           headers,
           ctx
@@ -2188,11 +2378,13 @@ export default {
           requestId,
           message,
           answer,
-          threadId
+          threadId,
+          {kind:body.voice===true?'assistant':'chat',started}
         );
 
         saved = true;
       }
+      if(anonymous)await controlChat(env.DB,userId,String(body.requestId||crypto.randomUUID()).slice(0,100),body.voice===true?'assistant':'chat',started,true);
 
       const totalDuration = Date.now() - started;
 
@@ -2214,6 +2406,7 @@ export default {
       );
 
     } catch (error) {
+      controlBackground(ctx,env.DB,{userId,kind:'error',title:'Ошибка: '+controlAction,error:error.message,started});
       console.error("ANIS AI error", {
         name: error.name,
         message: error.message,

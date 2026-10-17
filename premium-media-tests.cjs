@@ -7,7 +7,7 @@ const calls=[];let responseStatus=200,providerState='pending';
 raw.exec(fs.readFileSync('project-groups.sql','utf8'));
 const context=vm.createContext({URL,Uint8Array,AbortController,setTimeout,clearTimeout,Response,console,btoa,
  fetch:async(url,options)=>{calls.push({url,options});return Response.json(responseStatus===200?{id:'aig-test',status:providerState,data:providerState==='completed'?{url:'https://s3.polza.ai/result.png'}:undefined}:{error:'private provider detail'},{status:responseStatus})}});
-const code=fs.readFileSync('worker.js','utf8');vm.runInContext(code.slice(0,code.indexOf('async function recordMediaUsage')),context);context.env={DB:db,POLZA_API_KEY:'test-secret'};
+const code=fs.readFileSync('worker.js','utf8');vm.runInContext(code.split('export default')[0],context);context.env={DB:db,POLZA_API_KEY:'test-secret'};
 const run=s=>vm.runInContext(s,context);context.body={kind:'image',requestId:'test-request-000001',model:'google/gemini-3.1-flash-image-preview',prompt:'Горы на рассвете',ratio:'1:1'};
 const create=async(owner,file=null,identity=null)=>{fund(raw,owner);try{context.body=await accept(context,context.body,file);}catch{}context.owner=owner;context.sourceFile=file;context.identityFile=identity;return run('createPremiumMedia(env,owner,body,sourceFile,identityFile)');};
 (async()=>{

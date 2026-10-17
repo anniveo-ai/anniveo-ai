@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="video-models.css?v=__ANIS_BUILD__">
 <link rel="stylesheet" href="topup.css?v=__ANIS_BUILD__">
 <link rel="stylesheet" href="media-creation.css?v=__ANIS_BUILD__">
+<link rel="stylesheet" href="control.css?v=__ANIS_BUILD__">
 <title>ANIS AI</title><script>try{document.documentElement.dataset.theme=localStorage.getItem("anis-theme")==="light"?"light":"dark";}catch{}</script>
 <link rel="preconnect" href="https://anniveo-ai-api.yaylaevismail.workers.dev" crossorigin>
 <link rel="preload" as="image" href="orb20-real.webp">
@@ -3942,7 +3943,7 @@ async function sendMessage(text,audioURL,spokenVoice=false){
 
   try{
     const payload=isAnonymous
-      ?{action:"anonymous",message:text,messages:context,voice:spokenVoice}
+      ?{action:"anonymous",message:text,messages:context,voice:spokenVoice,requestId:crypto.randomUUID()}
       :{action:"chat",message:text,requestId:crypto.randomUUID(),voice:spokenVoice};
 
     const data=await api(payload,90000,token=>{
@@ -4528,6 +4529,7 @@ async function finishVoice(){
   try{
     const form=new FormData();
     form.append("action","transcribe");
+    form.append("purpose",spokenVoice?'assistant':'chat');form.append("private",anonymous?'1':'0');
     form.append("initData",initData);
     form.append("file",blob,blob.type.includes("mp4")?"voice.m4a":"voice.webm");
 
@@ -4844,7 +4846,7 @@ async function transcribeMediaDictation(task){
   task.controller=new AbortController();task.timer=setTimeout(()=>task.controller.abort(),60000);
   try{
     const type=task.recorder.mimeType||'audio/webm',blob=new Blob(task.chunks,{type});if(!blob.size)throw Error('Запись пустая. Попробуй ещё раз.');
-    const form=new FormData();form.append('action','transcribe');form.append('initData',initData);form.append('file',blob,type.includes('mp4')?'description.m4a':'description.webm');
+    const form=new FormData();form.append('action','transcribe');form.append('purpose',task.kind+'-prompt');form.append('private','0');form.append('initData',initData);form.append('file',blob,type.includes('mp4')?'description.m4a':'description.webm');
     const response=await fetch(API_URL,{method:'POST',body:form,signal:task.controller.signal});const data=await response.json();
     if(!response.ok||!data.text)throw Error(data.error||'Не удалось распознать описание.');
     if(task.cancelled||mediaVoiceTask!==task)return;
@@ -5311,6 +5313,7 @@ syncMediaMic();
 <script src="video-models.js?v=__ANIS_BUILD__"></script>
 <script src="stability.js?v=__ANIS_BUILD__"></script>
 <script src="media-creation.js?v=__ANIS_BUILD__"></script>
+<script src="control.js?v=__ANIS_BUILD__"></script>
 
 </body>
 </html>
