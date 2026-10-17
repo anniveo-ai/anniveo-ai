@@ -370,7 +370,7 @@
   }
   function enhancementReturnControl(kind,origin,create,project){
     if(enhancementSession){enhancementSession.toolbar.remove();for(const [field,listener]of enhancementSession.listeners)field.removeEventListener('change',listener);}
-    const ids=kind==='video'?['videoQuality','videoRatio','duration']:['imageQuality','imageRatio'];
+    const ids=kind==='video'?['videoQuality','videoRatio','duration']:['imageModel','imageQuality','imageRatio'];
     const initial=ids.map(id=>$(id).value),toolbar=node('div',{className:'enhancement-return-bar'});
     const session={kind,project,ids,initial,origin,toolbar,create,listeners:[]};enhancementSession=session;
     const back=session.back=control('← Вернуться',()=>void confirmEnhancement(session),'enhancement-return'),note=node('small',{},'Новый вариант оплачивается отдельно');
@@ -392,6 +392,7 @@
     const room=$('mediaResultDialog'),origin={view:currentView,scrollTop:$('app').scrollTop,roomId:room.open?selectedStudioProject:null,roomScroll:room.scrollTop};
     // Navigation does not depend on downloading the original file.
     openActionStudio(kind);
+    if(kind==='image')window.anisImageModels?.select(project.model||'auto');
     selectValue(kind+'Ratio',project.ratio||(kind==='video'?'16:9':'1:1'));
     selectValue(kind+'Quality',project.quality||'fhd');if(kind==='video')selectValue('duration',project.duration||4);
     const session=enhancementReturnControl(kind,origin,create,project);
@@ -412,6 +413,7 @@
   function prepareAction(project,item,action){
     const kind=project.kind;openActionStudio(kind);
     if(kind==='video'){clearVideoIdentity();if(setStudioVideo(item.file)===false)throw Error('Не удалось добавить видео. Проверь размер файла и заверши текущую отправку.');}else if(setStudioPhoto(item.file)===false)throw Error('Не удалось добавить фото. Проверь размер файла и заверши текущую отправку.');
+    if(kind==='image')window.anisImageModels?.select(project.model||'auto');
     selectValue(kind+'Ratio',project.ratio||(kind==='video'?'16:9':'1:1'));
     selectValue(kind+'Quality',project.quality||'fhd');
     if(kind==='video')selectValue('duration',project.duration||4);
@@ -528,7 +530,7 @@
       let blob;
       if(s.project.kind==='video')blob=await trimVideo(s);else{const output=node('canvas'),b=s.bounds;output.width=Math.max(1,Math.round(b.w));output.height=Math.max(1,Math.round(b.h));output.getContext('2d').drawImage(s.image,b.x,b.y,b.w,b.h,0,0,output.width,output.height);blob=await new Promise(resolve=>output.toBlob(resolve,'image/png'));}
       if(!blob?.size)throw Error('Не удалось сохранить обрезку.');if(cropState!==s||s.controller.signal.aborted)return;
-      const media=mediaFromBlob(s.project.kind,blob),p={id:crypto.randomUUID(),groupId:s.project.groupId||s.project.id,kind:s.project.kind,status:'completed',created:Date.now(),order:++projectCounter,prompt:(s.project.prompt||'Моя работа')+' · обрезка',quality:s.project.quality||'fast',ratio:s.project.kind==='image'?(s.ratio===1?'1:1':s.ratio<1?'9:16':'16:9'):s.project.ratio,duration:s.project.kind==='video'?Math.round((s.end-s.start)*10)/10:undefined,media,mediaBlob:blob,sourceFile:media.file};
+      const media=mediaFromBlob(s.project.kind,blob),p={id:crypto.randomUUID(),groupId:s.project.groupId||s.project.id,kind:s.project.kind,model:s.project.model,status:'completed',created:Date.now(),order:++projectCounter,prompt:(s.project.prompt||'Моя работа')+' · обрезка',quality:s.project.quality||'fast',ratio:s.project.kind==='image'?(s.ratio===1?'1:1':s.ratio<1?'9:16':'16:9'):s.project.ratio,duration:s.project.kind==='video'?Math.round((s.end-s.start)*10)/10:undefined,media,mediaBlob:blob,sourceFile:media.file};
       p.exportJobId=s.project.exportJobId||s.project.id;media.exportJobId=p.exportJobId;studioProjects.set(p.id,p);persistStudioProjects();cropDialog.close();openProjectRoom(p.id);if(telegramDownloads())void saveMedia(media,p.kind);else showMedia(media,p.kind);
     }catch(error){if(error.name!=='AbortError'){if(s.project.kind==='video')cropDialog.close();toast(error.message);}}
     finally{if(cropState===s){s.exporting=false;cropSave.disabled=false;for(const input of cropFields.querySelectorAll('input,button'))input.disabled=false;}}
@@ -584,5 +586,6 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observeGallery,{once:true});else observeGallery();
   window.anisProjectActions={enhancementVariant,enhancementPrompt,createControls,normalizeBlob,saveMedia,saveProject,showMedia,getMedia,prepareDownload,retryResult,showLoadError,ensureImagePreview,ensureProjectPreview,downloadMediaBlob,restorePreviews,resultPreview,refreshGallery:scheduleGallery};
 })();
+
 
 

@@ -52,6 +52,7 @@ async function improveCreationPrompt(env,body){
 const PREMIUM_MEDIA_MODELS=Object.freeze({
  'google/gemini-3.1-flash-image-preview':{kind:'image',resolution:'1K'},
  'google/gemini-3-pro-image-preview':{kind:'image',resolution:'2K'},
+ 'bytedance/seedream-4.5':{kind:'image',resolution:'2K'},
  'bytedance/seedance-2-fast':{kind:'video',resolution:'720p'},
  'bytedance/seedance-2':{kind:'video',resolution:'720p'},
  'gemini-omni-video':{kind:'video',resolution:'4k'}
@@ -82,7 +83,7 @@ async function settleMediaCoins(env,userId,jobId){
 async function billedMediaJob(env,row){
  const charge=await env.DB.prepare('SELECT amount,state FROM media_job_charges WHERE job_id=? AND user_id=?').bind(row.id,String(row.user_id)).first();return publicMediaJob({...row,billing_amount:charge?.amount||0,billing_state:charge?.state||'not_charged'});
 }
-function publicMediaJob(row){return {jobId:row.id,groupId:row.group_id||row.id,kind:row.kind,status:row.status,prompt:row.prompt||'',quality:row.quality||'fast',ratio:row.ratio||'1:1',duration:row.duration||4,createdAt:row.created_at||null,expiresAt:row.created_at?new Date(Date.parse(row.created_at.replace(' ','T')+'Z')+7*86400000).toISOString():null,region:row.region_json?JSON.parse(row.region_json):null,...(row.billing_state?{billing:{state:row.billing_state,amount:row.billing_amount||0,currency:'ANI'}}:{}),...(row.status==='completed'?{url:row.result_url}:{}),...(row.error?{error:row.error}:{})};}
+function publicMediaJob(row){return {jobId:row.id,groupId:row.group_id||row.id,kind:row.kind,model:row.model,status:row.status,prompt:row.prompt||'',quality:row.quality||'fast',ratio:row.ratio||'1:1',duration:row.duration||4,createdAt:row.created_at||null,expiresAt:row.created_at?new Date(Date.parse(row.created_at.replace(' ','T')+'Z')+7*86400000).toISOString():null,region:row.region_json?JSON.parse(row.region_json):null,...(row.billing_state?{billing:{state:row.billing_state,amount:row.billing_amount||0,currency:'ANI'}}:{}),...(row.status==='completed'?{url:row.result_url}:{}),...(row.error?{error:row.error}:{})};}
 function providerResultUrl(data){const value=data?.data?.url||data?.data?.[0]?.url||data?.output?.url;try{const u=new URL(value);return u.protocol==='https:'?u.href:null;}catch{return null;}}
 async function updatePremiumJob(env,row,data){
  const status=['pending','processing','completed','failed','cancelled'].includes(data.status)?data.status:'processing';
@@ -99,6 +100,13 @@ function choosePremiumMedia(body,file){
  const kind=body.kind,quality=body.quality;
  if(quality===undefined)return {model:String(body.model||''),resolution:null};
  if(kind==='image'){
+  if(body.model&&body.model!=='auto'){
+   const model=String(body.model),config=PREMIUM_MEDIA_MODELS[model];
+   if(!config||config.kind!=='image')throw Error('Выбери доступную модель фото или видео.');
+   if(!['fhd','qhd','uhd','fast','high','max'].includes(quality))throw Error('Выбери качество фото.');
+   const resolution=['fast','high','max'].includes(quality)?{fast:'1K',high:'2K',max:'4K'}[quality]:quality==='uhd'||quality==='qhd'&&body.ratio==='1:1'?'4K':'2K';
+   return {model,resolution};
+  }
   if(['fhd','qhd','uhd'].includes(quality)){
    const resolution=quality==='uhd'||quality==='qhd'&&body.ratio==='1:1'?'4K':'2K';
    return {model:resolution==='4K'||/текст|надпис|логотип|шрифт|инфограф|text|logo|typography/i.test(String(body.prompt||''))?'google/gemini-3-pro-image-preview':'google/gemini-3.1-flash-image-preview',resolution};
@@ -153,7 +161,10 @@ async function createPremiumMedia(env,userId,body,file,identityFile=null){
   row.prompt=prompt;row.quality=String(body.quality||'fast');row.ratio=ratio;row.duration=duration;row.region_json=region?JSON.stringify(region):null;
   await env.DB.prepare('UPDATE media_jobs SET prompt=?,quality=?,ratio=?,duration=?,region_json=? WHERE id=? AND user_id=?').bind(prompt,row.quality,ratio,duration,row.region_json,id,userId).run();
   const input={prompt,aspect_ratio:ratio};
-  if(kind==='image'){input.image_resolution=selection.resolution||config.resolution;input.output_format=file?.type==='image/png'||/прозрач|transparent|alpha|\bpng\b|без фона|удали(?:ть)? фон|убери фон/i.test(prompt)?'png':'jpeg';}
+  if(kind==='image'){
+   if(model==='bytedance/seedream-4.5')input.quality=(selection.resolution||config.resolution)==='4K'?'high':'basic';
+   else{input.image_resolution=selection.resolution||config.resolution;input.output_format=file?.type==='image/png'||/прозрач|transparent|alpha|\bpng\b|без фона|удали(?:ть)? фон|убери фон/i.test(prompt)?'png':'jpeg';}
+  }
   else{input.duration=String(duration);input.resolution=selection.resolution||config.resolution;if(model!=='gemini-omni-video')input.generate_audio=false;}
   if(file){const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));input[file.type.startsWith('image/')?'images':'videos']=[{type:'base64',data:'data:'+file.type+';base64,'+btoa(binary)}];}
   if(identityFile){const bytes=new Uint8Array(await identityFile.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));input.images=[...(input.images||[]),{type:'base64',data:'data:'+identityFile.type+';base64,'+btoa(binary)}];}
@@ -2057,4 +2068,5 @@ export default {
     }
   }
 };
+
 

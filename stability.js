@@ -62,7 +62,7 @@
   try{return await durableSavePromise;}finally{durableSavePromise=null;}
  }
  persistStudioProjects=function(){if(state.restoring)return;metadataPersist();clearTimeout(persistTimer);persistTimer=setTimeout(()=>void saveDurable(),180);};
- const draftIds=['messageInput','imagePrompt','videoPrompt','projectAgentIdea','imageQuality','videoQuality','imageRatio','videoRatio','duration'];
+ const draftIds=['messageInput','imagePrompt','videoPrompt','projectAgentIdea','imageModel','imageQuality','videoQuality','imageRatio','videoRatio','duration'];
  const studioPromptEditedAt={...(read('drafts',null)?.promptEditedAt||{})};
  const studioSourceEditedAt={...(read('drafts',null)?.sourceEditedAt||{})};
  function saveDrafts(){const values={};for(const id of draftIds)if($(id))values[id]=id==='messageInput'&&anonymous?'':$(id).value;write('drafts',{values,view:currentView,promptEditedAt:{...studioPromptEditedAt},sourceEditedAt:{...studioSourceEditedAt}});}
@@ -122,15 +122,16 @@
  const createOriginal=createStudioVariant;
  let lastCreation={fingerprint:'',time:0,id:null},creationLock=false;
  const fileStamp=f=>f?[f.name,f.size,f.lastModified].join(':'):'';
- function fingerprint(s){return JSON.stringify([s.groupId,s.kind,s.prompt.trim(),s.quality,s.ratio,s.duration,fileStamp(s.regionOriginalFile||s.sourceFile),fileStamp(s.identityFile),s.region?.points]);}
+ function fingerprint(s){return JSON.stringify([s.groupId,s.kind,s.model,s.prompt.trim(),s.quality,s.ratio,s.duration,fileStamp(s.regionOriginalFile||s.sourceFile),fileStamp(s.identityFile),s.region?.points]);}
  createStudioVariant=async function(snapshot){
+  if(snapshot.kind==='image'&&!snapshot.model)snapshot={...snapshot,model:$('imageModel')?.value||'auto'};
   if(snapshot.consumeDraft)snapshot={...snapshot,submittedSourceStamp:fileStamp(snapshot.regionOriginalFile||snapshot.sourceFile),submittedIdentityStamp:fileStamp(snapshot.identityFile)};
   const stamp=fingerprint(snapshot),now=Date.now();
   if(creationLock||lastCreation.fingerprint===stamp&&now-lastCreation.time<2500){if(lastCreation.id)openProjectRoom(lastCreation.id);return;}
   creationLock=true;lastCreation={fingerprint:stamp,time:now,id:null};
   try{
    if(snapshot.prompt.trim().length>=3&&snapshot.prompt.trim().length<=1200){
-    let quote;try{quote=await mediaJSON({action:'media-quote',kind:snapshot.kind,quality:snapshot.quality,duration:snapshot.duration});}catch(error){toast(readableMediaError(error));return;}
+    let quote;try{quote=await mediaJSON({action:'media-quote',kind:snapshot.kind,model:snapshot.model,quality:snapshot.quality,duration:snapshot.duration});}catch(error){toast(readableMediaError(error));return;}
     if(quote.enabled){const text='Создать '+(snapshot.kind==='video'?'видео':'фото')+' за '+quote.amount+' аниумов? При подтверждённой ошибке создания сумма вернётся на баланс.';const confirmed=typeof tg!=='undefined'&&tg?.showConfirm?await new Promise(resolve=>tg.showConfirm(text,resolve)):window.confirm(text);if(!confirmed)return;snapshot={...snapshot,acceptedPrice:quote.amount};}
    }
    if(snapshot.kind==='video'&&['qhd','uhd'].includes(snapshot.quality)&&snapshot.sourceFile?.type.startsWith('video/')){const source=await window.anisMediaQuality.inspectVideo(snapshot.sourceFile);if(source.duration>10.1){toast('Для 2K и 4K добавь видео до 10 секунд. Можно сначала обрезать ролик.');return;}}
@@ -504,8 +505,8 @@
     const kind=kinds[index],rows=result.value.items||[];
     for(const row of [...rows].reverse()){
      if(!row.jobId)continue;
-     let p=studioProjects.get(row.jobId);if(!p){p={id:row.jobId,kind,order:++projectCounter,created:Date.parse(row.createdAt?.replace(' ','T')+'Z')||Date.now(),prompt:row.prompt,quality:row.quality,ratio:row.ratio,duration:row.duration};studioProjects.set(p.id,p);}
-     Object.assign(p,{groupId:row.groupId||p.groupId||p.id,status:p.media?'completed':row.status,resultUrl:row.url||p.resultUrl,expiresAt:row.expiresAt||p.expiresAt,error:row.error,region:p.region||row.region,billing:row.billing||p.billing});
+     let p=studioProjects.get(row.jobId);if(!p){p={id:row.jobId,kind,model:row.model,order:++projectCounter,created:Date.parse(row.createdAt?.replace(' ','T')+'Z')||Date.now(),prompt:row.prompt,quality:row.quality,ratio:row.ratio,duration:row.duration};studioProjects.set(p.id,p);}
+     Object.assign(p,{model:row.model||p.model,groupId:row.groupId||p.groupId||p.id,status:p.media?'completed':row.status,resultUrl:row.url||p.resultUrl,expiresAt:row.expiresAt||p.expiresAt,error:row.error,region:p.region||row.region,billing:row.billing||p.billing});
     }
    }
    try{await window.anisProjectActions.restorePreviews([...studioProjects.values()]);}catch{}state.historyLoading=false;state.historyLoaded=!failure;
@@ -552,7 +553,7 @@
  threadSelect.onchange=()=>void switchThread(threadSelect.value);
  state.decorateMediaHistoryCard=function(card,row){
    let p=studioProjects.get(row.jobId);
-   if(!p){p={id:row.jobId,groupId:row.groupId||row.jobId,kind:row.kind,status:row.status,prompt:row.prompt,quality:row.quality,ratio:row.ratio,duration:row.duration,created:Date.parse(row.createdAt?.replace(' ','T')+'Z')||Date.now(),expiresAt:row.expiresAt,resultUrl:row.url,region:row.region,order:++projectCounter};studioProjects.set(p.id,p);}
+   if(!p){p={id:row.jobId,groupId:row.groupId||row.jobId,kind:row.kind,model:row.model,status:row.status,prompt:row.prompt,quality:row.quality,ratio:row.ratio,duration:row.duration,created:Date.parse(row.createdAt?.replace(' ','T')+'Z')||Date.now(),expiresAt:row.expiresAt,resultUrl:row.url,region:row.region,order:++projectCounter};studioProjects.set(p.id,p);}
    const caption=card.querySelector('small');if(caption&&row.status==='completed')caption.textContent=p?.media?'Готово · сохранено на этом устройстве':row.expired?'Срок хранения у сервиса истёк':'Готово · доступно до '+new Date(row.expiresAt).toLocaleDateString('ru-RU');
    if(p){card.disabled=row.expired&&!p.media;card.onclick=()=>{openProjectRoom(p.id);if(p.status==='completed'&&!p.media&&p.resultUrl)void loadStudioProjectResult(p);else if(!['completed','failed'].includes(p.status))void recoverProject(p);};}
  };
@@ -742,7 +743,7 @@
  async function start(){
   const updateHandoff=takeUpdateHandoff();
   const drafts=read('drafts',null);if(drafts)for(const [id,value]of Object.entries(drafts.values||{}))if($(id))$(id).value=id.endsWith('Quality')?({fast:'fhd',high:id==='imageQuality'?'qhd':'fhd',max:'uhd'}[value]||value):value;
-  syncQualityFormats();
+  window.anisImageModels?.sync();syncQualityFormats();
   let rows=[];for(const name of [studioProjectKey()+':backup',studioProjectKey()])try{rows=mergeProjectRecords(rows,JSON.parse(localStorage.getItem(name)||'[]'));}catch{storageWarning();}
   const restoreRows=records=>{for(const row of mergeProjectRecords(records,[...studioProjects.values()].map(projectRecord))){const p={...row};if(p.mediaBlob){p.media=studioProjects.get(p.id)?.media||mediaFromBlob(p.kind,p.mediaBlob);Object.assign(p.media,{width:p.outputWidth,height:p.outputHeight,warning:p.resolutionWarning});}studioProjects.set(p.id,p);projectCounter=Math.max(projectCounter,p.order||0);}};
   restoreRows(rows);
@@ -772,5 +773,6 @@
   showWelcome=true;chatOpenedThisSession=false;returnToChatAvailable=false;newestFirstChat=true;openView('home');
  });
 })();
+
 
 
