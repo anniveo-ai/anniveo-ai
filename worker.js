@@ -1834,7 +1834,7 @@ async function controlOverview(env,body,cfg){
   env.DB.prepare('SELECT COUNT(*) n FROM control_users'),
   env.DB.prepare('SELECT COALESCE(SUM(active_seconds),0) n FROM control_sessions WHERE started_at>=? AND started_at<?').bind(Math.floor(range.start/1000),Math.floor(range.end/1000)),
   env.DB.prepare('SELECT COALESCE(SUM(active_seconds),0) n FROM control_sessions'),
-  env.DB.prepare("SELECT date(r.created_at,?) day,r.kind,COUNT(*) n FROM control_records r WHERE r.created_at>=? AND r.created_at<? GROUP BY day,r.kind ORDER BY day").bind('+'+CONTROL_TIMEZONES[range.zone]+' minutes',controlStamp(Math.max(range.start,Date.now()-29*86400000)),range.to),
+  env.DB.prepare("SELECT date(r.created_at,?) day,r.kind,COUNT(*) n FROM control_records r WHERE r.created_at>=? AND r.created_at<? GROUP BY day,r.kind ORDER BY day").bind('+'+CONTROL_TIMEZONES[range.zone]+' minutes',controlStamp(Math.max(range.start,range.end-30*86400000)),range.to),
   env.DB.prepare("SELECT COUNT(*) n FROM control_records r WHERE (kind IN ('error','payment') OR status IN ('failed','unknown','cancelled')) AND created_at>?").bind(cfg.alerts_read_at||'1970-01-01')
  ]);
  const map=r=>Object.fromEntries((r.results||[]).map(x=>[x.kind,{count:x.n,completed:x.completed||0}])),period=map(results[0]),lifetime=map(results[1]);
