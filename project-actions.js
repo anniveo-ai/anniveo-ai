@@ -370,7 +370,7 @@
   }
   function enhancementReturnControl(kind,origin,create,project){
     if(enhancementSession){enhancementSession.toolbar.remove();for(const [field,listener]of enhancementSession.listeners)field.removeEventListener('change',listener);}
-    const ids=kind==='video'?['videoQuality','videoRatio','duration']:['imageModel','imageQuality','imageRatio'];
+    const ids=kind==='video'?['videoModel','videoQuality','videoRatio','duration']:['imageModel','imageQuality','imageRatio'];
     const initial=ids.map(id=>$(id).value),toolbar=node('div',{className:'enhancement-return-bar'});
     const session={kind,project,ids,initial,origin,toolbar,create,listeners:[]};enhancementSession=session;
     const back=session.back=control('← Вернуться',()=>void confirmEnhancement(session),'enhancement-return'),note=node('small',{},'Новый вариант оплачивается отдельно');
@@ -393,8 +393,9 @@
     // Navigation does not depend on downloading the original file.
     openActionStudio(kind);
     if(kind==='image')window.anisImageModels?.select(project.model||'auto');
+    if(kind==='video')window.anisVideoModels?.forEnhancement(project);
     selectValue(kind+'Ratio',project.ratio||(kind==='video'?'16:9':'1:1'));
-    selectValue(kind+'Quality',project.quality||'fhd');if(kind==='video')selectValue('duration',project.duration||4);
+    if(kind==='image'||!window.anisVideoModels)selectValue(kind+'Quality',project.quality||'fhd');if(kind==='video')selectValue('duration',project.duration??4);
     const session=enhancementReturnControl(kind,origin,create,project);
     enhancementSources.delete(kind);
     const prompt=$(kind+'Prompt');prompt.value='';prompt.dispatchEvent(new Event('input',{bubbles:true}));
@@ -414,9 +415,10 @@
     const kind=project.kind;openActionStudio(kind);
     if(kind==='video'){clearVideoIdentity();if(setStudioVideo(item.file)===false)throw Error('Не удалось добавить видео. Проверь размер файла и заверши текущую отправку.');}else if(setStudioPhoto(item.file)===false)throw Error('Не удалось добавить фото. Проверь размер файла и заверши текущую отправку.');
     if(kind==='image')window.anisImageModels?.select(project.model||'auto');
+    if(kind==='video')window.anisVideoModels?.forEnhancement(project);
     selectValue(kind+'Ratio',project.ratio||(kind==='video'?'16:9':'1:1'));
-    selectValue(kind+'Quality',project.quality||'fhd');
-    if(kind==='video')selectValue('duration',project.duration||4);
+    if(kind==='image'||!window.anisVideoModels)selectValue(kind+'Quality',project.quality||'fhd');
+    if(kind==='video')selectValue('duration',project.duration??4);
     const subject=kind==='video'?'видео':'фото',prompt=$(kind+'Prompt');
     prompt.value=action==='enhance'?'Улучши качество этого '+subject+'. Сохрани лица, композицию, цвета и все важные детали. Добавь естественную чёткость'+(kind==='video'?', плавность и стабильность движения.':', аккуратно убери шум.'):
       action==='similar'?((project.prompt||'Создай похожее '+subject)+'. Новый вариант по этому референсу: сохрани стиль и настроение, предложи немного другую композицию.').slice(0,1200):'';

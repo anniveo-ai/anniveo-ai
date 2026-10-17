@@ -15,7 +15,7 @@ const run=s=>vm.runInContext(s,context),models=['google/gemini-3.1-flash-image-p
  }
  for(const model of ['other/expensive-model','bytedance/seedance-2']){context.body={kind:'image',model,quality:'fhd'};assert.throws(()=>run('choosePremiumMedia(body,null)'),/доступную модель/);}
  context.body={kind:'image',model:'auto',quality:'fhd',ratio:'9:16',prompt:'Море'};assert.equal(run('choosePremiumMedia(body,null).model'),models[0]);context.body.prompt='Надпись';assert.equal(run('choosePremiumMedia(body,null).model'),models[1]);
- context.body={kind:'video',model:models[0],quality:'fhd',ratio:'16:9'};assert.equal(run('choosePremiumMedia(body,null).model'),'bytedance/seedance-2');
+ context.body={kind:'video',model:models[0],quality:'fhd',ratio:'16:9'};assert.throws(()=>run('choosePremiumMedia(body,null)'),/доступную модель/);
  context.env.MEDIA_PRICES_JSON=JSON.stringify({'image:fhd:0':30});context.body={kind:'image',model:models[2],quality:'fhd',ratio:'1:1',prompt:'Вечерний свет',requestId:'model-no-wallet-00001',acceptedPrice:30};const count=calls.length;await assert.rejects(run("createPremiumMedia(env,'empty-wallet',body,null)"),/Недостаточно аниумов/);assert.equal(calls.length,count,'new models do not bypass wallet');
  console.log('PASS: all three explicit models, native provider parameters, reference images, history, idempotency, auto compatibility, video isolation and wallet protection. No paid requests.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

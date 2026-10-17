@@ -8,6 +8,7 @@
 <meta name="anis-build" content="__ANIS_BUILD__">
 <link rel="stylesheet" href="stability.css?v=__ANIS_BUILD__">
 <link rel="stylesheet" href="image-models.css?v=__ANIS_BUILD__">
+<link rel="stylesheet" href="video-models.css?v=__ANIS_BUILD__">
 <link rel="stylesheet" href="topup.css?v=__ANIS_BUILD__">
 <title>ANIS AI</title><script>try{document.documentElement.dataset.theme=localStorage.getItem("anis-theme")==="light"?"light":"dark";}catch{}</script>
 <link rel="preconnect" href="https://anniveo-ai-api.yaylaevismail.workers.dev" crossorigin>
@@ -4607,6 +4608,7 @@ function openFormatHelp(kind){
 function applyFormatHelp(ratio){
  const kind=formatHelpKind;if($(kind==='image'?'makeImage':'makeVideo').disabled)return;
  if(!FORMAT_GUIDES[kind].some(item=>item[3]===ratio))return;
+ if(kind==='video'&&[...$('videoRatio').options].find(option=>option.value===ratio)?.disabled){toast('Этот формат недоступен для выбранной модели.');return;}
  $(kind+'Ratio').value=ratio;$('formatHelpDialog').close();toast('Формат '+ratio+' выбран');tg?.HapticFeedback?.selectionChanged?.();
 }
 
@@ -4963,7 +4965,7 @@ async function launchStudioProject(p){
  try{
   const preparedFile=p.sourceFile&&p.sourceFile.type.startsWith('image/')?await prepareStudioImage(p.sourceFile):p.sourceFile;
   const file=await materializeStudioUpload(preparedFile,p.kind==='image'?'reference.png':'reference.mp4'),identityFile=await materializeStudioUpload(p.identityFile,'identity.jpg');
-  const payload={action:'media-create',kind:p.kind,requestId:p.id,prompt:p.providerPrompt||p.prompt,quality:p.quality,ratio:p.ratio,groupId:p.groupId||p.id,acceptedPrice:p.acceptedPrice||0,initData};if(p.kind==='image'&&p.model&&p.model!=='auto')payload.model=p.model;if(p.kind==='video')payload.duration=p.duration;if(p.region)payload.region=JSON.stringify(p.region);
+  const payload={action:'media-create',kind:p.kind,requestId:p.id,prompt:p.providerPrompt||p.prompt,quality:p.quality,ratio:p.ratio,groupId:p.groupId||p.id,acceptedPrice:p.acceptedPrice||0,initData};if(p.model&&p.model!=='auto')payload.model=p.model;if(p.kind==='video')payload.duration=p.duration;if(p.region)payload.region=JSON.stringify(p.region);
   let response;if(file||identityFile){const form=new FormData();for(const [key,value]of Object.entries(payload))form.append(key,String(value));if(file)form.append('file',file,file.name);if(identityFile)form.append('identityFile',identityFile,identityFile.name);response=await fetch(API_URL,{method:'POST',body:form,signal:controller.signal});}
   else response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});
   const data=await response.json();if(!response.ok){p.status='failed';const error=Error(data.error||'Не удалось создать проект.');error.status=response.status;throw error;}
@@ -4985,12 +4987,12 @@ async function createStudioVariant(snapshot){
 }
 async function generateMedia(kind){
  if(mediaVoiceTask){toast('Сначала заверши голосовой ввод.');return;}
- return createStudioVariant({...window.anisProjectActions?.enhancementVariant?.(kind),kind,model:kind==='image'?$('imageModel')?.value||'auto':undefined,consumeDraft:true,prompt:$(kind+'Prompt').value.trim()||window.anisProjectActions?.enhancementPrompt?.(kind)||'',sourceFile:kind==='image'?studioImageFile:studioVideoFile,identityFile:kind==='video'?studioVideoIdentityFile:null,quality:$(kind+'Quality').value,ratio:$(kind+'Ratio').value,duration:kind==='video'?Number($('duration').value):undefined});
+ return createStudioVariant({...window.anisProjectActions?.enhancementVariant?.(kind),kind,model:$(kind==='image'?'imageModel':'videoModel')?.value||'auto',consumeDraft:true,prompt:$(kind+'Prompt').value.trim()||window.anisProjectActions?.enhancementPrompt?.(kind)||'',sourceFile:kind==='image'?studioImageFile:studioVideoFile,identityFile:kind==='video'?studioVideoIdentityFile:null,quality:$(kind+'Quality').value,ratio:$(kind+'Ratio').value,duration:kind==='video'?Number($('duration').value):undefined});
 }
 async function addAgentVariant(){
  const base=studioProjects.get(selectedStudioProject),idea=$('projectAgentIdea').value.trim();if(base&&(base.hasSource&&!base.sourceFile||base.hasIdentity&&!base.identityFile)){toast('Для нового варианта заново добавь исходные файлы в студии.');return;}if(!base||!idea){toast('Добавь идею для нового варианта.');return;}
  const prompt=base.prompt+'\nНовый вариант: '+idea;if(prompt.length>1200){toast('Сократи дополнительную идею.');return;}
- $('projectAgentIdea').value='';return createStudioVariant({kind:base.kind,model:base.model,prompt,groupId:base.groupId||base.id,previewBlob:base.media?.blob||base.previewBlob,sourceFile:base.sourceFile,identityFile:base.identityFile,region:base.region,regionOriginalFile:base.regionOriginalFile,quality:base.quality||'fast',ratio:base.ratio||'1:1',duration:base.duration||4});
+ $('projectAgentIdea').value='';return createStudioVariant({kind:base.kind,model:base.model,prompt,groupId:base.groupId||base.id,previewBlob:base.media?.blob||base.previewBlob,sourceFile:base.sourceFile,identityFile:base.identityFile,region:base.region,regionOriginalFile:base.regionOriginalFile,quality:base.quality||'fast',ratio:base.ratio||'1:1',duration:base.duration??4});
 }
 async function resumeMediaProjects(){
  if(!initData||!user)return;
@@ -5305,6 +5307,7 @@ syncMediaMic();
 <script src="media-quality.js?v=__ANIS_BUILD__"></script>
 <script src="project-actions.js?v=__ANIS_BUILD__"></script>
 <script src="image-models.js?v=__ANIS_BUILD__"></script>
+<script src="video-models.js?v=__ANIS_BUILD__"></script>
 <script src="stability.js?v=__ANIS_BUILD__"></script>
 
 </body>

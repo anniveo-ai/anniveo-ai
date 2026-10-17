@@ -62,7 +62,7 @@
   try{return await durableSavePromise;}finally{durableSavePromise=null;}
  }
  persistStudioProjects=function(){if(state.restoring)return;metadataPersist();clearTimeout(persistTimer);persistTimer=setTimeout(()=>void saveDurable(),180);};
- const draftIds=['messageInput','imagePrompt','videoPrompt','projectAgentIdea','imageModel','imageQuality','videoQuality','imageRatio','videoRatio','duration'];
+ const draftIds=['messageInput','imagePrompt','videoPrompt','projectAgentIdea','imageModel','videoModel','imageQuality','videoQuality','imageRatio','videoRatio','duration'];
  const studioPromptEditedAt={...(read('drafts',null)?.promptEditedAt||{})};
  const studioSourceEditedAt={...(read('drafts',null)?.sourceEditedAt||{})};
  function saveDrafts(){const values={};for(const id of draftIds)if($(id))values[id]=id==='messageInput'&&anonymous?'':$(id).value;write('drafts',{values,view:currentView,promptEditedAt:{...studioPromptEditedAt},sourceEditedAt:{...studioSourceEditedAt}});}
@@ -125,13 +125,15 @@
  function fingerprint(s){return JSON.stringify([s.groupId,s.kind,s.model,s.prompt.trim(),s.quality,s.ratio,s.duration,fileStamp(s.regionOriginalFile||s.sourceFile),fileStamp(s.identityFile),s.region?.points]);}
  createStudioVariant=async function(snapshot){
   if(snapshot.kind==='image'&&!snapshot.model)snapshot={...snapshot,model:$('imageModel')?.value||'auto'};
+  if(snapshot.kind==='video'&&!snapshot.model)snapshot={...snapshot,model:$('videoModel')?.value||'auto'};
   if(snapshot.consumeDraft)snapshot={...snapshot,submittedSourceStamp:fileStamp(snapshot.regionOriginalFile||snapshot.sourceFile),submittedIdentityStamp:fileStamp(snapshot.identityFile)};
   const stamp=fingerprint(snapshot),now=Date.now();
   if(creationLock||lastCreation.fingerprint===stamp&&now-lastCreation.time<2500){if(lastCreation.id)openProjectRoom(lastCreation.id);return;}
   creationLock=true;lastCreation={fingerprint:stamp,time:now,id:null};
   try{
+   if(snapshot.kind==='video')try{await window.anisVideoModels?.validate(snapshot);}catch(error){toast(error.message);return;}
    if(snapshot.prompt.trim().length>=3&&snapshot.prompt.trim().length<=1200){
-    let quote;try{quote=await mediaJSON({action:'media-quote',kind:snapshot.kind,model:snapshot.model,quality:snapshot.quality,duration:snapshot.duration});}catch(error){toast(readableMediaError(error));return;}
+    let quote;try{quote=await mediaJSON({action:'media-quote',kind:snapshot.kind,model:snapshot.model,quality:snapshot.quality,ratio:snapshot.ratio,duration:snapshot.duration});}catch(error){toast(readableMediaError(error));return;}
     if(quote.enabled){const text='Создать '+(snapshot.kind==='video'?'видео':'фото')+' за '+quote.amount+' аниумов? При подтверждённой ошибке создания сумма вернётся на баланс.';const confirmed=typeof tg!=='undefined'&&tg?.showConfirm?await new Promise(resolve=>tg.showConfirm(text,resolve)):window.confirm(text);if(!confirmed)return;snapshot={...snapshot,acceptedPrice:quote.amount};}
    }
    if(snapshot.kind==='video'&&['qhd','uhd'].includes(snapshot.quality)&&snapshot.sourceFile?.type.startsWith('video/')){const source=await window.anisMediaQuality.inspectVideo(snapshot.sourceFile);if(source.duration>10.1){toast('Для 2K и 4K добавь видео до 10 секунд. Можно сначала обрезать ролик.');return;}}
@@ -259,17 +261,19 @@
    else choice.append(el('i',{className:'setting-duration-icon','aria-hidden':'true'},'▷'));
    const [title,detail]=option.textContent.split(' · ');choice.append(el('strong',{},title));if(detail)choice.append(el('small',{},detail));rail.append(choice);
   }
-   const sync=()=>{for(const card of rail.children){const option=[...select.options].find(o=>o.value===card.dataset.value);card.setAttribute('aria-pressed',String(card.dataset.value===select.value));card.disabled=select.disabled||!!option?.disabled;}};
-  select.addEventListener('change',sync);new MutationObserver(sync).observe(select,{attributes:true,attributeFilter:['disabled']});panel.append(rail);settingCardSync.push(sync);sync();
+   const sync=()=>{for(const card of rail.children){const option=[...select.options].find(o=>o.value===card.dataset.value);card.hidden=!!option?.hidden;card.setAttribute('aria-pressed',String(card.dataset.value===select.value));card.disabled=select.disabled||!!option?.disabled;}};
+  select.addEventListener('change',sync);new MutationObserver(sync).observe(select,{attributes:true,subtree:true,attributeFilter:['disabled','hidden']});panel.append(rail);settingCardSync.push(sync);sync();
  }
  const videoQualityNote=el('p',{className:'studio-tool-hint',id:'videoQualityNote'});$('videoQuality').parentElement.append(videoQualityNote);
  function syncQualityFormats(){
+  if(window.anisVideoModels){window.anisVideoModels.syncSettings();settingCardSync.forEach(sync=>sync());return;}
   const square=$('videoRatio').value==='1:1';for(const option of $('videoQuality').options)option.disabled=square&&['qhd','uhd'].includes(option.value);
   if($('videoQuality').selectedOptions[0]?.disabled)$('videoQuality').value='fhd';
   videoQualityNote.textContent=square?'Для 2K и 4K выбери широкий или вертикальный формат.':$('videoQuality').value==='qhd'?'2K подготавливается из исходного видео 4K при сохранении.':$('videoQuality').value==='uhd'?'Исходное видео 4K. Для референса используй ролик до 10 секунд.':'Full HD · 1080p.';
   settingCardSync.forEach(sync=>sync());
  }
  $('videoRatio').addEventListener('change',syncQualityFormats);$('videoQuality').addEventListener('change',syncQualityFormats);syncQualityFormats();
+ $('videoModel')?.addEventListener('change',syncQualityFormats);
  const formatHelpOriginal=applyFormatHelp;applyFormatHelp=function(...args){const result=formatHelpOriginal(...args);settingCardSync.forEach(sync=>sync());saveDrafts();return result;};
  const room=$('mediaResultDialog'),roomHeader=room.querySelector('header'),roomTitle=$('mediaResultTitle');roomHeader.after(roomTitle);
  function syncRoomSafeTop(){
@@ -743,7 +747,7 @@
  async function start(){
   const updateHandoff=takeUpdateHandoff();
   const drafts=read('drafts',null);if(drafts)for(const [id,value]of Object.entries(drafts.values||{}))if($(id))$(id).value=id.endsWith('Quality')?({fast:'fhd',high:id==='imageQuality'?'qhd':'fhd',max:'uhd'}[value]||value):value;
-  window.anisImageModels?.sync();syncQualityFormats();
+  window.anisVideoModels?.sync();window.anisImageModels?.sync();syncQualityFormats();
   let rows=[];for(const name of [studioProjectKey()+':backup',studioProjectKey()])try{rows=mergeProjectRecords(rows,JSON.parse(localStorage.getItem(name)||'[]'));}catch{storageWarning();}
   const restoreRows=records=>{for(const row of mergeProjectRecords(records,[...studioProjects.values()].map(projectRecord))){const p={...row};if(p.mediaBlob){p.media=studioProjects.get(p.id)?.media||mediaFromBlob(p.kind,p.mediaBlob);Object.assign(p.media,{width:p.outputWidth,height:p.outputHeight,warning:p.resolutionWarning});}studioProjects.set(p.id,p);projectCounter=Math.max(projectCounter,p.order||0);}};
   restoreRows(rows);
